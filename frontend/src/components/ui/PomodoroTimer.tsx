@@ -23,9 +23,12 @@ export function PomodoroTimer({
 }) {
   return (
     <div className="text-center">
+      {/* 56px es el único tamaño por encima de la escala, y es deliberado: la
+          cuenta atrás a pantalla completa es la cifra héroe de la app. En card
+          usa el peldaño de cifra (34), no un valor suelto. */}
       <div
         className="font-display font-bold leading-none text-[var(--gr-arcane-bright)]"
-        style={{ fontSize: big ? 56 : 28, letterSpacing: "0.05em" }}
+        style={{ fontSize: big ? 56 : 34, letterSpacing: "0.05em" }}
       >
         {formatTime(secondsLeft)}
       </div>

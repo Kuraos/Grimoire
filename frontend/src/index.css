@@ -62,8 +62,8 @@ body {
   color: var(--text-primary);
   /* Capa de trabajo: legible por defecto. La atmósfera vive en .font-display */
   font-family: var(--gr-font-ui);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -91,7 +91,7 @@ body {
 .font-prose,
 .input.font-prose {
   font-family: var(--gr-font-prose);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.7;
 }
 
@@ -137,10 +137,11 @@ body {
 }
 
 /* Etiqueta de sección: Inter, no Cinzel. Cuando todo es ceremonial,
-   nada destaca — Cinzel queda para títulos de página. */
+   nada destaca — Cinzel queda para títulos de página.
+   A 11px es un rótulo, no un título: lo que debe pesar es el contenido. */
 .section-title {
   font-family: var(--gr-font-ui);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.06em;
@@ -277,7 +278,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #392060;
+  background: var(--gr-arcane-deep-hover);
   color: var(--gr-ink-bright);
 }
 

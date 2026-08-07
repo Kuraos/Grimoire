@@ -120,8 +120,10 @@ export default function Stats() {
 function Metric({ value, label }: { value: string; label: string }) {
   return (
     <div className="card text-center">
-      <div className="font-display text-xl tabular text-[var(--purple-main)]">{value}</div>
-      <div className="text-xs text-[var(--text-muted)]">{label}</div>
+      {/* Cifra, no título: Inter tabular lee mejor en números y deja a Cinzel
+          significar "ceremonial" en vez de "grande". */}
+      <div className="gr-figure text-[var(--purple-main)]">{value}</div>
+      <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

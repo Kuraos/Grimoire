@@ -113,6 +113,10 @@ export default function Dashboard() {
 
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {/* Era la única vista sin título. Con la rúbrica a 44px en las otras
+          ocho, la ausencia se notaba más que la presencia. */}
+      <h1 className="gr-title-module md:col-span-2 lg:col-span-3">Hoy</h1>
+
       <div className="md:col-span-2 lg:col-span-3">
         <XPBar xpToday={summary?.xp_earned} streakBonus={bonus} />
       </div>

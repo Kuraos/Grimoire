@@ -67,13 +67,20 @@ export default {
           "danger-bg": "var(--gr-oxblood-deep)",
         },
       },
-      // Escala única: 5 pasos, piso en 12px. Nada por debajo.
+      // Escala única con techo y con función asignada a cada peldaño.
+      // Antes eran 5 pasos con el 94% del uso en los dos de abajo: la escala
+      // existía en la config y la app usaba dos. El suelo sube de 12 a 13 —los
+      // rótulos en versalitas bajan a 11, que leen mayores de lo que miden— y
+      // los tres peldaños de arriba le devuelven un techo.
       fontSize: {
-        xs: ["12px", { lineHeight: "1.45" }],
-        sm: ["13px", { lineHeight: "1.5" }],
-        base: ["15px", { lineHeight: "1.55" }],
+        "2xs": ["11px", { lineHeight: "1.45", letterSpacing: "0.02em" }], // rótulo
+        xs: ["13px", { lineHeight: "1.5" }], // suelo de interfaz
+        sm: ["15px", { lineHeight: "1.55" }],
+        base: ["16px", { lineHeight: "1.6" }], // prosa
         lg: ["19px", { lineHeight: "1.35" }],
-        xl: ["28px", { lineHeight: "1.15" }],
+        xl: ["24px", { lineHeight: "1.2" }], // iluminación — Cinzel
+        "2xl": ["34px", { lineHeight: "1.05" }], // cifra
+        "3xl": ["44px", { lineHeight: "1.02" }], // rúbrica — título de vista
       },
       fontFamily: {
         display: "var(--gr-font-display)",

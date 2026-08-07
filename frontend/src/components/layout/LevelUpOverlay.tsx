@@ -15,7 +15,7 @@ export function LevelUpOverlay() {
         <div className="mt-3 font-label text-xs uppercase tracking-[0.3em] text-[var(--purple-muted)]">
           Ascensión
         </div>
-        <div className="mt-1 font-display text-[44px] font-bold leading-none text-[var(--gr-gilded-bright)]">
+        <div className="mt-1 font-display text-3xl font-bold leading-none text-[var(--gr-gilded-bright)]">
           Nivel {levelUp.level}
         </div>
         <div className="mt-2 font-display text-base italic tracking-wide text-[var(--purple-main)]">

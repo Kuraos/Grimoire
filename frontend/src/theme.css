@@ -1,8 +1,8 @@
 /* ============================================================================
-   GRIMOIRE — Sistema visual gótico (propuesta)
+   GRIMOIRE — Sistema visual gótico
    ----------------------------------------------------------------------------
-   Tokens con prefijo `gr-` para poder convivir con el sistema actual sin
-   alterarlo. Nada se propaga hasta que la dirección quede aprobada.
+   Única fuente de verdad de la paleta. tailwind.config.js y los gráficos leen
+   de aquí; no hay valores duplicados en ningún otro sitio.
 
    TESIS DE DISEÑO
    El gótico no está en "usar morado", está en la TENSIÓN TÉRMICA: un sustrato
@@ -12,53 +12,66 @@
    El carácter vive en el sustrato y los bordes; la legibilidad, en la tinta.
    Así el contraste sube en vez de bajar.
 
+   LA ESCALERA DE ELEVACIÓN
+   El sustrato tenía 1.09:1 entre card y fondo: la superficie no existía y toda
+   la profundidad recaía en un borde a 1.26:1, también invisible. Los cuatro
+   niveles se han separado hasta donde permite la tinta.
+
+     abismo → cromo → superficie → elevado    1.04 · 1.10 · 1.15
+     superficie vs abismo   1.09 → 1.18
+     borde vs superficie    1.26 → 1.48
+
+   No se puede subir más sin bajar ink-faint de AA: es el techo real, no una
+   preferencia. Por eso ink-faint sube también, y con él el resto de la escalera.
+
    VERIFICACIÓN WCAG (computada, no estimada)
-   Los 11 colores de tinta/acento contra los 4 niveles de sustrato: todos
-   >= 4.5:1. Cada color de estado sobre su fondo de estado: todos >= 5.2:1.
-   Peor par: ink-faint sobre surface-raised = 4.50:1.
+   Los 12 colores de tinta/acento contra los 4 niveles de sustrato: todos
+   >= 4.5:1. Peor par: oxblood sobre surface-raised = 4.57:1.
+   Cada color de estado sobre su fondo `-deep`: todos >= 4.79:1.
    ============================================================================ */
 
 :root {
-  /* --- Sustrato: violeta-negro frío. sat ~30% (antes ~12%) --- */
+  /* --- Sustrato: violeta-negro frío, en pasos perceptibles --- */
   --gr-void: #07060c;            /* fondo de la app — el abismo */
-  --gr-surface: #15111f;         /* cards y paneles — vitela oscura */
-  --gr-surface-raised: #221c35;  /* inputs, hover, dropdowns */
+  --gr-surface: #1e1830;         /* cards y paneles — vitela oscura */
+  --gr-surface-raised: #2b2340;  /* inputs, hover, dropdowns */
   --gr-surface-sunken: #040308;  /* overlays de modal, pozos */
 
   /* --- Tinta: cálida sobre tierra fría --- */
-  --gr-ink-bright: #f2ede6;      /* 15.9:1 s/surface — títulos */
-  --gr-ink: #d2cbdb;             /* 11.8:1 — cuerpo */
-  --gr-ink-dim: #a49db5;         /*  7.1:1 — metadata */
-  --gr-ink-faint: #8a8399;       /*  5.1:1 — deshabilitado (cumple AA) */
+  --gr-ink-bright: #f2ede6;      /* 15.1:1 s/surface — títulos */
+  --gr-ink: #d2cbdb;             /* 11.2:1 — cuerpo */
+  --gr-ink-dim: #a49db5;         /*  6.8:1 — metadata */
+  --gr-ink-faint: #a29ab3;       /*  6.1:1 — deshabilitado */
 
   /* --- Acento ARCANO (frío): estado, foco, navegación activa --- */
-  --gr-arcane: #a98bf0;          /* 6.8:1 */
-  --gr-arcane-bright: #c6b0ff;   /* 9.8:1 */
-  --gr-arcane-deep: #1e1236;     /* fondo de badge */
+  --gr-arcane: #a98bf0;          /* 6.4:1 */
+  --gr-arcane-bright: #c6b0ff;   /* 9.3:1 */
+  --gr-arcane-deep: #2d1c56;     /* fondo de badge — elevado, no hundido */
+  --gr-arcane-deep-hover: #3d2670;
 
   /* --- Acento DORADO (cálido): recompensa, XP, logros --- */
-  --gr-gilded: #dcae5c;          /* 9.1:1 */
-  --gr-gilded-bright: #f0cd8a;   /* 12.2:1 */
-  --gr-gilded-deep: #2a1e08;
+  --gr-gilded: #dcae5c;          /* 8.6:1 */
+  --gr-gilded-bright: #f0cd8a;   /* 11.6:1 */
+  --gr-gilded-deep: #3a2a0c;
 
   /* --- Estados semánticos, coherentes con la estética --- */
-  --gr-verdigris: #5aa885;       /* éxito — cobre envejecido, 6.5:1 */
-  --gr-verdigris-deep: #0f2a1e;
-  --gr-amber: #d4913c;           /* advertencia — 7.0:1 */
-  --gr-amber-deep: #2e1e08;
-  --gr-oxblood: #dc6b84;         /* peligro — 5.7:1 */
-  --gr-oxblood-deep: #33101a;
+  --gr-verdigris: #5aa885;       /* éxito — cobre envejecido, 6.2:1 */
+  --gr-verdigris-deep: #123422;
+  --gr-amber: #d4913c;           /* advertencia — 6.6:1 */
+  --gr-amber-deep: #3d290c;
+  --gr-oxblood: #dc6b84;         /* peligro — 5.4:1 */
+  --gr-oxblood-deep: #3f1522;
 
   /* --- Bordes: neutro estructural; el acento sólo marca foco/estado --- */
-  --gr-edge: #2b2440;
-  --gr-edge-strong: #3d3357;
+  --gr-edge: #3d3358;
+  --gr-edge-strong: #52456f;
   --gr-edge-focus: #a98bf0;
-  --gr-edge-danger: #5c2434;
+  --gr-edge-danger: #6e2c3f;
   /* Filo interior: da volumen de objeto (piedra/vitela) sin sombras */
-  --gr-edge-inner: rgba(201, 180, 255, 0.06);
+  --gr-edge-inner: rgba(201, 180, 255, 0.09);
 
   /* --- Cromo de la app: sidebar y topbar, apenas elevados del abismo --- */
-  --gr-chrome: #0c0916;
+  --gr-chrome: #100c1c;
 
   /* --- Barra de XP: del arcano al dorado = progreso hacia la recompensa --- */
   --gr-xp-from: #3b2a6e;
@@ -100,31 +113,56 @@
   --gr-ease-reward: cubic-bezier(0.34, 1.36, 0.5, 1); /* leve rebase */
 }
 
-/* ---------------- Roles tipográficos ---------------- */
+/* ---------------- Roles tipográficos ----------------
+   La escala tenía techo en 20px y suelo en 12, con el 94% de los tamaños en
+   los dos peldaños inferiores: todo pesaba lo mismo. Cinzel a 12px además
+   estorbaba la legibilidad, que es por lo que ya se había retirado de las
+   etiquetas. Sube a donde una display serif hace su trabajo.
+
+     rótulo 11 · interfaz 13 · prosa 16 · cifra 34 · iluminación 24 · rúbrica 44
+   ------------------------------------------------------------------------- */
+
+/* Rúbrica: título de vista. El techo de la escala. */
 .gr-title-module {
   font-family: var(--gr-font-display);
-  font-size: 20px;
+  font-size: 44px;
+  line-height: 1.02;
   font-weight: 600;
-  letter-spacing: 0.09em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--gr-ink-bright);
+  text-wrap: balance;
 }
 
+/* Rótulo: título de card. Se encoge para que el contenido pese más que su
+   etiqueta — la inversión que hace legible la jerarquía. */
 .gr-title-card {
   font-family: var(--gr-font-ui);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gr-ink-dim);
 }
 
-/* Énfasis ceremonial: nivel, nombre de logro, título de modal */
+/* Iluminación: nivel, nombre de logro, título de modal */
 .gr-emphasis {
   font-family: var(--gr-font-display);
-  font-size: 15px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-size: 24px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  color: var(--gr-ink-bright);
+}
+
+/* Cifra: XP, racha, minutos de foco. Tabular, para que columnas y saltos
+   de valor no bailen. */
+.gr-figure {
+  font-family: var(--gr-font-ui);
+  font-size: 34px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
   color: var(--gr-ink-bright);
 }
 
@@ -144,7 +182,7 @@
 
 .gr-meta {
   font-family: var(--gr-font-ui);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--gr-ink-dim);
@@ -171,7 +209,7 @@
 
 .gr-card:hover {
   border-color: var(--gr-edge-strong);
-  background: #191426;
+  background: var(--gr-surface-raised);
 }
 
 /* ---------------- Movimiento ---------------- */
