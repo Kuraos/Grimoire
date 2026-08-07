@@ -36,7 +36,7 @@ Cierra y reabre la terminal después de instalar para refrescar el PATH.
 ## Desarrollo — un solo comando, sin recompilar
 
 ```powershell
-cd C:\Users\jbust\OneDrive\Desktop\Grimoire
+cd <carpeta-del-repo>
 npm run dev
 ```
 
@@ -87,6 +87,57 @@ src-tauri\target\release\bundle\nsis\Grimoire_0.1.0_x64-setup.exe
 ```
 
 Instala el `.msi` o `.exe` y tendrás Grimoire en el menú Inicio con su ícono.
+
+## Actualizaciones automáticas
+
+La app instalada se actualiza sola. Al abrir consulta el endpoint del updater y,
+si hay versión nueva, avisa con un toast; la instalación se hace desde
+**Ajustes → Actualizaciones** y siempre pide confirmación, porque reinicia la app.
+
+```
+tag v0.2.0 ──► GitHub Actions (windows) ──► instalador firmado + latest.json
+                                                      │
+                        app instalada ◄───────────────┘  Ajustes → Actualizar
+```
+
+Cada bundle se firma con una clave **minisign**; el binario verifica la firma
+contra la pública incrustada en `tauri.conf.json` antes de instalar nada. Un
+endpoint comprometido no basta para colar un instalador: haría falta la privada.
+
+### Publicar una versión
+
+```powershell
+# 1. subir la version en src-tauri/tauri.conf.json  (p. ej. 0.1.0 -> 0.2.0)
+git commit -am "Grimoire 0.2.0"
+git tag v0.2.0
+git push && git push --tags
+# 2. GitHub compila y deja un release en BORRADOR -> publicarlo a mano
+```
+
+La etiqueta y el campo `version` de `tauri.conf.json` **deben coincidir**: el
+updater compara contra ese campo, no contra la etiqueta. El workflow lo verifica
+y falla si no cuadran, porque si no el release sale con la versión vieja y la
+actualización no se ofrece nunca — un fallo mudo y caro de diagnosticar.
+
+El release queda en borrador a propósito: sus archivos no son descargables hasta
+que lo publiques, así que nadie recibe una versión a medio revisar.
+
+### La clave de firma
+
+Vive en `~/.tauri/grimoire.key` y **nunca** debe entrar al repositorio
+(`.gitignore` la bloquea como red de seguridad). La pública, en `tauri.conf.json`.
+
+Si se pierde la privada, los clientes ya instalados dejan de aceptar
+actualizaciones: hay que generar otra clave, publicar una versión con la nueva
+pública y reinstalar a mano. Conviene guardarla en un gestor de contraseñas.
+
+Para que CI pueda firmar, el repositorio necesita un secreto
+(`Settings → Secrets and variables → Actions`):
+
+| Secreto | Valor |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | el contenido íntegro de `~/.tauri/grimoire.key` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | omitir: la clave se generó sin contraseña |
 
 ## Cómo está organizado
 

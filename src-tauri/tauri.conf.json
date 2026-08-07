@@ -34,6 +34,18 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["binaries/grimoire-backend"]
+    "externalBin": ["binaries/grimoire-backend"],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE3MDZBQkM1QURGRjBGRgpSV1QvOE45YXZHcHdBVC9DT3RDeTlabDJTVVF6L0dIa1NQOGNFZ0pSY282S1htTHV3Qkh2T3Awawo=",
+      "endpoints": [
+        "https://github.com/Kuraos/Grimoire/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

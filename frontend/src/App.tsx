@@ -12,6 +12,7 @@ import { useApp } from "./context";
 import { usePomodoroCtx } from "./pomodoro-context";
 import { useReminders } from "./hooks/useReminders";
 import { ensureNotifyPermission } from "./notify";
+import { checkForUpdate, isDesktop } from "./updater";
 import { Api } from "./api/endpoints";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -49,6 +50,27 @@ export default function App() {
       })
       .catch(() => {});
   }, [refreshUser, pushToast]);
+
+  // Aviso de actualización disponible. Se retrasa para no competir con la carga
+  // inicial y falla en silencio: quedarse sin red no es algo que deba molestar.
+  // Sólo avisa — instalar exige ir a Ajustes y confirmar, porque reinicia la app.
+  useEffect(() => {
+    if (!isDesktop()) return;
+    const t = setTimeout(() => {
+      checkForUpdate()
+        .then((u) => {
+          if (u) {
+            pushToast({
+              title: "Actualización disponible",
+              body: `Grimoire ${u.version} — instálala desde Ajustes`,
+              icon: "download",
+            });
+          }
+        })
+        .catch(() => {});
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [pushToast]);
 
   // Space toggles the Pomodoro timer (unless typing in a field)
   useEffect(() => {

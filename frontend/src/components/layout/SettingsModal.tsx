@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  IconDeviceFloppy, IconDownload, IconFileTypeCsv, IconDatabase, IconRotate,
+  IconDeviceFloppy, IconDownload, IconFileTypeCsv, IconDatabase, IconRotate, IconRefresh,
 } from "@tabler/icons-react";
 import { Modal, Field } from "../ui/Modal";
 import { Api } from "../../api/endpoints";
 import { useApp } from "../../context";
 import { confirm } from "../../confirm";
+import { checkForUpdate, applyUpdate, isDesktop, type UpdateState } from "../../updater";
+import type { Update } from "@tauri-apps/plugin-updater";
 import type { BackupEntry } from "../../types";
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
@@ -61,6 +63,49 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
       loadBackups();
     } catch { /* */ } finally { setBusy(false); }
   };
+
+  // ---------------- Actualizaciones (sólo escritorio) ----------------
+  const [upd, setUpd] = useState<UpdateState>({ phase: "idle" });
+  const [pending, setPending] = useState<Update | null>(null);
+  const [appVersion, setAppVersion] = useState("");
+
+  const runCheck = useCallback(async () => {
+    setUpd({ phase: "checking" });
+    try {
+      const u = await checkForUpdate();
+      setPending(u);
+      setUpd(u ? { phase: "available", version: u.version, notes: u.body } : { phase: "uptodate" });
+    } catch (e) {
+      setUpd({ phase: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDesktop()) return;
+    import("@tauri-apps/api/app")
+      .then(({ getVersion }) => getVersion())
+      .then(setAppVersion)
+      .catch(() => { /* sin versión: el resto sigue funcionando */ });
+    runCheck();
+  }, [runCheck]);
+
+  const installUpdate = async () => {
+    if (!pending) return;
+    const ok = await confirm({
+      title: "Instalar actualización",
+      message: `Se descargará Grimoire ${pending.version} y la aplicación se reiniciará. ` +
+               `Tus datos no se tocan: viven en %APPDATA%\\Grimoire, fuera de lo que el instalador reemplaza.`,
+      confirmLabel: "Instalar y reiniciar",
+    });
+    if (!ok) return;
+    try {
+      await applyUpdate(pending, setUpd);
+    } catch (e) {
+      setUpd({ phase: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  };
+
+  const updBusy = upd.phase === "checking" || upd.phase === "downloading" || upd.phase === "installing";
 
   const download = (kind: "json" | "db") => {
     // descarga directa: deja que el navegador/webview guarde el archivo
@@ -149,6 +194,55 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       </div>
+
+      {/* ---------------- Actualizaciones ---------------- */}
+      {isDesktop() && (
+        <div className="mt-5 border-t border-[var(--gr-edge)] pt-4">
+          <h3 className="gr-title-card mb-1">Actualizaciones</h3>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">
+            Grimoire busca una versión nueva al abrir. Cada actualización se verifica
+            con firma criptográfica antes de instalarse; si la firma no cuadra, se descarta.
+            {appVersion && (
+              <> Versión instalada:{" "}
+                <span className="tabular text-[var(--text-body)]">{appVersion}</span>.</>
+            )}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="btn" onClick={runCheck} disabled={updBusy}>
+              <IconRefresh size={13} /> Buscar actualizaciones
+            </button>
+            {upd.phase === "available" && (
+              <button className="btn btn-primary" onClick={installUpdate}>
+                <IconDownload size={13} /> Instalar {upd.version} y reiniciar
+              </button>
+            )}
+          </div>
+
+          <div className="mt-2 text-xs">
+            {upd.phase === "checking" && (
+              <span className="text-[var(--text-muted)]">Consultando…</span>
+            )}
+            {upd.phase === "uptodate" && (
+              <span className="text-[var(--text-muted)]">Estás en la última versión.</span>
+            )}
+            {upd.phase === "available" && upd.notes && (
+              <p className="whitespace-pre-line text-[var(--text-muted)]">{upd.notes}</p>
+            )}
+            {upd.phase === "downloading" && (
+              <span className="text-[var(--gr-gilded)]">
+                Descargando{upd.percent !== null ? ` — ${upd.percent}%` : "…"}
+              </span>
+            )}
+            {upd.phase === "installing" && (
+              <span className="text-[var(--gr-gilded)]">Instalando y reiniciando…</span>
+            )}
+            {upd.phase === "error" && (
+              <span className="text-[var(--danger)]">No se pudo comprobar: {upd.message}</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex justify-end">
         <button className="btn" onClick={onClose}>Cerrar</button>

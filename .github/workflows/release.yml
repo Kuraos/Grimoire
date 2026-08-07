@@ -1,0 +1,98 @@
+# Compila el instalador de Windows y lo publica como release firmado.
+#
+# Se dispara al empujar una etiqueta `v*`. Sustituye al `npm run desktop:build`
+# local: en vez de esperar ~6 min con la máquina ocupada, la compilación ocurre
+# en la nube y la app instalada se actualiza sola desde Ajustes.
+#
+#   1. bump de "version" en src-tauri/tauri.conf.json
+#   2. git tag v0.2.0 && git push --tags
+#   3. publicar el borrador del release que aparece en GitHub
+#
+# El paso 3 es manual a propósito: mientras el release siga en borrador, sus
+# archivos no son descargables y ningún cliente verá la actualización.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # El updater compara la versión de tauri.conf.json, NO la etiqueta. Si no
+      # coinciden, el release sale con la versión vieja y la actualización jamás
+      # se ofrece: un fallo mudo que cuesta mucho diagnosticar. Mejor reventar aquí.
+      - name: Verificar que la etiqueta coincide con tauri.conf.json
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $conf = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $tag  = "${{ github.ref_name }}" -replace '^v', ''
+          if ($tag -ne $conf) {
+            Write-Error "Etiqueta '$tag' != tauri.conf.json '$conf'. Ajusta la version antes de etiquetar."
+            exit 1
+          }
+          Write-Host "Version a publicar: $conf"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Dependencias de Node
+        shell: pwsh
+        run: |
+          npm ci
+          npm --prefix frontend ci
+
+      # build_sidecar.ps1 usa backend/.venv; en un runner limpio hay que crearlo.
+      - name: Entorno de Python del backend
+        shell: pwsh
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/Scripts/python.exe -m pip install --upgrade pip
+          backend/.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
+
+      - name: Empaquetar el backend como sidecar (PyInstaller)
+        shell: pwsh
+        run: powershell -ExecutionPolicy Bypass -File backend/build_sidecar.ps1 -Force
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Clave minisign generada con `tauri signer generate`. Sin ella el
+          # bundle sale sin firma y el updater rechaza la actualización.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Grimoire v__VERSION__"
+          releaseBody: |
+            Instalador de Windows (`.exe`). Si ya tienes Grimoire instalado no
+            hace falta descargar nada: la app detecta la versión y se actualiza
+            desde **Ajustes → Actualizaciones**.
+          releaseDraft: true
+          prerelease: false
+          # El updater de Windows funciona mejor con el instalador NSIS que con
+          # el .msi, que exige elevación y deja la instalación a medias más a menudo.
+          updaterJsonPreferNsis: true

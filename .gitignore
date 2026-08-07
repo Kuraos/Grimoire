@@ -24,6 +24,11 @@ src-tauri/gen/
 .vscode/
 .DS_Store
 
+# Claves de firma del updater. Viven en ~/.tauri/, nunca en el repo; esto es
+# una red de seguridad por si alguna vez se copian aquí por error.
+*.key
+!**/*.key.pub
+
 # Respaldos locales de la base
 backend/backups/
 

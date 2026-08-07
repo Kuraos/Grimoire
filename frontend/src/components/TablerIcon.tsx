@@ -8,7 +8,7 @@ import {
   IconNotebook, IconAtom, IconTargetArrow, IconChecks, IconClockBolt, IconClockHour4,
   IconHeart, IconHeartBroken, IconAlertTriangle, IconArrowBackUp, IconLayoutDashboard, IconRepeat,
   IconListCheck, IconClock, IconCalendar, IconChartBar, IconPlayerPause, IconPlayerPlay,
-  IconSettings, IconCopy,
+  IconSettings, IconCopy, IconDownload, IconDatabase,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -26,7 +26,7 @@ const REGISTRY: Record<string, Icon> = {
   "layout-dashboard": IconLayoutDashboard, repeat: IconRepeat, "list-check": IconListCheck,
   clock: IconClock, calendar: IconCalendar, "chart-bar": IconChartBar,
   "player-pause": IconPlayerPause, "player-play": IconPlayerPlay, settings: IconSettings,
-  copy: IconCopy,
+  copy: IconCopy, download: IconDownload, database: IconDatabase,
 };
 
 /** Render a Tabler icon by its DB-stored kebab-case name (e.g. "flame" → IconFlame). */

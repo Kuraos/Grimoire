@@ -9,11 +9,32 @@ use tauri_plugin_shell::ShellExt;
 /// Holds the FastAPI sidecar process so we can terminate it when the app exits.
 struct Backend(Mutex<Option<CommandChild>>);
 
+/// Apaga el sidecar a petición del frontend.
+///
+/// Es imprescindible antes de aplicar una actualización: en Windows un proceso
+/// vivo mantiene su .exe bloqueado, así que el instalador no podría sobrescribir
+/// `grimoire-backend-*.exe` y la actualización quedaría aplicada a medias.
+/// Por eso el frontend descarga primero, llama aquí, y sólo entonces instala.
+#[tauri::command]
+fn shutdown_backend(app: tauri::AppHandle) {
+    if let Some(child) = app.state::<Backend>().0.lock().unwrap().take() {
+        let _ = child.kill();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_process::init())
         .manage(Backend(Mutex::new(None)))
+        .invoke_handler(tauri::generate_handler![shutdown_backend])
         .setup(|app| {
+            // El updater se registra antes del corte de desarrollo para que
+            // Ajustes se comporte igual en `tauri dev` y en la app instalada.
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             // En desarrollo (`tauri dev`) el backend corre aparte con `--reload`.
             // No se lanza el sidecar: así tocar código Python no obliga a
             // reconstruir el .exe con PyInstaller, y no hay choque en el 8000.
