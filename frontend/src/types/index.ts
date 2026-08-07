@@ -1,0 +1,244 @@
+export interface User {
+  id: number;
+  name: string;
+  xp: number;
+  level: number;
+  title: string;
+  lives: number;
+  obsidian_vault_path: string | null;
+  xp_for_current_level: number;
+  xp_for_next_level: number;
+  xp_into_level: number;
+  xp_span: number;
+}
+
+export interface Habit {
+  id: number;
+  name: string;
+  category: string;
+  frequency: string;
+  xp_reward: number;
+  color: string;
+  active: boolean;
+  notes: string | null;
+  tags: string | null;
+  created_at: string;
+  streak: number;
+  best_streak: number;
+  total_xp: number;
+  completion_rate: number;
+  done_today: boolean;
+  last_completed: string | null;
+}
+
+export interface HabitCategory {
+  id: number;
+  name: string;
+  color: string;
+  habit_count: number;
+}
+
+export interface HabitLog {
+  id: number;
+  habit_id: number;
+  completed_at: string;
+  notes: string | null;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  color: string;
+  category: string | null;
+  vault_note_path: string | null;
+  created_at: string;
+  tasks_total: number;
+  tasks_pending: number;
+  pomodoro_hours: number;
+}
+
+export interface ChecklistItem {
+  id: number;
+  task_id: number;
+  text: string;
+  done: boolean;
+  position: number;
+}
+
+export interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  category: string | null;
+  priority: "high" | "medium" | "low";
+  project_id: number | null;
+  due_date: string | null;
+  xp_reward: number;
+  completed: boolean;
+  completed_at: string | null;
+  status: "todo" | "doing" | "done";
+  position: number;
+  remind_at: string | null;
+  tags: string | null;
+  vault_note_path: string | null;
+  created_at: string;
+  checklist: ChecklistItem[];
+  checklist_done: number;
+  checklist_total: number;
+}
+
+export interface PomodoroSession {
+  id: number;
+  task_id: number | null;
+  project_id: number | null;
+  work_minutes: number;
+  completed: boolean;
+  started_at: string;
+  finished_at: string | null;
+  task_title: string | null;
+}
+
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  category: string | null;
+  color: string;
+  start_dt: string;
+  end_dt: string | null;
+  notes: string | null;
+  recurrence: "none" | "daily" | "weekly";
+  recurrence_until: string | null;
+  is_occurrence?: boolean;
+}
+
+export interface IcsImportResult {
+  created: number;
+  updated: number;
+  events_in_file: number;
+  titles: string[];
+  warnings: string[];
+}
+
+export interface DiaryEntry {
+  id: number;
+  entry_date: string;
+  content: string;
+  tags: string | null;
+  updated_at: string;
+}
+
+export interface Checkin {
+  id: number;
+  checkin_date: string;
+  energy: number;
+  mood: number;
+  note: string | null;
+}
+
+export type Tier = "common" | "rare" | "epic" | "legendary";
+
+export interface Achievement {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  icon: string;
+  tier: Tier;
+  unlocked: boolean;
+  unlocked_at: string | null;
+  progress: number;
+}
+
+export interface Quest {
+  id: number;
+  scope: "daily" | "weekly";
+  metric: string;
+  target: number;
+  title: string;
+  icon: string;
+  xp_reward: number;
+  claimed: boolean;
+  progress: number;
+  completed: boolean;
+}
+
+export interface BackupEntry {
+  filename: string;
+  kind: "auto" | "manual";
+  size_kb: number;
+  created_at: string;
+}
+
+export interface StreakEval {
+  lives: number;
+  life_lost: boolean;
+  lives_gained: number;
+  broken_habits: string[];
+  xp_penalty: number;
+  new_xp: number;
+}
+
+export interface WeeklyReview {
+  id: number;
+  week_iso: string;
+  what_worked: string | null;
+  what_failed: string | null;
+  next_change: string | null;
+  rating: number | null;
+  created_at: string;
+}
+
+export interface XPEventResponse {
+  xp_earned: number;
+  new_xp: number;
+  new_level: number;
+  title: string;
+  leveled_up: boolean;
+  streak: number | null;
+  total_today_minutes: number | null;
+  achievement_unlocked: Achievement | null;
+}
+
+export interface DaySummary {
+  habits_done: { name: string; color: string; category: string }[];
+  pomodoro_sessions: { work_minutes: number; task_title: string | null; finished_at: string | null }[];
+  pomodoro_minutes: number;
+  xp_earned: number;
+  checkin: Checkin | null;
+}
+
+export interface Stats {
+  period: string;
+  xp_total: number;
+  xp_by_day: { date: string; xp: number }[];
+  habits_completed: number;
+  habits_possible: number;
+  habits_rate: number;
+  pomodoro_sessions: number;
+  pomodoro_minutes_total: number;
+  tasks_closed: number;
+  avg_energy: number | null;
+  avg_mood: number | null;
+  xp_by_category: { category: string; xp: number }[];
+  mood_energy: { date: string; energy: number; mood: number; xp: number }[];
+  top_streaks: { name: string; color: string; streak: number }[];
+  hours_by_project: { project: string; color: string; hours: number }[];
+  heatmap: { date: string; count: number }[];
+}
+
+export interface WeekSummary {
+  week_iso: string;
+  xp_total: number;
+  xp_prev: number;
+  xp_delta_pct: number | null;
+  habits_completed: number;
+  habits_possible: number;
+  pomodoro_sessions: number;
+  pomodoro_minutes: number;
+  tasks_closed: number;
+  tasks_open: number;
+  avg_energy: number | null;
+  avg_mood: number | null;
+}

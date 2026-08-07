@@ -1,0 +1,25 @@
+{
+  "name": "grimoire",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Grimoire — Personal Life CRM (desktop via Tauri)",
+  "scripts": {
+    "tauri": "tauri",
+    "//dev": "Bucle de desarrollo: backend con recarga + Vite HMR dentro de la ventana nativa. No reconstruye nada.",
+    "dev:backend": "powershell -ExecutionPolicy Bypass -File scripts/dev-backend.ps1",
+    "dev:web": "npm --prefix frontend run dev",
+    "dev": "concurrently -k -n backend,app -c blue,magenta \"npm:dev:backend\" \"tauri dev\"",
+    "dev:browser": "concurrently -k -n backend,web -c blue,green \"npm:dev:backend\" \"npm:dev:web\"",
+    "//release": "Sólo para producir instalador. El sidecar se reconstruye únicamente si cambió el backend.",
+    "sidecar": "powershell -ExecutionPolicy Bypass -File backend/build_sidecar.ps1",
+    "desktop:dev": "concurrently -k -n backend,app -c blue,magenta \"npm:dev:backend\" \"tauri dev\"",
+    "desktop:build": "npm run sidecar && tauri build",
+    "desktop:rebuild": "powershell -ExecutionPolicy Bypass -File scripts/rebuild.ps1",
+    "test": "npm --prefix frontend run test",
+    "check": "powershell -ExecutionPolicy Bypass -File scripts/check.ps1"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "concurrently": "^9"
+  }
+}

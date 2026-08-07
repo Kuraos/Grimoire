@@ -1,0 +1,212 @@
+/* ============================================================================
+   GRIMOIRE — Sistema visual gótico (propuesta)
+   ----------------------------------------------------------------------------
+   Tokens con prefijo `gr-` para poder convivir con el sistema actual sin
+   alterarlo. Nada se propaga hasta que la dirección quede aprobada.
+
+   TESIS DE DISEÑO
+   El gótico no está en "usar morado", está en la TENSIÓN TÉRMICA: un sustrato
+   violeta-frío y profundo contra dos acentos que se oponen —arcano frío para
+   el estado del sistema, dorado cálido para la recompensa (manuscrito
+   iluminado: pan de oro sobre vitela oscura).
+   El carácter vive en el sustrato y los bordes; la legibilidad, en la tinta.
+   Así el contraste sube en vez de bajar.
+
+   VERIFICACIÓN WCAG (computada, no estimada)
+   Los 11 colores de tinta/acento contra los 4 niveles de sustrato: todos
+   >= 4.5:1. Cada color de estado sobre su fondo de estado: todos >= 5.2:1.
+   Peor par: ink-faint sobre surface-raised = 4.50:1.
+   ============================================================================ */
+
+:root {
+  /* --- Sustrato: violeta-negro frío. sat ~30% (antes ~12%) --- */
+  --gr-void: #07060c;            /* fondo de la app — el abismo */
+  --gr-surface: #15111f;         /* cards y paneles — vitela oscura */
+  --gr-surface-raised: #221c35;  /* inputs, hover, dropdowns */
+  --gr-surface-sunken: #040308;  /* overlays de modal, pozos */
+
+  /* --- Tinta: cálida sobre tierra fría --- */
+  --gr-ink-bright: #f2ede6;      /* 15.9:1 s/surface — títulos */
+  --gr-ink: #d2cbdb;             /* 11.8:1 — cuerpo */
+  --gr-ink-dim: #a49db5;         /*  7.1:1 — metadata */
+  --gr-ink-faint: #8a8399;       /*  5.1:1 — deshabilitado (cumple AA) */
+
+  /* --- Acento ARCANO (frío): estado, foco, navegación activa --- */
+  --gr-arcane: #a98bf0;          /* 6.8:1 */
+  --gr-arcane-bright: #c6b0ff;   /* 9.8:1 */
+  --gr-arcane-deep: #1e1236;     /* fondo de badge */
+
+  /* --- Acento DORADO (cálido): recompensa, XP, logros --- */
+  --gr-gilded: #dcae5c;          /* 9.1:1 */
+  --gr-gilded-bright: #f0cd8a;   /* 12.2:1 */
+  --gr-gilded-deep: #2a1e08;
+
+  /* --- Estados semánticos, coherentes con la estética --- */
+  --gr-verdigris: #5aa885;       /* éxito — cobre envejecido, 6.5:1 */
+  --gr-verdigris-deep: #0f2a1e;
+  --gr-amber: #d4913c;           /* advertencia — 7.0:1 */
+  --gr-amber-deep: #2e1e08;
+  --gr-oxblood: #dc6b84;         /* peligro — 5.7:1 */
+  --gr-oxblood-deep: #33101a;
+
+  /* --- Bordes: neutro estructural; el acento sólo marca foco/estado --- */
+  --gr-edge: #2b2440;
+  --gr-edge-strong: #3d3357;
+  --gr-edge-focus: #a98bf0;
+  --gr-edge-danger: #5c2434;
+  /* Filo interior: da volumen de objeto (piedra/vitela) sin sombras */
+  --gr-edge-inner: rgba(201, 180, 255, 0.06);
+
+  /* --- Cromo de la app: sidebar y topbar, apenas elevados del abismo --- */
+  --gr-chrome: #0c0916;
+
+  /* --- Barra de XP: del arcano al dorado = progreso hacia la recompensa --- */
+  --gr-xp-from: #3b2a6e;
+  --gr-xp-to: #dcae5c;
+
+  /* --- Paleta de CATEGORÍAS (datos) — fría y saturada, no pastel --- */
+  --gr-cat-fisico: #5aa885;
+  --gr-cat-academico: #a98bf0;
+  --gr-cat-idioma: #6f93e0;
+  --gr-cat-proyecto: #cf7ba6;
+  --gr-cat-tcg: #dcae5c;
+  --gr-cat-otro: #9a90b5;
+  --gr-cat-personal: #63a9c4;
+  --gr-cat-trabajo: #b8807f;
+
+  /* --- Paleta de RAREZA de logros: culmina en dorado --- */
+  --gr-tier-common: #a49db5;
+  --gr-tier-rare: #6f93e0;
+  --gr-tier-epic: #b57ded;
+  --gr-tier-legendary: #dcae5c;
+
+  /* ==========================================================
+     TIPOGRAFÍA
+     Cinzel: sólo encabezados y énfasis.
+     Inter: UI, datos, metadata.
+     Spectral: prosa extensa (diario, descripciones).
+     ========================================================== */
+  --gr-font-display: "Cinzel", Georgia, serif;
+  --gr-font-ui: "Inter", system-ui, sans-serif;
+  --gr-font-prose: "Spectral", Georgia, serif;
+
+  /* ==========================================================
+     MOVIMIENTO — duraciones y curvas con propósito
+     ========================================================== */
+  --gr-dur-state: 170ms;   /* hover / focus / active   (150-200ms) */
+  --gr-dur-enter: 240ms;   /* entrada de card o modal  (200-300ms) */
+  --gr-dur-reward: 420ms;  /* gamificación             (300-500ms) */
+  --gr-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --gr-ease-reward: cubic-bezier(0.34, 1.36, 0.5, 1); /* leve rebase */
+}
+
+/* ---------------- Roles tipográficos ---------------- */
+.gr-title-module {
+  font-family: var(--gr-font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--gr-ink-bright);
+}
+
+.gr-title-card {
+  font-family: var(--gr-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gr-ink-dim);
+}
+
+/* Énfasis ceremonial: nivel, nombre de logro, título de modal */
+.gr-emphasis {
+  font-family: var(--gr-font-display);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--gr-ink-bright);
+}
+
+.gr-body {
+  font-family: var(--gr-font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--gr-ink);
+}
+
+.gr-prose {
+  font-family: var(--gr-font-prose);
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--gr-ink);
+}
+
+.gr-meta {
+  font-family: var(--gr-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--gr-ink-dim);
+}
+
+.gr-numeric {
+  font-family: var(--gr-font-ui);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* ---------------- Superficie base ---------------- */
+.gr-card {
+  position: relative;
+  background: var(--gr-surface);
+  border: 1px solid var(--gr-edge);
+  border-radius: 10px;
+  /* filo interior: hace que la card lea como objeto, no como rectángulo */
+  box-shadow: inset 0 1px 0 0 var(--gr-edge-inner);
+  transition: border-color var(--gr-dur-state) var(--gr-ease-out),
+              background-color var(--gr-dur-state) var(--gr-ease-out),
+              transform var(--gr-dur-state) var(--gr-ease-out);
+}
+
+.gr-card:hover {
+  border-color: var(--gr-edge-strong);
+  background: #191426;
+}
+
+/* ---------------- Movimiento ---------------- */
+
+/* Entrada: fade + leve desplazamiento vertical */
+@keyframes gr-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.gr-enter {
+  animation: gr-enter var(--gr-dur-enter) var(--gr-ease-out) both;
+}
+
+/* Recompensa: scale + glow. Refuerza el feedback de logro. */
+@keyframes gr-reward {
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(220, 174, 92, 0); }
+  40%  { transform: scale(1.04); box-shadow: 0 0 18px 3px rgba(220, 174, 92, 0.45); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(220, 174, 92, 0); }
+}
+.gr-reward {
+  animation: gr-reward var(--gr-dur-reward) var(--gr-ease-reward);
+}
+
+/* Marca de completado: el trazo se dibuja, no aparece de golpe */
+@keyframes gr-seal {
+  from { stroke-dashoffset: 22; }
+  to   { stroke-dashoffset: 0; }
+}
+.gr-seal path {
+  stroke-dasharray: 22;
+  animation: gr-seal var(--gr-dur-state) var(--gr-ease-out) both;
+}
+
+/* Respeta la preferencia del sistema: sin movimiento si así se pidió */
+@media (prefers-reduced-motion: reduce) {
+  .gr-enter, .gr-reward, .gr-seal path { animation: none; }
+  .gr-card { transition: none; }
+}

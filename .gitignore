@@ -1,0 +1,31 @@
+# Python
+backend/.venv/
+__pycache__/
+*.pyc
+backend/grimoire.db
+backend/.pytest_cache/
+backend/build/
+backend/dist/
+backend/*.spec
+
+# Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Build artifacts / logs
+*.log
+
+# Editor / OS
+.vscode/
+.DS_Store
+
+# Respaldos locales de la base
+backend/backups/
+
+# Sidecar compilado: se regenera con `npm run sidecar` desde backend/*.py
+src-tauri/binaries/

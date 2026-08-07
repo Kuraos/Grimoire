@@ -1,0 +1,264 @@
+@import "./fonts.css";
+/* Sistema visual gótico: theme.css es la única fuente de verdad de los tokens. */
+@import "./theme.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Los nombres heredados apuntan al sistema gótico (theme.css).
+   Así los 9 módulos adoptan la paleta sin reescribir cada componente,
+   y `gr-*` queda como única fuente de verdad. */
+:root {
+  --bg-base: var(--gr-void);
+  --bg-primary: var(--gr-void);
+  --bg-surface: var(--gr-surface);
+  --bg-elevated: var(--gr-surface-raised);
+  --bg-overlay: var(--gr-surface-sunken);
+  --bg-deep: var(--gr-surface-sunken);
+
+  --border: var(--gr-edge);
+  --border-strong: var(--gr-edge-strong);
+  --border-accent: var(--gr-edge-strong);
+  --border-focus: var(--gr-edge-focus);
+  --border-glow: var(--gr-edge-focus);
+
+  --text-primary: var(--gr-ink-bright);
+  --text-body: var(--gr-ink);
+  --text-muted: var(--gr-ink-dim);
+  --text-faint: var(--gr-ink-faint);
+
+  --accent: var(--gr-arcane);
+  --accent-strong: var(--gr-arcane-bright);
+  --accent-deep: var(--gr-arcane-deep);
+  --purple-main: var(--gr-arcane);
+  --purple-muted: var(--gr-ink-dim);
+  --purple-deep: var(--gr-arcane-deep);
+
+  --xp-from: var(--gr-xp-from);
+  --xp-to: var(--gr-xp-to);
+
+  --success: var(--gr-verdigris);
+  --success-bg: var(--gr-verdigris-deep);
+  --warning: var(--gr-amber);
+  --warning-bg: var(--gr-amber-deep);
+  --danger: var(--gr-oxblood);
+  --danger-bg: var(--gr-oxblood-deep);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--gr-void);
+  color: var(--text-primary);
+  /* Capa de trabajo: legible por defecto. La atmósfera vive en .font-display */
+  font-family: var(--gr-font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display ceremonial: títulos de página, nivel, cifras grandes, logo. */
+.font-display {
+  font-family: var(--gr-font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* Etiqueta pequeña: mantiene el carácter de versalita, pero en Inter.
+   Sustituye a Cinzel en labels de formulario y metadatos. */
+.font-label {
+  font-family: var(--gr-font-ui);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Prosa: Diario y Revisión semanal — donde de verdad se escribe.
+   Los selectores de elemento suben la especificidad por encima de `.input`
+   (que fija font-family: inherit y, por orden de cascada, ganaría). */
+.font-prose,
+.input.font-prose {
+  font-family: var(--gr-font-prose);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Foco visible y consistente en todo lo interactivo. */
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@keyframes skeletonPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.85; } }
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-surface), var(--bg-elevated), var(--bg-surface));
+  border: 1px solid var(--border);
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes levelupFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes levelupPop {
+  0% { transform: scale(0.7); opacity: 0; }
+  55% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes levelupGlowPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+@keyframes levelupSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.levelup-fade { animation: levelupFade var(--gr-dur-enter) var(--gr-ease-out); }
+.levelup-pop { animation: levelupPop var(--gr-dur-reward) var(--gr-ease-reward); }
+.levelup-star { animation: levelupSpin 4s linear infinite; }
+.levelup-glow {
+  background: radial-gradient(circle, rgba(220, 174, 92, 0.45), transparent 65%);
+  animation: levelupGlowPulse 1.8s ease-in-out infinite;
+}
+
+/* Etiqueta de sección: Inter, no Cinzel. Cuando todo es ceremonial,
+   nada destaca — Cinzel queda para títulos de página. */
+.section-title {
+  font-family: var(--gr-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card {
+  position: relative;
+  background: var(--gr-surface);
+  border: 1px solid var(--gr-edge);
+  border-radius: 10px;
+  padding: 14px 16px;
+  /* filo interior: la card lee como objeto, no como rectángulo plano */
+  box-shadow: inset 0 1px 0 0 var(--gr-edge-inner);
+  transition: border-color var(--gr-dur-state) var(--gr-ease-out),
+              background-color var(--gr-dur-state) var(--gr-ease-out);
+}
+
+.card:hover {
+  border-color: var(--gr-edge-strong);
+  background: var(--gr-surface-raised);
+}
+
+.input,
+textarea.input,
+select.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 8px 11px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  width: 100%;
+  outline: none;
+  transition: border-color var(--gr-dur-state) var(--gr-ease-out);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.input:focus {
+  border-color: var(--border-focus);
+}
+
+.btn {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  color: var(--text-body);
+  font-family: var(--gr-font-ui);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color var(--gr-dur-state) var(--gr-ease-out),
+              background var(--gr-dur-state) var(--gr-ease-out),
+              color var(--gr-dur-state) var(--gr-ease-out);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--border-focus);
+  color: var(--text-primary);
+}
+
+/* El acento morado se gana su lugar: solo la acción principal. */
+.btn-primary {
+  background: var(--accent-deep);
+  border-color: var(--border-focus);
+  color: var(--gr-arcane-bright);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #392060;
+  color: var(--gr-ink-bright);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-accent);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.toast-enter {
+  animation: toast-in var(--gr-dur-enter) var(--gr-ease-out);
+}
