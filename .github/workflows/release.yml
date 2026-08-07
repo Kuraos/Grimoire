@@ -41,9 +41,10 @@ jobs:
           }
           Write-Host "Version a publicar: $conf"
 
+      # Node 24 = npm 11, el mismo que genera el lockfile (ver ci.yml).
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: |
             package-lock.json
