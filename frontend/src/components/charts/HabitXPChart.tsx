@@ -1,10 +1,12 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { chartPalette, TOOLTIP_STYLE } from "../../theme-tokens";
 
 /**
  * Cumulative XP over time for a single habit. `series` comes from the backend's
  * xp_log (exact amounts, including streak multipliers and undo reversals).
  */
 export function HabitXPChart({ series }: { series: { date: string; xp: number }[] }) {
+  const c = chartPalette();
   if (series.length === 0) {
     return <div className="py-6 text-center text-xs text-[var(--text-muted)]">Sin datos todavía.</div>;
   }
@@ -13,14 +15,14 @@ export function HabitXPChart({ series }: { series: { date: string; xp: number }[
       <AreaChart data={series} margin={{ top: 4, right: 6, left: -22, bottom: 0 }}>
         <defs>
           <linearGradient id="habitxp" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#a98bf0" stopOpacity={0.5} />
-            <stop offset="100%" stopColor="#3b2a6e" stopOpacity={0.05} />
+            <stop offset="0%" stopColor={c.arcane} stopOpacity={0.5} />
+            <stop offset="100%" stopColor={c.xpFrom} stopOpacity={0.05} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: "#a49db5", fontSize: 12 }} stroke="#2b2440" />
-        <YAxis tick={{ fill: "#a49db5", fontSize: 12 }} stroke="#2b2440" />
-        <Tooltip contentStyle={{ background: "#040308", border: "1px solid #3d3357", borderRadius: 8, fontSize: 12, color: "#f2ede6" }} />
-        <Area dataKey="xp" stroke="#a98bf0" strokeWidth={2} fill="url(#habitxp)" />
+        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: c.tick, fontSize: 12 }} stroke={c.axis} />
+        <YAxis tick={{ fill: c.tick, fontSize: 12 }} stroke={c.axis} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} />
+        <Area dataKey="xp" stroke={c.arcane} strokeWidth={2} fill="url(#habitxp)" />
       </AreaChart>
     </ResponsiveContainer>
   );

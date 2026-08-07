@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { isoDate } from "../../utils";
+import { chartPalette, toRgb } from "../../theme-tokens";
 
 /**
  * GitHub-style heatmap: 53 weeks × 7 days, coloured by completion count.
@@ -35,13 +36,16 @@ export function HabitHeatmap({ data, weeks = 53 }: {
     return { columns: cols, max };
   }, [data, weeks]);
 
+  // La rampa se interpola entre dos tokens del tema, no entre hexadecimales
+  // sueltos: antes terminaba en el morado de la config vieja (#9b7fc4).
+  const c = chartPalette();
+  const from = toRgb(c.surfaceRaised);
+  const to = toRgb(c.arcane);
+
   const color = (count: number) => {
-    if (count <= 0) return "var(--bg-elevated)";
+    if (count <= 0) return "var(--gr-surface-raised)";
     const t = Math.min(1, count / max);
-    // interpolate bg-elevated → purple-main
     const lerp = (a: number, b: number) => Math.round(a + (b - a) * t);
-    const from = [26, 20, 34];
-    const to = [155, 127, 196];
     return `rgb(${lerp(from[0], to[0])},${lerp(from[1], to[1])},${lerp(from[2], to[2])})`;
   };
 
