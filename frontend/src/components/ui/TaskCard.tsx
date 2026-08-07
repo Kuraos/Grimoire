@@ -26,7 +26,7 @@ export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelet
       <div className={`flex items-center gap-2 border-b border-[var(--gr-edge)] py-1 text-sm last:border-none ${
         task.completed ? "text-[var(--text-faint)] line-through" : "text-[var(--text-body)]"
       }`}>
-        <button onClick={toggle} className="text-[var(--border-accent)] hover:text-[var(--purple-main)]">
+        <button onClick={toggle} className="text-[var(--text-muted)] hover:text-[var(--purple-main)]">
           {task.completed ? <IconSquareCheck size={14} /> : <IconSquare size={14} />}
         </button>
         <span className="truncate">{task.title}</span>
@@ -41,7 +41,7 @@ export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelet
 
   return (
     <div className="card flex items-center gap-3" style={projectColor ? { borderLeft: `2px solid ${projectColor}` } : undefined}>
-      <button onClick={toggle} title={task.completed ? "Reabrir" : "Completar"} className="text-[var(--border-accent)] hover:text-[var(--purple-main)]">
+      <button onClick={toggle} title={task.completed ? "Reabrir" : "Completar"} className="text-[var(--text-muted)] hover:text-[var(--purple-main)]">
         {task.completed ? <IconSquareCheck size={18} className="text-[var(--success)]" /> : <IconSquare size={18} />}
       </button>
       <div className="min-w-0 flex-1">

@@ -246,7 +246,7 @@ function TaskForm({ task, projects, onClose, onSaved }: { task: Task | null; pro
       <Field label="Etiquetas"><TagInput value={tags} onChange={setTags} /></Field>
       <Field label="Nota en Obsidian"><VaultNoteField value={vaultNotePath} onChange={setVaultNotePath} /></Field>
       <Field label={`XP reward (${xp})`}>
-        <input type="range" min={5} max={50} step={5} value={xp} onChange={(e) => setXp(Number(e.target.value))} className="w-full accent-[var(--purple-main)]" />
+        <input type="range" min={5} max={50} step={5} value={xp} onChange={(e) => setXp(Number(e.target.value))} className="w-full" />
       </Field>
       {task && <ChecklistEditor task={task} />}
       <div className="mt-2 flex justify-end gap-2">

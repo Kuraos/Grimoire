@@ -191,6 +191,58 @@ select.input {
   border-color: var(--border-focus);
 }
 
+/* Deslizadores (energía, ánimo, XP de hábitos y tareas).
+   El carril nativo se pinta blanco puro: dos barras de 410px a 18:1 contra el
+   sustrato eran, con diferencia, los objetos más brillantes del Dashboard.
+   `accent-color` sólo teñía el pulgar, así que hay que dibujar el carril. */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--gr-surface-raised);
+  border: 1px solid var(--gr-edge);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  /* centra el pulgar sobre el carril: (alto de carril − alto de pulgar) / 2 */
+  margin-top: -5.5px;
+  border-radius: 50%;
+  background: var(--gr-arcane);
+  border: 1px solid var(--gr-arcane-bright);
+  transition: background-color var(--gr-dur-state) var(--gr-ease-out);
+}
+
+input[type="range"]:hover::-webkit-slider-thumb {
+  background: var(--gr-arcane-bright);
+}
+
+input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--gr-surface-raised);
+  border: 1px solid var(--gr-edge);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--gr-arcane);
+  border: 1px solid var(--gr-arcane-bright);
+}
+
 .btn {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);

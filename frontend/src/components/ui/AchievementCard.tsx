@@ -8,7 +8,8 @@ export function AchievementCard({ a }: { a: Achievement }) {
     <div
       className="card flex flex-col items-center gap-2 text-center transition-opacity"
       style={{
-        opacity: a.unlocked ? 1 : 0.42,
+        // 0.42 dejaba el texto del logro bloqueado en 3.4:1, por debajo de AA.
+        opacity: a.unlocked ? 1 : 0.62,
         filter: a.unlocked ? "none" : "grayscale(1)",
         borderColor: a.unlocked ? tier.color : "var(--border)",
         boxShadow: a.unlocked && a.tier !== "common" ? `0 0 14px ${tier.glow}` : "none",

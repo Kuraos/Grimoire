@@ -25,7 +25,7 @@ export function TopBar() {
       className="flex h-[42px] items-center gap-3 px-4"
       style={{ background: "var(--gr-chrome)", borderBottom: "0.5px solid var(--border)" }}
     >
-      <IconHexagon size={18} className="text-[var(--border-accent)]" />
+      <IconHexagon size={18} className="text-[var(--gr-gilded)]" />
       <span className="font-display text-base font-bold tracking-[0.15em] text-[var(--purple-main)]">
         Grimoire
       </span>

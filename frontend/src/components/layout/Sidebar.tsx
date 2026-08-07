@@ -22,7 +22,9 @@ export function Sidebar() {
       className="flex w-[52px] flex-col items-center gap-3 py-4"
       style={{ background: "var(--gr-chrome)", borderRight: "0.5px solid var(--border)" }}
     >
-      <div className="mb-2 text-[var(--border-accent)]">
+      {/* La marca es lo único iluminado del cromo: un token de borde a 1.7:1
+          la dejaba prácticamente invisible. */}
+      <div className="mb-2 text-[var(--gr-gilded)]">
         <IconHexagon size={20} />
       </div>
       {NAV.map(({ to, icon: Icon, label }) => (

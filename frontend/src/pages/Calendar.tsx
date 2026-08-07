@@ -180,7 +180,7 @@ function MonthGrid({ cursor, dots, selected, onSelect }: {
   return (
     <Card title={`${MONTHS_ES[month]} ${year}`}>
       <div className="grid grid-cols-7 gap-1">
-        {WEEKDAYS_ES.map((w) => <div key={w} className="pb-1 text-center text-xs text-[var(--border-accent)]">{w}</div>)}
+        {WEEKDAYS_ES.map((w) => <div key={w} className="pb-1 text-center text-xs text-[var(--text-faint)]">{w}</div>)}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />;
           const iso = isoDate(new Date(year, month, d));

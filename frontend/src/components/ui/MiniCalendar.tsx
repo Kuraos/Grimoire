@@ -25,7 +25,7 @@ export function MiniCalendar({
     <div>
       <div className="grid grid-cols-7 gap-[2px] text-center">
         {WEEKDAYS_ES.map((w) => (
-          <div key={w} className="py-[3px] text-xs text-[var(--border-accent)]">{w}</div>
+          <div key={w} className="py-[3px] text-xs text-[var(--text-faint)]">{w}</div>
         ))}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />;

@@ -13,7 +13,8 @@ function Slider({ label, icon, value, onChange }: {
       <input
         type="range" min={1} max={5} value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[var(--purple-main)]"
+        aria-label={label}
+        className="w-full"
       />
     </div>
   );

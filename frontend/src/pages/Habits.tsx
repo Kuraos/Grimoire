@@ -344,7 +344,7 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Field label={`XP por completar (${xp})`}>
-          <input type="range" min={10} max={100} step={5} value={xp} onChange={(e) => setXp(Number(e.target.value))} className="w-full accent-[var(--purple-main)]" />
+          <input type="range" min={10} max={100} step={5} value={xp} onChange={(e) => setXp(Number(e.target.value))} className="w-full" />
         </Field>
         <Field label="Color">
           <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="input h-9 p-1" />
