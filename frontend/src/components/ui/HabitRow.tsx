@@ -16,11 +16,12 @@ export function HabitRow({ habit, onComplete, onUndo, onClick }: {
         title={habit.done_today ? "Deshacer" : "Marcar como completado"}
         className={`group flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border ${
           habit.done_today
-            ? "border-[var(--gr-edge-focus)] bg-[var(--purple-deep)]"
+            ? "border-[var(--gr-gilded)] bg-[var(--gr-gilded-deep)]"
             : "border-[var(--border-accent)] hover:border-[var(--border-glow)]"
         }`}
       >
-        {habit.done_today && <IconCheck size={10} className="text-[var(--gr-arcane-bright)]" />}
+        {/* El sello de completado es oro: es lo que el día se ha ganado. */}
+        {habit.done_today && <IconCheck size={10} className="text-[var(--gr-gilded-bright)]" />}
       </button>
       <span
         className="h-2.5 w-1 shrink-0 rounded"
@@ -33,7 +34,7 @@ export function HabitRow({ habit, onComplete, onUndo, onClick }: {
       >
         {habit.name}
       </span>
-      <span className="ml-auto flex items-center gap-1 text-xs text-[var(--purple-main)]">
+      <span className="ml-auto flex items-center gap-1 text-xs tabular text-[var(--gr-gilded)]">
         <IconFlame size={12} /> {habit.streak}
       </span>
     </div>

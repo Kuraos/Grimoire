@@ -20,9 +20,10 @@ export function TagInput({ value, onChange }: { value: string | null; onChange: 
   return (
     <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-[var(--border-accent)] bg-[var(--bg-elevated)] px-2 py-1.5">
       {tags.map((t) => (
-        <span key={t} className="flex items-center gap-1 rounded-full bg-[var(--purple-deep)] px-2 py-0.5 text-xs text-[var(--gr-arcane-bright)]">
+        /* Una etiqueta es metadata, no acento: chip en tinta. */
+        <span key={t} className="flex items-center gap-1 rounded-full bg-[var(--bg-elevated)] px-2 py-0.5 text-xs text-[var(--text-muted)]">
           {t}
-          <button onClick={() => remove(t)} className="text-[var(--gr-arcane)] hover:text-white"><IconX size={10} /></button>
+          <button onClick={() => remove(t)} className="text-[var(--text-faint)] hover:text-[var(--gr-ink-bright)]"><IconX size={10} /></button>
         </span>
       ))}
       <input

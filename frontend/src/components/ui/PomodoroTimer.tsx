@@ -37,7 +37,9 @@ export function PomodoroTimer({
       </div>
       {big && (
         <div className="mx-auto my-3 h-1.5 max-w-xs overflow-hidden rounded bg-[var(--bg-elevated)]">
-          <div className="h-full rounded" style={{ width: `${progress * 100}%`, background: "linear-gradient(90deg, var(--xp-from), var(--xp-to))" }} />
+          {/* El tiempo transcurrido no es recompensa: usaba el degradado de XP
+              y terminaba en dorado. Aquí el arcano es lo correcto. */}
+          <div className="h-full rounded" style={{ width: `${progress * 100}%`, background: "linear-gradient(90deg, var(--gr-xp-from), var(--gr-arcane))" }} />
         </div>
       )}
       <div className="mt-2 flex items-center justify-center gap-2">

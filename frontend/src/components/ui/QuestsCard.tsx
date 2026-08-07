@@ -43,11 +43,12 @@ function Group({ label, quests, onClaim }: { label: string; quests: Quest[]; onC
           return (
             <div key={q.id} className="text-sm">
               <div className="flex items-center gap-2">
-                <TablerIcon name={q.icon} size={14} className={q.claimed ? "text-[var(--success)]" : "text-[var(--purple-main)]"} />
+                <TablerIcon name={q.icon} size={14} className={q.claimed ? "text-[var(--success)]" : "text-[var(--text-muted)]"} />
                 <span className={`flex-1 ${q.claimed ? "text-[var(--text-faint)] line-through" : "text-[var(--text-body)]"}`}>{q.title}</span>
                 <span className="tabular text-xs text-[var(--text-muted)]">{q.progress}/{q.target}</span>
                 {claimable ? (
-                  <button onClick={() => onClaim(q)} className="rounded border border-[var(--border-accent)] bg-[var(--purple-deep)] px-1.5 py-0.5 font-label text-xs text-[var(--gr-arcane-bright)] hover:border-[var(--border-glow)]">
+                  /* Misión cumplida y sin reclamar: es lo único dorado de la card. */
+                  <button onClick={() => onClaim(q)} className="gr-reward rounded border border-[var(--gr-gilded)] bg-[var(--gr-gilded-deep)] px-1.5 py-0.5 font-label text-xs text-[var(--gr-gilded-bright)] hover:border-[var(--gr-gilded-bright)]">
                     +{q.xp_reward}
                   </button>
                 ) : (

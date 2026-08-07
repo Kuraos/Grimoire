@@ -12,10 +12,11 @@ export function ToastAchievement() {
         <div
           key={t.id}
           className="toast-enter pointer-events-auto flex w-72 items-center gap-3 rounded-lg px-3 py-2.5"
-          style={{ background: "var(--bg-deep)", border: `0.5px solid ${error ? "var(--gr-oxblood-deep)" : "var(--border-accent)"}` }}
+          style={{ background: "var(--bg-deep)", border: `0.5px solid ${error ? "var(--gr-edge-danger)" : "var(--gr-gilded-deep)"}` }}
         >
+          {/* Un toast no-error siempre anuncia algo ganado: XP, logro, vida. */}
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md"
-               style={{ background: error ? "var(--gr-oxblood-deep)" : "var(--purple-deep)", color: error ? "var(--gr-oxblood)" : "var(--gr-arcane-bright)" }}>
+               style={{ background: error ? "var(--gr-oxblood-deep)" : "var(--gr-gilded-deep)", color: error ? "var(--gr-oxblood)" : "var(--gr-gilded-bright)" }}>
             <TablerIcon name={t.icon ?? "trophy"} size={20} />
           </div>
           <div className="min-w-0 flex-1">

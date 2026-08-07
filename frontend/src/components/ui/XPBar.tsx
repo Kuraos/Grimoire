@@ -1,6 +1,10 @@
 import { IconSkull, IconFlame } from "@tabler/icons-react";
 import { useUser } from "../../context";
 
+/**
+ * Ley del acento: aquí todo es recompensa —nivel, bonus de racha, XP del día—
+ * así que todo va en dorado. El arcano no entra en esta card.
+ */
 export function XPBar({ xpToday, streakBonus }: { xpToday?: number; streakBonus?: number }) {
   const user = useUser();
   if (!user) {
@@ -12,17 +16,17 @@ export function XPBar({ xpToday, streakBonus }: { xpToday?: number; streakBonus?
   return (
     <div className="card">
       <div className="mb-1.5 flex flex-wrap items-center gap-3">
-        <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border-accent)] bg-[var(--gr-surface-raised)] px-2.5 py-[3px] font-display text-sm text-[var(--purple-main)]">
+        <div className="inline-flex items-center gap-1.5 rounded-md border border-[var(--gr-gilded)] bg-[var(--gr-gilded-deep)] px-2.5 py-[3px] font-display text-sm text-[var(--gr-gilded-bright)]">
           <IconSkull size={14} /> Nivel {user.level}
         </div>
         <span className="text-xs italic text-[var(--text-body)]">{user.title}</span>
         {hasBonus && (
-          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--border-accent)] bg-[var(--purple-deep)] px-2 py-[2px] font-label text-xs text-[var(--gr-arcane-bright)]" title="Bonus de racha activo">
+          <span className="inline-flex items-center gap-1 rounded-md border border-[var(--gr-gilded)] bg-[var(--gr-gilded-deep)] px-2 py-[2px] font-label text-xs text-[var(--gr-gilded-bright)]" title="Bonus de racha activo">
             <IconFlame size={12} /> ×{streakBonus!.toFixed(2)}
           </span>
         )}
         {xpToday !== undefined && (
-          <span className="ml-auto text-xs text-[var(--purple-main)]">+{xpToday} XP hoy</span>
+          <span className="ml-auto text-xs text-[var(--gr-gilded)]">+{xpToday} XP hoy</span>
         )}
       </div>
       <div className="my-1.5 h-2 overflow-hidden rounded bg-[var(--bg-elevated)]">

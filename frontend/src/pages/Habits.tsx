@@ -266,10 +266,10 @@ function DetailPanel({ habit, logs, xpSeries, onClose, onArchive, onEdit }: {
         <button onClick={onClose} className="ml-auto text-[var(--text-muted)]"><IconX size={14} /></button>
       </div>
       <div className="grid grid-cols-2 gap-2 text-xs">
-        <Metric label="Racha actual" value={`${habit.streak} días`} icon={<IconFlame size={11} />} />
-        <Metric label="Mejor racha" value={`${habit.best_streak} días`} />
+        <Metric label="Racha actual" value={`${habit.streak} días`} icon={<IconFlame size={11} />} gold />
+        <Metric label="Mejor racha" value={`${habit.best_streak} días`} gold />
         <Metric label="Completado" value={`${habit.completion_rate}%`} />
-        <Metric label="XP total" value={`${habit.total_xp}`} />
+        <Metric label="XP total" value={`${habit.total_xp}`} gold />
       </div>
       <div className="mt-3">
         <div className="section-title mb-1">XP acumulado</div>
@@ -292,11 +292,17 @@ function DetailPanel({ habit, logs, xpSeries, onClose, onArchive, onEdit }: {
   );
 }
 
-function Metric({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+/** `gold` marca lo que el usuario se ha ganado; el resto es dato, y va en tinta. */
+function Metric({ label, value, icon, gold }: { label: string; value: string; icon?: React.ReactNode; gold?: boolean }) {
   return (
     <div className="rounded-md bg-[var(--bg-elevated)] p-2">
-      <div className="text-xs text-[var(--text-muted)]">{label}</div>
-      <div className="flex items-center gap-1 font-display text-base tabular text-[var(--purple-main)]">{icon}{value}</div>
+      <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
+      <div
+        className="flex items-center gap-1 text-base tabular"
+        style={{ color: gold ? "var(--gr-gilded)" : "var(--text-primary)" }}
+      >
+        {icon}{value}
+      </div>
     </div>
   );
 }

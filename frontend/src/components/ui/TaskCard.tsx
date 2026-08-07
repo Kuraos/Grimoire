@@ -61,7 +61,7 @@ export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelet
           )}
           <span>· {task.xp_reward} XP</span>
           {parseTags(task.tags).map((tag) => (
-            <span key={tag} className="rounded-full bg-[var(--purple-deep)] px-1.5 text-xs text-[var(--gr-arcane-bright)]">{tag}</span>
+            <span key={tag} className="rounded-full bg-[var(--bg-elevated)] px-1.5 text-xs text-[var(--text-muted)]">{tag}</span>
           ))}
         </div>
       </div>

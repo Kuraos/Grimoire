@@ -26,7 +26,9 @@ export function TopBar() {
       style={{ background: "var(--gr-chrome)", borderBottom: "0.5px solid var(--border)" }}
     >
       <IconHexagon size={18} className="text-[var(--gr-gilded)]" />
-      <span className="font-display text-base font-bold tracking-[0.15em] text-[var(--purple-main)]">
+      {/* El hexágono dorado ya es la marca; el logotipo en tinta evita que el
+          cromo compita con la recompensa. */}
+      <span className="font-display text-base font-bold tracking-[0.15em] text-[var(--text-primary)]">
         Grimoire
       </span>
       {user && (

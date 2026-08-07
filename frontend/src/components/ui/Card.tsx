@@ -11,7 +11,9 @@ export function Card({ title, icon, children, className = "", right }: {
     <section className={`card ${className}`}>
       {title && (
         <div className="section-title mb-2.5">
-          {icon && <span className="text-[var(--purple-main)]">{icon}</span>}
+          {/* Icono de rótulo, no de estado: en tinta. Era la mayor fuente de
+              morado ambiental de la app, y con él encendido el oro no se lee. */}
+          {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
           <span>{title}</span>
           {right && <span className="ml-auto normal-case">{right}</span>}
         </div>

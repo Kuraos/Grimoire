@@ -59,15 +59,15 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
           aria-label={done ? `Deshacer ${habit.name}` : `Completar ${habit.name}`}
           className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px] border transition-colors"
           style={{
-            borderColor: done ? "var(--gr-arcane)" : "var(--gr-edge-strong)",
-            background: done ? "var(--gr-arcane-deep)" : "transparent",
+            borderColor: done ? "var(--gr-gilded)" : "var(--gr-edge-strong)",
+            background: done ? "var(--gr-gilded-deep)" : "transparent",
             transitionDuration: "var(--gr-dur-state)",
             transitionTimingFunction: "var(--gr-ease-out)",
           }}
         >
           {done && (
             <svg className="gr-seal" width="13" height="13" viewBox="0 0 24 24" fill="none"
-                 stroke="var(--gr-arcane-bright)" strokeWidth="3.5"
+                 stroke="var(--gr-gilded-bright)" strokeWidth="3.5"
                  strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12.5l5.5 5.5L20 6.5" />
             </svg>

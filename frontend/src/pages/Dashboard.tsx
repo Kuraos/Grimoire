@@ -164,7 +164,7 @@ export default function Dashboard() {
 
       <Card title="Resumen del día" icon={<IconChartBar size={14} />}>
         <div className="grid grid-cols-3 gap-2 text-center">
-          <Stat value={`${summary?.xp_earned ?? 0}`} label="XP hoy" />
+          <Stat value={`${summary?.xp_earned ?? 0}`} label="XP hoy" gold />
           <Stat value={`${doneCount}/${habits.length}`} label="Hábitos" />
           <Stat value={`${summary?.pomodoro_minutes ?? 0}m`} label="Foco" />
         </div>
@@ -173,11 +173,16 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({ value, label, gold }: { value: string; label: string; gold?: boolean }) {
   return (
     <div className="rounded-md bg-[var(--bg-elevated)] py-2">
-      <div className="font-display text-lg tabular text-[var(--purple-main)]">{value}</div>
-      <div className="text-xs text-[var(--text-muted)]">{label}</div>
+      <div
+        className="text-lg tabular"
+        style={{ color: gold ? "var(--gr-gilded)" : "var(--text-primary)" }}
+      >
+        {value}
+      </div>
+      <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

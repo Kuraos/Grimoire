@@ -9,7 +9,8 @@ const COLUMNS: { key: Task["status"]; label: string }[] = [
   { key: "done", label: "Hecho" },
 ];
 
-const PRIORITY_COLOR: Record<string, string> = { high: "var(--gr-oxblood)", medium: "var(--gr-arcane)", low: "var(--gr-ink-dim)" };
+// Prioridad es dato semántico, no acento. Mismo criterio que TaskCard.
+const PRIORITY_COLOR: Record<string, string> = { high: "var(--gr-oxblood)", medium: "var(--gr-amber)", low: "var(--gr-ink-dim)" };
 
 const byPosition = (a: Task, b: Task) => a.position - b.position || a.id - b.id;
 
@@ -88,7 +89,7 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
                       <span className="flex items-center gap-0.5"><IconChecklist size={11} /> {t.checklist_done}/{t.checklist_total}</span>
                     )}
                     {parseTags(t.tags).map((tag) => (
-                      <span key={tag} className="rounded-full bg-[var(--purple-deep)] px-1.5 text-xs text-[var(--gr-arcane-bright)]">{tag}</span>
+                      <span key={tag} className="rounded-full bg-[var(--bg-elevated)] px-1.5 text-xs text-[var(--text-muted)]">{tag}</span>
                     ))}
                     {t.due_date && <span className="ml-auto">{t.due_date.slice(5)}</span>}
                   </div>

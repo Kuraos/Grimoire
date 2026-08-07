@@ -52,7 +52,7 @@ export default function Stats() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Metric value={data.xp_total.toLocaleString()} label="XP total" />
+        <Metric value={data.xp_total.toLocaleString()} label="XP total" gold />
         <Metric value={`${data.habits_completed} · ${data.habits_rate}%`} label="Hábitos" />
         <Metric value={`${data.pomodoro_minutes_total}m`} label="Foco" />
         <Metric value={`${data.tasks_closed}`} label="Tareas cerradas" />
@@ -106,7 +106,7 @@ export default function Stats() {
               {data.top_streaks.map((s) => (
                 <tr key={s.name} className="border-b border-[var(--gr-edge)] last:border-none">
                   <td className="py-1.5"><span className="mr-2 inline-block h-2 w-2 rounded-full align-middle" style={{ background: s.color }} />{s.name}</td>
-                  <td className="py-1.5 text-right tabular text-[var(--purple-main)]"><IconFlame size={12} className="inline" /> {s.streak} días</td>
+                  <td className="py-1.5 text-right tabular text-[var(--gr-gilded)]"><IconFlame size={12} className="inline" /> {s.streak} días</td>
                 </tr>
               ))}
             </tbody>
@@ -117,12 +117,13 @@ export default function Stats() {
   );
 }
 
-function Metric({ value, label }: { value: string; label: string }) {
+function Metric({ value, label, gold }: { value: string; label: string; gold?: boolean }) {
   return (
     <div className="card text-center">
       {/* Cifra, no título: Inter tabular lee mejor en números y deja a Cinzel
-          significar "ceremonial" en vez de "grande". */}
-      <div className="gr-figure text-[var(--purple-main)]">{value}</div>
+          significar "ceremonial" en vez de "grande". Dorado sólo si es algo
+          ganado; lo demás es dato. */}
+      <div className="gr-figure" style={gold ? { color: "var(--gr-gilded)" } : undefined}>{value}</div>
       <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
     </div>
   );
