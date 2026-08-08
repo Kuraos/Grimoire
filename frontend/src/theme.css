@@ -233,13 +233,15 @@
   animation: gr-reward var(--gr-dur-reward) var(--gr-ease-reward);
 }
 
-/* Marca de completado: el trazo se dibuja, no aparece de golpe */
+/* Marca de completado: el trazo se dibuja, no aparece de golpe.
+   El trazo mide 23.4 unidades; con dasharray 22 arrancaba con un 6% ya
+   pintado. 24 lo cubre entero. */
 @keyframes gr-seal {
-  from { stroke-dashoffset: 22; }
+  from { stroke-dashoffset: 24; }
   to   { stroke-dashoffset: 0; }
 }
 .gr-seal path {
-  stroke-dasharray: 22;
+  stroke-dasharray: 24;
   animation: gr-seal var(--gr-dur-state) var(--gr-ease-out) both;
 }
 

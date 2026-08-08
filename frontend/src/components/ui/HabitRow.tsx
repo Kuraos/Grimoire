@@ -1,4 +1,4 @@
-import { IconCheck, IconFlame } from "@tabler/icons-react";
+import { IconFlame } from "@tabler/icons-react";
 import type { Habit } from "../../types";
 import { CATEGORY_COLORS } from "../../utils";
 
@@ -20,8 +20,15 @@ export function HabitRow({ habit, onComplete, onUndo, onClick }: {
             : "border-[var(--border-accent)] hover:border-[var(--border-glow)]"
         }`}
       >
-        {/* El sello de completado es oro: es lo que el día se ha ganado. */}
-        {habit.done_today && <IconCheck size={10} className="text-[var(--gr-gilded-bright)]" />}
+        {/* El sello de completado es oro —es lo que el día se ha ganado— y el
+            trazo se dibuja en vez de aparecer de golpe. */}
+        {habit.done_today && (
+          <svg className="gr-seal" width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke="var(--gr-gilded-bright)" strokeWidth="4"
+               strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 12.5l5.5 5.5L20 6.5" />
+          </svg>
+        )}
       </button>
       <span
         className="h-2.5 w-1 shrink-0 rounded"

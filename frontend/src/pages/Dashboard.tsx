@@ -121,7 +121,18 @@ export default function Dashboard() {
         <XPBar xpToday={summary?.xp_earned} streakBonus={bonus} />
       </div>
 
-      <Card title="Hábitos de hoy" icon={<IconRepeat size={14} />} right={<span className="font-label text-xs text-[var(--text-muted)]">{doneCount}/{habits.length}</span>}>
+      {/* Rúbrica: el bucle diario es lo que la vista existe para servir. */}
+      <Card
+        rank="rubric"
+        title="Hábitos de hoy"
+        icon={<IconRepeat size={14} />}
+        right={
+          <span className="tabular text-xl leading-none">
+            <span className="text-[var(--gr-gilded)]">{doneCount}</span>
+            <span className="text-[var(--text-faint)]">/{habits.length}</span>
+          </span>
+        }
+      >
         {habits.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin hábitos. Créalos en la sección Hábitos.</p>}
         {habits.map((h) => (
           <HabitRow key={h.id} habit={h} onComplete={completeHabit} onUndo={undoHabit} onClick={() => nav("/habitos")} />
@@ -162,8 +173,15 @@ export default function Dashboard() {
         <MiniCalendar month={now.getMonth()} year={now.getFullYear()} marks={marks} onSelect={() => nav("/calendario")} />
       </Card>
 
-      <Card title="Resumen del día" icon={<IconChartBar size={14} />}>
-        <div className="grid grid-cols-3 gap-2 text-center">
+      {/* Marginalia: contar tres cifras no necesita un marco. Pierde la caja y
+          se convierte en el pie de la vista. */}
+      <Card
+        rank="marginalia"
+        title="Resumen del día"
+        icon={<IconChartBar size={14} />}
+        className="md:col-span-2 lg:col-span-3"
+      >
+        <div className="flex flex-wrap gap-x-10 gap-y-3">
           <Stat value={`${summary?.xp_earned ?? 0}`} label="XP hoy" gold />
           <Stat value={`${doneCount}/${habits.length}`} label="Hábitos" />
           <Stat value={`${summary?.pomodoro_minutes ?? 0}m`} label="Foco" />
@@ -173,16 +191,17 @@ export default function Dashboard() {
   );
 }
 
+/* Sin caja: en marginalia la cifra y su rótulo se sostienen solos. */
 function Stat({ value, label, gold }: { value: string; label: string; gold?: boolean }) {
   return (
-    <div className="rounded-md bg-[var(--bg-elevated)] py-2">
+    <div>
       <div
-        className="text-lg tabular"
+        className="text-xl tabular leading-none"
         style={{ color: gold ? "var(--gr-gilded)" : "var(--text-primary)" }}
       >
         {value}
       </div>
-      <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
+      <div className="mt-1.5 text-2xs font-label text-[var(--text-muted)]">{label}</div>
     </div>
   );
 }

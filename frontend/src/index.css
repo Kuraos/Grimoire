@@ -168,6 +168,55 @@ body {
   background: var(--gr-surface-raised);
 }
 
+/* ---------------- Rangos de superficie ----------------
+   Una card no puede significar tres cosas distintas. El Dashboard tenía ocho
+   con idéntico fondo, borde, radio y padding —seis de ellas de 444px exactos—
+   así que ningún elemento pesaba más que otro y el ojo no tenía por dónde
+   entrar.
+
+     rúbrica     lo que el día exige. Una por vista.
+     hoja        la card estándar. `.card` a secas.
+     marginalia  cifras de contexto: pierde la caja entera.
+
+   Los modificadores van aquí y no en theme.css porque `.card` vive aquí: a
+   igual especificidad gana el que se declara después, y `.card:hover` tiene
+   que quedar por encima de ellos para poder sobrescribirlo. */
+
+.card-rubric {
+  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 66%);
+  border-color: var(--gr-edge-strong);
+  padding: 18px 20px;
+  box-shadow: inset 0 1px 0 0 rgba(201, 180, 255, 0.13);
+}
+
+.card-rubric:hover {
+  border-color: var(--gr-edge-strong);
+  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 66%);
+}
+
+/* El título de la rúbrica sí es ceremonial: recupera Cinzel. En el resto de
+   las cards el rótulo se encoge para que pese el contenido. */
+.card-rubric > .section-title {
+  font-family: var(--gr-font-display);
+  font-size: 15px;
+  letter-spacing: 0.13em;
+  color: var(--text-primary);
+}
+
+.card-marginalia {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--gr-edge);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 14px 2px 2px;
+}
+
+.card-marginalia:hover {
+  background: transparent;
+  border-color: var(--gr-edge);
+}
+
 .input,
 textarea.input,
 select.input {
