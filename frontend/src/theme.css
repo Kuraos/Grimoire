@@ -205,23 +205,11 @@
   font-feature-settings: "tnum";
 }
 
-/* ---------------- Superficie base ---------------- */
-.gr-card {
-  position: relative;
-  background: var(--gr-surface);
-  border: 1px solid var(--gr-edge);
-  border-radius: var(--gr-radius-lg);
-  /* filo interior: hace que la card lea como objeto, no como rectángulo */
-  box-shadow: inset 0 1px 0 0 var(--gr-edge-inner);
-  transition: border-color var(--gr-dur-state) var(--gr-ease-out),
-              background-color var(--gr-dur-state) var(--gr-ease-out),
-              transform var(--gr-dur-state) var(--gr-ease-out);
-}
-
-.gr-card:hover {
-  border-color: var(--gr-edge-strong);
-  background: var(--gr-surface-raised);
-}
+/* La superficie base vive en index.css como `.card`, con sus tres rangos.
+   `.gr-card` era una segunda definición idéntica salvo por el padding —que no
+   fijaba— y por un `transform` en la transición que nada llegaba a animar: el
+   único movimiento de esa card es `gr-reward`, y las animaciones no necesitan
+   transición. Dos definiciones de lo mismo es la deriva que esta hoja evita. */
 
 /* ---------------- Movimiento ---------------- */
 
@@ -257,7 +245,7 @@
 }
 
 /* Respeta la preferencia del sistema: sin movimiento si así se pidió */
+/* Cada hoja apaga su propio movimiento; index.css hace lo mismo con el suyo. */
 @media (prefers-reduced-motion: reduce) {
   .gr-enter, .gr-reward, .gr-seal path { animation: none; }
-  .gr-card { transition: none; }
 }

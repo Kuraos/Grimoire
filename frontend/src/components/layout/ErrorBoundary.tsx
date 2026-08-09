@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="gr-enter mx-auto mt-8 max-w-lg">
-        <div className="gr-card p-5">
+        <div className="card">
           <div className="flex items-center gap-2">
             <IconAlertTriangle size={18} style={{ color: "var(--gr-amber)" }} />
             <h2 className="gr-emphasis" style={{ color: "var(--gr-ink-bright)" }}>

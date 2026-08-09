@@ -37,7 +37,7 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
   };
 
   return (
-    <article className={`gr-card gr-enter p-4 ${rewarding ? "gr-reward" : ""}`}
+    <article className={`card gr-enter ${rewarding ? "gr-reward" : ""}`}
              style={archived ? { opacity: 0.62, borderStyle: "dashed" } : undefined}>
       <div className="flex items-start gap-3">
         {/* Archivado: en vez de completar, se ofrece recuperar */}

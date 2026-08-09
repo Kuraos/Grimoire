@@ -366,3 +366,42 @@ input[type="range"]::-moz-range-thumb {
 .toast-enter {
   animation: toast-in var(--gr-dur-enter) var(--gr-ease-out);
 }
+
+/* ---------------- Movimiento reducido ----------------
+   theme.css apagaba el suyo (`gr-enter`, `gr-reward`, `gr-seal`) pero esta hoja
+   no tenía bloque ninguno, así que su movimiento ignoraba la preferencia del
+   sistema — incluidos un giro y un pulso INFINITOS en el overlay de subida de
+   nivel, que ocupa la pantalla entera. Es justo lo que esta media query existe
+   para detener.
+
+   El esqueleto conserva su degradado: sin el pulso sigue leyéndose como hueco
+   a la espera, que es su trabajo.
+
+   Quedan fuera a propósito las utilidades `transition-colors` y
+   `transition-opacity` de los componentes: sólo cambian color y opacidad, que
+   no son movimiento. La preferencia pide retirar desplazamiento, giro y
+   escalado —lo que dispara respuestas vestibulares—, no los fundidos que
+   ayudan a seguir un cambio de estado. Medido: 0 elementos transicionan
+   `transform` en toda la app. */
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .card-rubric,
+  .card-marginalia {
+    transition: none;
+  }
+
+  .skeleton,
+  .levelup-fade,
+  .levelup-pop,
+  .levelup-star,
+  .levelup-glow,
+  .toast-enter {
+    animation: none;
+  }
+
+  .btn,
+  .input,
+  input[type="range"]::-webkit-slider-thumb {
+    transition: none;
+  }
+}
