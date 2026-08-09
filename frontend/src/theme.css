@@ -175,6 +175,9 @@
   font-family: var(--gr-font-ui);
   font-size: 34px;
   line-height: 1.05;
+  /* Las cifras no heredan tracking: el de las versalitas separa los dígitos.
+     Importa porque este rol se usa dentro de rótulos, que sí lo llevan. */
+  letter-spacing: normal;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
   color: var(--gr-ink-bright);

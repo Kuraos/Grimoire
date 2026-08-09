@@ -25,10 +25,15 @@ export function PomodoroTimer({
     <div className="text-center">
       {/* 56px es el único tamaño por encima de la escala, y es deliberado: la
           cuenta atrás a pantalla completa es la cifra héroe de la app. En card
-          usa el peldaño de cifra (34), no un valor suelto. */}
+          usa el peldaño de cifra (34), no un valor suelto.
+
+          Va en el rol de cifra y no en Cinzel: Cinzel no tiene versión tabular
+          de los dígitos —`tabular-nums` no le hace nada— y "11:11" mide 6,2px
+          menos que "25:00" a 56px, así que la cuenta atrás saltaba de lado cada
+          vez que entraba o salía un 1. Con Inter tabular la oscilación es 0. */}
       <div
-        className="font-display font-bold leading-none text-[var(--gr-arcane-bright)]"
-        style={{ fontSize: big ? 56 : 34, letterSpacing: "0.05em" }}
+        className="gr-figure font-bold text-[var(--gr-arcane-bright)]"
+        style={{ fontSize: big ? 56 : 34 }}
       >
         {formatTime(secondsLeft)}
       </div>

@@ -195,8 +195,14 @@ body {
 }
 
 /* El título de la rúbrica sí es ceremonial: recupera Cinzel. En el resto de
-   las cards el rótulo se encoge para que pese el contenido. */
-.card-rubric > .section-title {
+   las cards el rótulo se encoge para que pese el contenido.
+
+   Va sobre `.section-title-text` y no sobre la fila entera: la fila también
+   contiene el slot `right`, y ahí viven las cifras. Con la regla en el
+   contenedor, `0/1` salía en Cinzel con tracking de versalita en la rúbrica y
+   en Inter tabular en el pie — el mismo dato en dos caras distintas dentro de
+   la misma pantalla. */
+.card-rubric > .section-title > .section-title-text {
   font-family: var(--gr-font-display);
   font-size: 15px;
   letter-spacing: 0.13em;

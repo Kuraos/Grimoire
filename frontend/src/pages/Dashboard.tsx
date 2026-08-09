@@ -127,7 +127,9 @@ export default function Dashboard() {
         title="Hábitos de hoy"
         icon={<IconRepeat size={14} />}
         right={
-          <span className="tabular text-xl leading-none">
+          /* Peldaño de cifra (34px). A 24px la rúbrica pesaba menos que el
+             temporizador del Pomodoro, que es una hoja: el rango no mandaba. */
+          <span className="gr-figure">
             <span className="text-[var(--gr-gilded)]">{doneCount}</span>
             <span className="text-[var(--text-faint)]">/{habits.length}</span>
           </span>

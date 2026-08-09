@@ -33,7 +33,10 @@ export function Card({ title, icon, children, className = "", right, rank = "lea
           {/* Icono de rótulo, no de estado: en tinta. Era la mayor fuente de
               morado ambiental de la app, y con él encendido el oro no se lee. */}
           {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
-          <span>{title}</span>
+          {/* El texto del título lleva clase propia: la rúbrica le pone Cinzel,
+              y sin este gancho la regla alcanzaba a toda la fila —incluido
+              `right`— y las cifras salían en display con tracking de versalita. */}
+          <span className="section-title-text">{title}</span>
           {right && <span className="ml-auto normal-case">{right}</span>}
         </div>
       )}

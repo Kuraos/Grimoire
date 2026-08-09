@@ -193,7 +193,9 @@ function MonthGrid({ cursor, dots, selected, onSelect }: {
                 iso === selected ? "border border-[var(--border-accent)] bg-[var(--bg-elevated)]" : "hover:bg-[var(--bg-elevated)]"
               } ${iso === todayIso ? "text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`}
             >
-              <span className={iso === todayIso ? "font-display" : ""}>{d}</span>
+              {/* Hoy se marca con color, no cambiando de tipografía: un dígito
+                  en Cinzel entre treinta en Inter rompe la rejilla tabular. */}
+              <span className={iso === todayIso ? "font-semibold" : ""}>{d}</span>
               <span className="mt-auto flex flex-wrap gap-[2px]">
                 {ds.slice(0, 6).map((c, j) => <span key={j} className="h-[4px] w-[4px] rounded-full" style={{ background: c }} />)}
               </span>
