@@ -151,6 +151,24 @@ body {
   gap: 6px;
 }
 
+/* ============================================================================
+   CAPA DE COMPONENTES
+   ----------------------------------------------------------------------------
+   `.card`, sus rangos, `.input` y `.btn` van dentro de `@layer components` para
+   que las utilidades de Tailwind puedan sobrescribirlas. Declaradas sueltas
+   —después de `@tailwind utilities`— ganaban por orden de cascada, y eso ya
+   habia mordido dos veces:
+
+     · los cuatro filtros de Tareas pedian `w-auto` y salian a 1162px cada uno,
+       porque `.input` fija `width: 100%`. El marcado siempre fue correcto.
+     · `.gr-card` existia como copia sin padding de `.card`, solo para que sus
+       dos consumidores pudieran poner el suyo con `p-4` y `p-5`.
+
+   Dentro de la capa, `w-auto` y `p-4` hacen lo que dicen. Es como Tailwind
+   espera que convivan componente y utilidad.
+   ============================================================================ */
+@layer components {
+
 .card {
   position: relative;
   background: var(--gr-surface);
@@ -182,16 +200,21 @@ body {
    igual especificidad gana el que se declara después, y `.card:hover` tiene
    que quedar por encima de ellos para poder sobrescribirlo. */
 
+/* El degradado solo no bastaba: al lado del Pomodoro, con su cifra en arcano,
+   la rúbrica no se imponía. Se le alarga la zona elevada y se le pone un filo
+   de oro en el canto superior — pan de oro en el borde de ataque, que es lo que
+   distingue una página iluminada de una corriente. Es el único sitio donde el
+   oro toca una superficie en vez de un dato. */
 .card-rubric {
-  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 66%);
+  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 78%);
   border-color: var(--gr-edge-strong);
   padding: 18px 20px;
-  box-shadow: inset 0 1px 0 0 rgba(201, 180, 255, 0.13);
+  box-shadow: inset 0 1px 0 0 rgba(220, 174, 92, 0.30);
 }
 
 .card-rubric:hover {
-  border-color: var(--gr-edge-strong);
-  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 66%);
+  border-color: var(--gr-gilded-deep);
+  background: linear-gradient(152deg, var(--gr-surface-raised) 0%, var(--gr-surface) 78%);
 }
 
 /* El título de la rúbrica sí es ceremonial: recupera Cinzel. En el resto de
@@ -223,9 +246,12 @@ body {
   border-color: var(--gr-edge);
 }
 
-.input,
-textarea.input,
-select.input {
+/* Sólo `.input`: las variantes `textarea.input` y `select.input` no añadían
+   nada —una clase de autor ya gana a los estilos de usuario-agente— y en cambio
+   subían la especificidad a 0-1-1, por encima de cualquier utilidad. Por eso los
+   cuatro filtros de Tareas pedían `w-auto` y seguían saliendo a ancho completo
+   incluso dentro de la capa de componentes. */
+.input {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--gr-radius-md);
@@ -343,6 +369,8 @@ input[type="range"]::-moz-range-thumb {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+} /* fin de @layer components */
 
 ::-webkit-scrollbar {
   width: 8px;

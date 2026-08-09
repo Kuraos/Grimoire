@@ -14,7 +14,10 @@ export function MiniCalendar({
 }) {
   const first = new Date(year, month, 1);
   const startOffset = (first.getDay() + 6) % 7; // Monday-first
-  const daysInMonth = new Date(year, month + 1, 1).getDate();
+  // Día 0 del mes siguiente = último del actual. Con `1` en vez de `0` esto
+  // devolvía el día 1 de septiembre, o sea 1, para cualquier mes: el
+  // minicalendario llevaba desde el commit inicial pintando un solo día.
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayIso = isoDate(new Date());
 
   const cells: (number | null)[] = [];

@@ -37,7 +37,11 @@ export function Card({ title, icon, children, className = "", right, rank = "lea
               y sin este gancho la regla alcanzaba a toda la fila —incluido
               `right`— y las cifras salían en display con tracking de versalita. */}
           <span className="section-title-text">{title}</span>
-          {right && <span className="ml-auto normal-case">{right}</span>}
+          {/* En la rúbrica la cifra acompaña al título en vez de irse al borde:
+              a 250px de distancia leían como dos cosas, no como una. */}
+          {right && (
+            <span className={`normal-case ${rank === "rubric" ? "ml-3" : "ml-auto"}`}>{right}</span>
+          )}
         </div>
       )}
       {children}
