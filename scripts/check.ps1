@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 #  Verificación completa antes de publicar: tipos, tests y build.
 #  Hace de "CI local" mientras el proyecto no esté en un repositorio
 #  con GitHub Actions. Devuelve código != 0 si algo falla.
