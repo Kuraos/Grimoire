@@ -14,8 +14,18 @@ Get-Process | Where-Object { $_.Name -match 'grimoire' } |
     ForEach-Object { try { Stop-Process -Id $_.Id -Force } catch {} }
 Start-Sleep -Seconds 2
 
+# Este script es para probar en la propia máquina, así que no genera artefactos
+# de updater: firmar es cosa de CI, que publica el release con la clave como
+# secreto (ver DESKTOP.md). Sin este override, `tauri build` compila los varios
+# minutos completos y sólo entonces pide la clave; y si la encuentra, pide la
+# contraseña por consola y se queda colgado para siempre, porque la clave se
+# generó sin contraseña y Windows no permite variables de entorno vacías:
+# tanto `$env:X = ""` como .NET las borran en vez de dejarlas vacías.
+$sinUpdater = Join-Path $env:TEMP "grimoire-build-local.json"
+'{"bundle":{"createUpdaterArtifacts":false}}' | Set-Content $sinUpdater -Encoding ascii
+
 Write-Host "Compilando (el sidecar se omite si el backend no cambió)..." -ForegroundColor Cyan
-npm run desktop:build
+npm run desktop:build -- --config $sinUpdater
 if ($LASTEXITCODE -ne 0) { Write-Host "La compilación falló." -ForegroundColor Red; exit 1 }
 
 $setup = Get-ChildItem "$root\src-tauri\target\release\bundle\nsis\*-setup.exe" |
