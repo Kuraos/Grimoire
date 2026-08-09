@@ -1,6 +1,20 @@
 # Verificación automática en cada push y pull request.
 # No compila el instalador (eso tarda ~6 min y sólo hace falta al publicar):
 # aquí se valida lo que se rompe a diario — tipos, tests y build del frontend.
+#
+# Ojo con los dos "Node" que aparecen aquí, que no son el mismo:
+#
+#   el major de la acción  ->  el Node en el que corre la propia acción.
+#                              GitHub retira Node 20; checkout y setup-node
+#                              pasan a node24 en v5, setup-python en v6.
+#   `node-version`         ->  el Node con el que se compila el proyecto.
+#
+# Se usan los majors más recientes, no los primeros con node24, porque ninguno
+# de sus cambios de ruptura aplica aquí: checkout v7 bloquea el checkout de
+# forks en `pull_request_target`/`workflow_run` —este repo no usa ninguno de
+# los dos disparadores—, setup-node v6 limita el cacheo automático a npm —que
+# es justo lo que se pide más abajo— y setup-python v7 retira la entrada
+# `pip-install`, que aquí no se usa.
 name: CI
 
 on:
@@ -12,11 +26,11 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Node 24 = npm 11, el mismo que genera el lockfile en desarrollo. Con
       # Node 20 (npm 10) `npm ci` aborta con "Missing: @esbuild/... from lock
       # file": npm 10 y 11 no anotan igual las dependencias opcionales anidadas.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: npm
@@ -41,8 +55,8 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
