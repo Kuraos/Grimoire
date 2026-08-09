@@ -13,6 +13,32 @@
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
+    // `fontSize` y `borderRadius` REEMPLAZAN la escala de Tailwind en vez de
+    // extenderla: si se quedan en `extend`, los peldaños que no defino siguen
+    // existiendo con los valores por defecto y se pueden usar sin querer. Fuera
+    // de `extend`, `text-lg` o `rounded-xl` simplemente no existen y la clase se
+    // queda muda — visible en revisión, en vez de un tamaño fuera de sistema.
+    fontSize: {
+      "2xs": ["11px", { lineHeight: "1.45", letterSpacing: "0.02em" }], // rótulo
+      xs: ["13px", { lineHeight: "1.5" }], // suelo de interfaz
+      sm: ["15px", { lineHeight: "1.55" }],
+      base: ["16px", { lineHeight: "1.6" }], // prosa
+      xl: ["24px", { lineHeight: "1.2" }], // iluminación — Cinzel
+      "3xl": ["44px", { lineHeight: "1.02" }], // rúbrica — título de vista
+      // La cifra (34px) no es un peldaño suelto: es el rol `.gr-figure`, que
+      // además fija tabular-nums. Tenerlo también aquí eran dos formas de
+      // decir lo mismo.
+    },
+    borderRadius: {
+      none: "0",
+      xs: "var(--gr-radius-xs)",
+      DEFAULT: "var(--gr-radius-sm)",
+      sm: "var(--gr-radius-sm)",
+      md: "var(--gr-radius-md)",
+      lg: "var(--gr-radius-lg)",
+      card: "var(--gr-radius-lg)",
+      full: "var(--gr-radius-pill)",
+    },
     extend: {
       colors: {
         bg: {
@@ -67,30 +93,12 @@ export default {
           "danger-bg": "var(--gr-oxblood-deep)",
         },
       },
-      // Escala única con techo y con función asignada a cada peldaño.
-      // Antes eran 5 pasos con el 94% del uso en los dos de abajo: la escala
-      // existía en la config y la app usaba dos. El suelo sube de 12 a 13 —los
-      // rótulos en versalitas bajan a 11, que leen mayores de lo que miden— y
-      // los tres peldaños de arriba le devuelven un techo.
-      fontSize: {
-        "2xs": ["11px", { lineHeight: "1.45", letterSpacing: "0.02em" }], // rótulo
-        xs: ["13px", { lineHeight: "1.5" }], // suelo de interfaz
-        sm: ["15px", { lineHeight: "1.55" }],
-        base: ["16px", { lineHeight: "1.6" }], // prosa
-        lg: ["19px", { lineHeight: "1.35" }],
-        xl: ["24px", { lineHeight: "1.2" }], // iluminación — Cinzel
-        "2xl": ["34px", { lineHeight: "1.05" }], // cifra
-        "3xl": ["44px", { lineHeight: "1.02" }], // rúbrica — título de vista
-      },
       fontFamily: {
         display: "var(--gr-font-display)",
         ui: "var(--gr-font-ui)",
         prose: "var(--gr-font-prose)",
         body: "var(--gr-font-ui)",
         mono: ["ui-monospace", "SFMono-Regular", "monospace"],
-      },
-      borderRadius: {
-        card: "10px",
       },
     },
   },

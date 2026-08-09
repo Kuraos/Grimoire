@@ -1,5 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { chartPalette, TOOLTIP_STYLE } from "../../theme-tokens";
+import { chartPalette, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
 
 /**
  * Cumulative XP over time for a single habit. `series` comes from the backend's
@@ -19,8 +19,8 @@ export function HabitXPChart({ series }: { series: { date: string; xp: number }[
             <stop offset="100%" stopColor={c.xpFrom} stopOpacity={0.05} />
           </linearGradient>
         </defs>
-        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: c.tick, fontSize: 12 }} stroke={c.axis} />
-        <YAxis tick={{ fill: c.tick, fontSize: 12 }} stroke={c.axis} />
+        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
+        <YAxis tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
         <Tooltip contentStyle={TOOLTIP_STYLE} />
         <Area dataKey="xp" stroke={c.arcane} strokeWidth={2} fill="url(#habitxp)" />
       </AreaChart>

@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { chartPalette, TOOLTIP_STYLE } from "../../theme-tokens";
+import { chartPalette, CHART_BAR_RADIUS, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
 
 export function ProjectHoursBar({ data }: { data: { project: string; color: string; hours: number }[] }) {
   const c = chartPalette();
@@ -9,14 +9,14 @@ export function ProjectHoursBar({ data }: { data: { project: string; color: stri
   return (
     <ResponsiveContainer width="100%" height={Math.max(120, data.length * 38)}>
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
-        <XAxis type="number" tick={{ fill: c.tick, fontSize: 12 }} stroke={c.axis} />
-        <YAxis type="category" dataKey="project" width={110} tick={{ fill: c.body, fontSize: 12 }} stroke={c.axis} />
+        <XAxis type="number" tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
+        <YAxis type="category" dataKey="project" width={110} tick={{ fill: c.body, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
         <Tooltip
           cursor={{ fill: c.arcaneDeep, fillOpacity: 0.55 }}
           contentStyle={TOOLTIP_STYLE}
           formatter={(v: number) => [`${v} h`, "Foco"]}
         />
-        <Bar dataKey="hours" radius={[0, 3, 3, 0]}>
+        <Bar dataKey="hours" radius={[0, CHART_BAR_RADIUS, CHART_BAR_RADIUS, 0]}>
           {data.map((d, i) => (
             <Cell key={i} fill={d.color || c.arcane} />
           ))}

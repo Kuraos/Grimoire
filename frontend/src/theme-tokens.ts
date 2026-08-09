@@ -53,12 +53,25 @@ export function chartPalette(): ChartPalette {
   return cache;
 }
 
+/**
+ * Rótulo (11px): el peldaño de etiqueta de la escala. Los ejes de recharts
+ * reciben un número, no una clase, así que el valor se declara aquí una vez
+ * en lugar de repetirse en los cinco gráficos.
+ */
+export const CHART_LABEL_SIZE = 11;
+
+/**
+ * Radio de marca de datos (2px, el peldaño `xs`). Recharts lo quiere en número
+ * por esquina, así que tampoco puede leer la variable CSS.
+ */
+export const CHART_BAR_RADIUS = 2;
+
 /** Estilo del tooltip de recharts. Es un div, así que admite `var()`. */
 export const TOOLTIP_STYLE = {
   background: "var(--gr-surface-sunken)",
   border: "1px solid var(--gr-edge-strong)",
-  borderRadius: 8,
-  fontSize: 12,
+  borderRadius: "var(--gr-radius-md)",
+  fontSize: 13,
   color: "var(--gr-ink-bright)",
 } as const;
 

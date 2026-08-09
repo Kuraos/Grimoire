@@ -104,7 +104,7 @@ body {
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--gr-radius-sm);
 }
 
 @keyframes skeletonPulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 0.85; } }
@@ -155,7 +155,7 @@ body {
   position: relative;
   background: var(--gr-surface);
   border: 1px solid var(--gr-edge);
-  border-radius: 10px;
+  border-radius: var(--gr-radius-lg);
   padding: 14px 16px;
   /* filo interior: la card lee como objeto, no como rectángulo plano */
   box-shadow: inset 0 1px 0 0 var(--gr-edge-inner);
@@ -222,7 +222,7 @@ textarea.input,
 select.input {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--gr-radius-md);
   color: var(--text-primary);
   padding: 8px 11px;
   font-family: inherit;
@@ -256,7 +256,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--gr-radius-xs);
   background: var(--gr-surface-raised);
   border: 1px solid var(--gr-edge);
 }
@@ -280,7 +280,7 @@ input[type="range"]:hover::-webkit-slider-thumb {
 
 input[type="range"]::-moz-range-track {
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--gr-radius-xs);
   background: var(--gr-surface-raised);
   border: 1px solid var(--gr-edge);
 }
@@ -296,10 +296,12 @@ input[type="range"]::-moz-range-thumb {
 .btn {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);
-  border-radius: 6px;
+  border-radius: var(--gr-radius-md);
   color: var(--text-body);
   font-family: var(--gr-font-ui);
-  font-size: 12px;
+  /* Suelo de interfaz: un botón es un control que se lee y se pulsa, no un
+     rótulo. Era el último tamaño de la app fuera de la escala. */
+  font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -345,7 +347,7 @@ input[type="range"]::-moz-range-thumb {
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 4px;
+  border-radius: var(--gr-radius-sm);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--border-accent);

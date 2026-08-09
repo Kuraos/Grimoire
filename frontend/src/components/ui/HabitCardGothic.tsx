@@ -46,7 +46,7 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
             onClick={() => onRestore?.(habit)}
             title="Restaurar este hábito"
             aria-label={`Restaurar ${habit.name}`}
-            className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px] border"
+            className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border"
             style={{ borderColor: "var(--gr-edge-strong)", color: "var(--gr-ink-dim)" }}
           >
             <IconArchiveOff size={13} />
@@ -57,7 +57,7 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
           onClick={toggle}
           aria-pressed={done}
           aria-label={done ? `Deshacer ${habit.name}` : `Completar ${habit.name}`}
-          className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-[6px] border transition-colors"
+          className="mt-[2px] grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border transition-colors"
           style={{
             borderColor: done ? "var(--gr-gilded)" : "var(--gr-edge-strong)",
             background: done ? "var(--gr-gilded-deep)" : "transparent",

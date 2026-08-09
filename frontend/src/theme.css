@@ -73,6 +73,20 @@
   /* --- Cromo de la app: sidebar y topbar, apenas elevados del abismo --- */
   --gr-chrome: #100c1c;
 
+  /* ==========================================================
+     RADIOS — cuatro pasos, cada uno con un trabajo asignado.
+     Convivían seis valores (2, 3, 4, 6, 8, 10 y 12 vía Tailwind)
+     sin criterio: ninguno se notaba como error, pero juntos hacen
+     que la interfaz se sienta ensamblada en vez de diseñada.
+     `0` y `50%` no son peldaños: son formas (la marginalia sin
+     caja, el pulgar del deslizador).
+     ========================================================== */
+  --gr-radius-xs: 2px;    /* marcas de datos: celdas de heatmap, carriles */
+  --gr-radius-sm: 4px;    /* piezas pequeñas: casillas, días, foco */
+  --gr-radius-md: 6px;    /* controles: botón, input, select */
+  --gr-radius-lg: 10px;   /* superficies: card, modal, popover */
+  --gr-radius-pill: 9999px;
+
   /* --- Barra de XP: del arcano al dorado = progreso hacia la recompensa --- */
   --gr-xp-from: #3b2a6e;
   --gr-xp-to: #dcae5c;
@@ -173,12 +187,9 @@
   color: var(--gr-ink);
 }
 
-.gr-prose {
-  font-family: var(--gr-font-prose);
-  font-size: 16px;
-  line-height: 1.7;
-  color: var(--gr-ink);
-}
+/* `.gr-prose` vivía aquí sin un solo uso, duplicando lo que ya hace
+   `.font-prose` en index.css. Dos formas de decir lo mismo es justo la deriva
+   que esta hoja existe para evitar. */
 
 .gr-meta {
   font-family: var(--gr-font-ui);
@@ -199,7 +210,7 @@
   position: relative;
   background: var(--gr-surface);
   border: 1px solid var(--gr-edge);
-  border-radius: 10px;
+  border-radius: var(--gr-radius-lg);
   /* filo interior: hace que la card lea como objeto, no como rectángulo */
   box-shadow: inset 0 1px 0 0 var(--gr-edge-inner);
   transition: border-color var(--gr-dur-state) var(--gr-ease-out),

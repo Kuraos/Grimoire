@@ -37,7 +37,7 @@ export function MiniCalendar({
             <button
               key={i}
               onClick={() => onSelect?.(iso)}
-              className={`relative rounded-[3px] py-[3px] text-xs tabular transition-colors ${
+              className={`relative rounded-sm py-[3px] text-xs tabular transition-colors ${
                 isSel
                   ? "bg-[var(--border-accent)] text-[var(--gr-arcane-bright)]"
                   : isToday

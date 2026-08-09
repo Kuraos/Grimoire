@@ -45,7 +45,7 @@ export function ConfirmHost() {
   return (
     <div className="fixed inset-0 z-[115] flex items-center justify-center bg-[rgba(5,3,8,0.6)]" onClick={() => close(false)}>
       <div
-        className="w-[360px] max-w-[90vw] rounded-xl border border-[var(--border-accent)] bg-[var(--bg-deep)] p-4"
+        className="w-[360px] max-w-[90vw] rounded-lg border border-[var(--border-accent)] bg-[var(--bg-deep)] p-4"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="font-label text-xs uppercase tracking-[0.12em] text-[var(--purple-main)]">

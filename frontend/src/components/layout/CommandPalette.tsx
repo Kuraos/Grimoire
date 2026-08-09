@@ -81,7 +81,7 @@ export function CommandPalette() {
   return (
     <div className="fixed inset-0 z-[110] flex items-start justify-center bg-[rgba(5,3,8,0.6)] pt-[12vh]" onClick={() => setOpen(false)}>
       <div
-        className="w-[520px] max-w-[92vw] overflow-hidden rounded-xl border border-[var(--border-accent)] bg-[var(--bg-deep)]"
+        className="w-[520px] max-w-[92vw] overflow-hidden rounded-lg border border-[var(--border-accent)] bg-[var(--bg-deep)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2.5">

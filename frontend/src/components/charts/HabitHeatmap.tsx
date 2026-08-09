@@ -60,7 +60,7 @@ export function HabitHeatmap({ data, weeks = 53 }: {
               <div
                 key={cell.date}
                 title={`${cell.date}: ${cell.count} completado(s)`}
-                className="h-[11px] w-[11px] rounded-[2px]"
+                className="h-[11px] w-[11px] rounded-xs"
                 style={{
                   background: cell.date > todayIso ? "transparent" : color(cell.count),
                   outline: cell.date === todayIso ? "1px solid var(--purple-main)" : "none",
