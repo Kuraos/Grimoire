@@ -366,3 +366,129 @@ def test_diary_export_requires_vault_path(tmp_path):
         r = c.post("/diary/2026-03-16/export-obsidian")
         assert r.status_code == 400
         assert "vault" in r.json()["detail"].lower()
+
+
+# ---------------- cadencia: días programados y metas semanales ----------------
+
+import sqlite3  # noqa: E402
+from datetime import date, timedelta  # noqa: E402
+from tz import today as _today  # noqa: E402
+
+
+def _exec(query: str, *params):
+    """Escribir historial directamente: la API sólo sabe marcar «hoy»."""
+    con = sqlite3.connect(_TMP)
+    try:
+        con.execute(query, params)
+        con.commit()
+    finally:
+        con.close()
+
+
+def _log_on(habit_id: int, day: date):
+    _exec("INSERT INTO habit_logs (habit_id, completed_at) VALUES (?, ?)",
+          habit_id, f"{day.isoformat()} 12:00:00.000000")
+
+
+def test_streak_counts_scheduled_days_only():
+    """Un hábito que sólo toca un día de la semana no pierde la racha los otros
+    seis: su ocasión anterior es hace 7 días, no ayer."""
+    today = _today()
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={
+            "name": "Un día fijo", "category": "Otro", "xp_reward": 20,
+            "days": str(today.weekday()),
+        }).json()
+        assert h["days"] == str(today.weekday())
+
+        _log_on(h["id"], today - timedelta(days=7))
+        assert c.get(f"/habits/{h['id']}").json()["streak"] == 1  # antes daba 0
+
+        c.post(f"/habits/{h['id']}/complete")
+        assert c.get(f"/habits/{h['id']}").json()["streak"] == 2
+
+
+def test_unscheduled_days_never_cost_a_life():
+    """El fallo que motivó `days`: un hábito L–V cargado como diario perdía una
+    vida cada sábado, y con 3 vidas eso son tres semanas hasta la penalización."""
+    today = _today()
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={
+            "name": "Lunes a viernes", "category": "Otro", "xp_reward": 20,
+            "days": "0,1,2,3,4",
+        }).json()
+        _exec("UPDATE habits SET created_at = ? WHERE id = ?",
+              f"{(today - timedelta(days=30)).isoformat()} 08:00:00.000000", h["id"])
+        # marcado todos los días hábiles de la ventana, ninguno del fin de semana
+        for i in range(1, 15):
+            day = today - timedelta(days=i)
+            if day.weekday() < 5:
+                _log_on(h["id"], day)
+
+        _exec("UPDATE users SET last_streak_eval = NULL, lives = 3")
+        res = c.post("/user/evaluate-streaks").json()
+        assert res["broken_habits"] == []
+        assert res["life_lost"] is False
+        assert res["xp_penalty"] == 0
+        assert res["lives"] == 3
+
+
+def test_weekly_target_needs_every_mark():
+    """«2×/semana» no se da por cumplido con una sola marca, ni se puede cumplir
+    dos veces el mismo día."""
+    today = _today()
+    prev_week = today - timedelta(days=today.weekday() + 7)
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={
+            "name": "Esgrima", "category": "Otro", "xp_reward": 20,
+            "frequency": "weekly", "target_per_week": 2,
+        }).json()
+        hid = h["id"]
+        assert h["target_per_week"] == 2
+
+        _log_on(hid, prev_week)
+        assert c.get(f"/habits/{hid}").json()["streak"] == 0  # 1 de 2 no cierra la semana
+
+        _log_on(hid, prev_week + timedelta(days=3))
+        assert c.get(f"/habits/{hid}").json()["streak"] == 1
+
+        assert c.post(f"/habits/{hid}/complete").status_code == 200
+        assert c.post(f"/habits/{hid}/complete").status_code == 400
+
+
+def test_undo_removes_only_the_latest_mark():
+    """Con varias marcas por semana, deshacer una no puede llevarse el XP de las otras."""
+    today = _today()
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={
+            "name": "Dos por semana", "category": "Otro", "xp_reward": 20,
+            "frequency": "weekly", "target_per_week": 2,
+        }).json()
+        hid = h["id"]
+        _log_on(hid, today - timedelta(days=1))  # marca previa, sin XP asociado
+
+        before = c.get("/user").json()["xp"]
+        c.post(f"/habits/{hid}/complete")
+        c.request("DELETE", f"/habits/{hid}/complete")
+
+        assert c.get("/user").json()["xp"] == before
+        logs = c.get(f"/habits/{hid}/logs").json()
+        assert len(logs) == 1
+        assert logs[0]["completed_at"].startswith((today - timedelta(days=1)).isoformat())
+
+
+def test_cadence_fields_are_validated_and_normalized():
+    with TestClient(main.app) as c:
+        for bad in ("9", "-1", "lunes"):
+            r = c.post("/habits", json={"name": "D", "category": "Otro", "days": bad})
+            assert r.status_code == 422, bad
+        assert c.post("/habits", json={"name": "D", "category": "Otro",
+                                       "target_per_week": 0}).status_code == 422
+        assert c.post("/habits", json={"name": "D", "category": "Otro",
+                                       "target_per_week": 8}).status_code == 422
+
+        h = c.post("/habits", json={"name": "Norm", "category": "Otro", "days": "3,0,0"}).json()
+        assert h["days"] == "0,3"
+        # vacío es «todos los días», no una lista vacía
+        h2 = c.post("/habits", json={"name": "Vacío", "category": "Otro", "days": ""}).json()
+        assert h2["days"] is None and h2["target_per_week"] == 1

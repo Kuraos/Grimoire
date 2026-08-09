@@ -9,7 +9,7 @@ import { HabitHeatmap } from "../components/charts/HabitHeatmap";
 import { HabitXPChart } from "../components/charts/HabitXPChart";
 import { TagInput } from "../components/ui/TagInput";
 import { confirm } from "../confirm";
-import { CATEGORY_COLORS } from "../utils";
+import { CATEGORY_COLORS, WEEKDAYS_ES, WEEKDAY_NAMES_ES, habitDays } from "../utils";
 import type { Habit, HabitCategory, HabitLog } from "../types";
 
 export default function Habits() {
@@ -315,6 +315,9 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
   const [name, setName] = useState(habit?.name ?? "");
   const [category, setCategory] = useState(habit?.category ?? categories[0]?.name ?? "Otro");
   const [frequency, setFrequency] = useState(habit?.frequency ?? "daily");
+  // vacío = todos los días, que es lo que guarda el backend como NULL
+  const [days, setDays] = useState<number[]>(habitDays(habit?.days ?? null) ?? []);
+  const [targetPerWeek, setTargetPerWeek] = useState(habit?.target_per_week ?? 1);
   const [xp, setXp] = useState(habit?.xp_reward ?? 20);
   const [color, setColor] = useState(
     habit?.color ?? catColor(habit?.category ?? categories[0]?.name ?? "Otro")
@@ -324,7 +327,12 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
 
   const save = async () => {
     if (!name.trim()) return;
-    const payload = { name, category, frequency, xp_reward: xp, color, notes, tags: tags || null };
+    const payload = {
+      name, category, frequency,
+      days: frequency === "daily" && days.length && days.length < 7 ? days.join(",") : null,
+      target_per_week: frequency === "weekly" ? targetPerWeek : 1,
+      xp_reward: xp, color, notes, tags: tags || null,
+    };
     if (habit) await Api.updateHabit(habit.id, payload);
     else await Api.createHabit(payload);
     onSaved();
@@ -348,6 +356,44 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
           </select>
         </Field>
       </div>
+      {frequency === "daily" ? (
+        <Field label="Días en que toca">
+          <div className="flex flex-wrap gap-1">
+            {WEEKDAYS_ES.map((label, i) => (
+              <button
+                key={i}
+                type="button"
+                aria-pressed={days.includes(i)}
+                aria-label={WEEKDAY_NAMES_ES[i]}
+                title={WEEKDAY_NAMES_ES[i]}
+                className={`btn w-9 justify-center px-0 ${days.includes(i) ? "btn-primary" : ""}`}
+                onClick={() => setDays((prev) =>
+                  prev.includes(i) ? prev.filter((d) => d !== i) : [...prev, i].sort((a, b) => a - b)
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="gr-meta mt-1.5" style={{ color: "var(--gr-ink-faint)" }}>
+            {days.length === 0 || days.length === 7
+              ? "Sin marcar: cuenta todos los días."
+              : "Los días sin marcar no suman racha ni la rompen."}
+          </p>
+        </Field>
+      ) : (
+        <Field label="Veces por semana">
+          <select className="input" value={targetPerWeek}
+                  onChange={(e) => setTargetPerWeek(Number(e.target.value))}>
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <option key={n} value={n}>{n}× por semana</option>
+            ))}
+          </select>
+          <p className="gr-meta mt-1.5" style={{ color: "var(--gr-ink-faint)" }}>
+            La semana cuenta como hecha al alcanzar la meta; máximo una marca por día.
+          </p>
+        </Field>
+      )}
       <div className="grid grid-cols-2 gap-3">
         <Field label={`XP por completar (${xp})`}>
           <input type="range" min={10} max={100} step={5} value={xp} onChange={(e) => setXp(Number(e.target.value))} className="w-full" />

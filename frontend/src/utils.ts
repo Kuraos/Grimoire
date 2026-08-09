@@ -34,6 +34,46 @@ export const MONTHS_ES = [
 
 export const WEEKDAYS_ES = ["L", "M", "X", "J", "V", "S", "D"];
 
+export const WEEKDAY_NAMES_ES = [
+  "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
+];
+
+/* ---- Cadencia de hábitos. Espejo de services.py: 0 = lunes, null = todos. ---- */
+
+type Cadence = { frequency: string; days: string | null; target_per_week: number };
+
+export function habitDays(days: string | null): number[] | null {
+  if (!days) return null;
+  const parsed = days.split(",").map(Number).filter((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+  return parsed.length ? parsed.sort((a, b) => a - b) : null;
+}
+
+/** ¿Toca hoy? Un hábito semanal toca cualquier día mientras le falten marcas. */
+export function scheduledToday(habit: Cadence): boolean {
+  if (habit.frequency === "weekly") return true;
+  const days = habitDays(habit.days);
+  if (!days) return true;
+  return days.includes((new Date().getDay() + 6) % 7); // getDay(): 0 = domingo
+}
+
+/** "diario" · "L–V" · "L·X·S" · "2×/semana" */
+export function cadenceLabel(habit: Cadence): string {
+  if (habit.frequency === "weekly") {
+    return habit.target_per_week > 1 ? `${habit.target_per_week}×/semana` : "semanal";
+  }
+  const days = habitDays(habit.days);
+  if (!days || days.length === 7) return "diario";
+  const contiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  if (contiguous && days.length > 2) return `${WEEKDAYS_ES[days[0]]}–${WEEKDAYS_ES[days[days.length - 1]]}`;
+  return days.map((d) => WEEKDAYS_ES[d]).join("·");
+}
+
+/** La racha de un hábito semanal se cuenta en semanas, no en días. */
+export function streakUnit(habit: Cadence, n: number): string {
+  if (habit.frequency === "weekly") return n === 1 ? "semana" : "semanas";
+  return n === 1 ? "día" : "días";
+}
+
 /* Paletas de DATOS: hex literal a propósito, no var().
    Estos valores se concatenan con alfa (`${color}66`) y se pasan como atributos
    SVG a recharts, donde `var(--x)66` sería inválido.

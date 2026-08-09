@@ -30,6 +30,13 @@ class Habit(Base):
     name: Mapped[str] = mapped_column(String, nullable=False)
     category: Mapped[str] = mapped_column(String, nullable=False)
     frequency: Mapped[str] = mapped_column(String, default="daily")
+    # Cadencia fina. Las dos columnas se excluyen: `days` sólo cuenta si
+    # frequency="daily", `target_per_week` sólo si frequency="weekly".
+    #   days: "0,1,5" (0=lunes) -> sólo esos días cuentan para racha y penalización.
+    #         NULL = todos los días, que es el comportamiento histórico.
+    #   target_per_week: cuántas marcas hacen falta para dar la semana por hecha.
+    days: Mapped[str | None] = mapped_column(String, nullable=True)
+    target_per_week: Mapped[int] = mapped_column(Integer, default=1)
     xp_reward: Mapped[int] = mapped_column(Integer, default=20)
     color: Mapped[str] = mapped_column(String, default="#9b7fc4")
     active: Mapped[bool] = mapped_column(Boolean, default=True)

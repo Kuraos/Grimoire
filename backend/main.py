@@ -25,7 +25,8 @@ def _ensure_columns(sync_conn):
         "users": [("lives", "INTEGER DEFAULT 3"), ("last_streak_eval", "DATE"),
                   ("obsidian_vault_path", "VARCHAR")],
         "achievements": [("tier", "VARCHAR DEFAULT 'common'")],
-        "habits": [("tags", "VARCHAR")],
+        "habits": [("tags", "VARCHAR"), ("days", "VARCHAR"),
+                   ("target_per_week", "INTEGER DEFAULT 1")],
         "tasks": [
             ("status", "VARCHAR DEFAULT 'todo'"), ("position", "INTEGER DEFAULT 0"),
             ("remind_at", "DATETIME"), ("tags", "VARCHAR"), ("vault_note_path", "VARCHAR"),

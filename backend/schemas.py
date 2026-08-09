@@ -1,7 +1,7 @@
 """Pydantic request/response schemas."""
 from datetime import datetime, date
 from typing import Literal
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 Priority = Literal["high", "medium", "low"]
 TaskStatus = Literal["todo", "doing", "done"]
@@ -47,14 +47,41 @@ class HabitCategoryOut(ORMModel):
     habit_count: int = 0  # active + archived habits using this category name
 
 
+def _normalize_days(v: str | None) -> str | None:
+    """"3,0,0" -> "0,3". Vacío o None -> None (= todos los días)."""
+    if v is None:
+        return None
+    raw = str(v).strip()
+    if not raw:
+        return None
+    try:
+        nums = sorted({int(p) for p in raw.split(",") if p.strip()})
+    except ValueError:
+        raise ValueError("days debe ser una lista de enteros separados por comas")
+    if not nums:
+        return None
+    if nums[0] < 0 or nums[-1] > 6:
+        raise ValueError("days sólo acepta 0–6 (0 = lunes)")
+    return ",".join(str(n) for n in nums)
+
+
 class HabitBase(BaseModel):
     name: str = Field(min_length=1)
     category: str = Field(min_length=1)
     frequency: Frequency = "daily"
+    # días de la semana en que toca (0=lunes). None = todos. Sólo aplica a "daily".
+    days: str | None = None
+    # marcas necesarias para dar la semana por hecha. Sólo aplica a "weekly".
+    target_per_week: int = Field(default=1, ge=1, le=7)
     xp_reward: int = Field(default=20, ge=10, le=100)
     color: str = "#9b7fc4"
     notes: str | None = None
     tags: str | None = None
+
+    @field_validator("days")
+    @classmethod
+    def _norm_days(cls, v: str | None) -> str | None:
+        return _normalize_days(v)
 
 
 class HabitCreate(HabitBase):
@@ -65,11 +92,18 @@ class HabitUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     category: str | None = Field(default=None, min_length=1)
     frequency: Frequency | None = None
+    days: str | None = None
+    target_per_week: int | None = Field(default=None, ge=1, le=7)
     xp_reward: int | None = Field(default=None, ge=10, le=100)
     color: str | None = None
     notes: str | None = None
     tags: str | None = None
     active: bool | None = None
+
+    @field_validator("days")
+    @classmethod
+    def _norm_days(cls, v: str | None) -> str | None:
+        return _normalize_days(v)
 
 
 class HabitOut(ORMModel):
@@ -77,6 +111,8 @@ class HabitOut(ORMModel):
     name: str
     category: str
     frequency: str
+    days: str | None = None
+    target_per_week: int = 1
     xp_reward: int
     color: str
     active: bool

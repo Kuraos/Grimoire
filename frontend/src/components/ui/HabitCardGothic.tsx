@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { IconFlame, IconAlertTriangle, IconArchiveOff } from "@tabler/icons-react";
 import type { Habit } from "../../types";
+import { cadenceLabel, scheduledToday, streakUnit } from "../../utils";
 
 /**
  * Card de hábito. Usa exclusivamente tokens `gr-*` (ver src/theme.css).
@@ -23,7 +24,8 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
   const done = habit.done_today;
   const [rewarding, setRewarding] = useState(false);
 
-  const atRisk = !done && habit.streak > 0;
+  // Sólo está en riesgo si hoy tocaba: un hábito L–V no corre peligro en sábado.
+  const atRisk = !done && habit.streak > 0 && scheduledToday(habit);
 
   const toggle = () => {
     if (done) {
@@ -88,7 +90,7 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
               {habit.name}
             </h3>
             <span className="gr-meta shrink-0" style={{ color: "var(--gr-ink-faint)" }}>
-              {archived ? "archivado" : habit.frequency === "weekly" ? "semanal" : "diario"}
+              {archived ? "archivado" : cadenceLabel(habit)}
             </span>
           </div>
 
@@ -118,7 +120,7 @@ export function HabitCardGothic({ habit, onComplete, onUndo, onOpen, onRestore }
                 title={atRisk ? "Racha en riesgo: aún no completado hoy" : "Racha activa"}
               >
                 {atRisk ? <IconAlertTriangle size={13} /> : <IconFlame size={13} />}
-                {habit.streak} {habit.streak === 1 ? "día" : "días"}
+                {habit.streak} {streakUnit(habit, habit.streak)}
               </span>
             )}
           </div>

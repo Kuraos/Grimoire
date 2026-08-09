@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import Habit, HabitLog
-from services import get_user, award_xp
+from services import get_user, award_xp, parse_days, scheduled_on, prev_scheduled
 from constants import xp_for_level, MAX_LIVES, STREAK_BREAK_XP_PENALTY
 from schemas import UserOut, UserUpdate, StreakEvalResponse
 
@@ -56,7 +56,11 @@ async def evaluate_streaks(db: AsyncSession = Depends(get_db)):
     """Catch up on every unevaluated day since last_streak_eval (bounded to the
     last 14 days). Each day with a broken daily-habit streak costs a life (or XP
     if none left); each "perfect day" (all active daily habits done) regains one,
-    up to MAX_LIVES. Idempotent per day via last_streak_eval."""
+    up to MAX_LIVES. Idempotent per day via last_streak_eval.
+
+    Un hábito sólo se evalúa los días en que toca (`habits.days`): un hábito L–V
+    no rompe racha el sábado, y ese sábado el día perfecto sólo exige los hábitos
+    que sí tocaban."""
     user = await get_user(db)
     today = _today()
     if user.last_streak_eval is not None and user.last_streak_eval >= today:
@@ -70,13 +74,15 @@ async def evaluate_streaks(db: AsyncSession = Depends(get_db)):
     habits = (await db.execute(
         select(Habit).where(Habit.active == True, Habit.frequency == "daily")
     )).scalars().all()
-    # precompute each habit's completed-day set (one query per habit)
+    # precompute each habit's completed-day set (one query per habit) and its cadence
     day_sets: dict[int, set[date]] = {}
+    sched: dict[int, set[int] | None] = {}
     for h in habits:
         rows = (await db.execute(
             select(HabitLog.completed_at).where(HabitLog.habit_id == h.id)
         )).scalars().all()
         day_sets[h.id] = {r.date() for r in rows}
+        sched[h.id] = parse_days(h.days)
 
     broken: list[str] = []
     lives_lost = 0
@@ -85,10 +91,17 @@ async def evaluate_streaks(db: AsyncSession = Depends(get_db)):
 
     day = start
     while day <= today - timedelta(days=1):
-        relevant = [h for h in habits if h.created_at.date() <= day]
+        relevant = [h for h in habits
+                    if h.created_at.date() <= day and scheduled_on(sched[h.id], day)]
         if relevant:
-            day_broken = [h.name for h in relevant
-                          if day not in day_sets[h.id] and (day - timedelta(days=1)) in day_sets[h.id]]
+            # la racha se rompe contra la ocasión anterior del propio hábito,
+            # no contra el día natural anterior
+            day_broken = [
+                h.name for h in relevant
+                if day not in day_sets[h.id]
+                and (prev := prev_scheduled(sched[h.id], day)) is not None
+                and prev in day_sets[h.id]
+            ]
             if day_broken:
                 broken.extend(day_broken)
                 if user.lives > 0:

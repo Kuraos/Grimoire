@@ -17,6 +17,10 @@ export interface Habit {
   name: string;
   category: string;
   frequency: string;
+  /** días en que toca, "0,1,4" con 0 = lunes. null = todos (sólo aplica a "daily") */
+  days: string | null;
+  /** marcas necesarias para dar la semana por hecha (sólo aplica a "weekly") */
+  target_per_week: number;
   xp_reward: number;
   color: string;
   active: boolean;
