@@ -1,5 +1,5 @@
-from datetime import datetime, date
-from tz import now as _now, today as _today
+from datetime import datetime, date, timedelta
+from tz import now as _now, today as _today, to_naive
 from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,19 +32,34 @@ async def create_session(payload: PomodoroCreate, db: AsyncSession = Depends(get
         if task:
             project_id = task.project_id
 
+    finished = _now()
     session = PomodoroSession(
         task_id=payload.task_id,
         project_id=project_id,
         work_minutes=payload.work_minutes,
-        completed=True,
-        finished_at=_now(),
+        completed=payload.completed,
+        # El cliente es el único que sabe cuándo se pulsó Iniciar. Si no lo dice,
+        # se deduce del final: sigue siendo mejor que sellar la hora de fin.
+        started_at=to_naive(payload.started_at) or finished - timedelta(minutes=payload.work_minutes),
+        finished_at=finished,
     )
     db.add(session)
     await db.flush()
 
     user = await get_user(db)
-    result = await award_xp(db, user, BASE_XP["pomodoro_session"], "pomodoro", session.id)
-    ach = await check_achievements(db, user, "pomodoro_complete")
+    if payload.completed:
+        result = await award_xp(db, user, BASE_XP["pomodoro_session"], "pomodoro", session.id)
+        ach = await check_achievements(db, user, "pomodoro_complete")
+    else:
+        # Un bloque abandonado no puntúa: se devuelve el estado tal cual está.
+        result = {
+            "xp_earned": 0,
+            "new_xp": user.xp,
+            "new_level": user.level,
+            "title": user.title,
+            "leveled_up": False,
+        }
+        ach = None
 
     await db.commit()
     return XPEventResponse(
@@ -69,7 +84,7 @@ async def _serialize(db: AsyncSession, rows) -> list[PomodoroOut]:
 async def today_sessions(db: AsyncSession = Depends(get_db)):
     rows = (await db.execute(
         select(PomodoroSession).where(
-            func.date(PomodoroSession.started_at) == _today().isoformat()
+            func.date(PomodoroSession.finished_at) == _today().isoformat()
         ).order_by(PomodoroSession.started_at.desc())
     )).scalars().all()
     return await _serialize(db, rows)
@@ -77,11 +92,17 @@ async def today_sessions(db: AsyncSession = Depends(get_db)):
 
 @router.get("/range", response_model=list[PomodoroOut])
 async def sessions_in_range(start: date, end: date, db: AsyncSession = Depends(get_db)):
-    """Completed sessions whose start date falls within [start, end] — used by the week calendar."""
+    """Sesiones que terminaron dentro de [start, end] — las pinta el calendario semanal.
+
+    Por fecha de fin, no de inicio: es el criterio que ya usan estadísticas,
+    misiones y la propia rejilla semanal. Mientras `started_at` guardaba la hora
+    de fin daba lo mismo; ahora que es real, un bloque que cruza la medianoche
+    se contaría en un día aquí y en el otro allá.
+    """
     rows = (await db.execute(
         select(PomodoroSession).where(
-            func.date(PomodoroSession.started_at) >= start.isoformat(),
-            func.date(PomodoroSession.started_at) <= end.isoformat(),
+            func.date(PomodoroSession.finished_at) >= start.isoformat(),
+            func.date(PomodoroSession.finished_at) <= end.isoformat(),
         ).order_by(PomodoroSession.started_at)
     )).scalars().all()
     return await _serialize(db, rows)

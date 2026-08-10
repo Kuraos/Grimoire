@@ -9,7 +9,8 @@ export default function Pomodoro() {
   const { config, setConfig, tasks, projects, taskId, setTaskId, projectId, setProjectId, sessions, activeTask } = pomo;
 
   const totalMinutes = sessions.reduce((s, x) => s + (x.completed ? x.work_minutes : 0), 0);
-  const inheritedProject = activeTask?.project_id != null;
+  // Heredado es una procedencia, no un candado: deja de serlo en cuanto se cambia.
+  const inheritedProject = activeTask?.project_id != null && projectId === String(activeTask.project_id);
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -24,6 +25,7 @@ export default function Pomodoro() {
               running={pomo.running}
               progress={pomo.progress}
               subtitle={activeTask?.title}
+              cycleDone={pomo.cycleDone}
               onStart={pomo.start}
               onPause={pomo.pause}
               onReset={pomo.reset}
@@ -42,7 +44,7 @@ export default function Pomodoro() {
               <span className="mb-1 block font-label text-xs text-[var(--text-muted)]">
                 Proyecto {inheritedProject && <span className="text-[var(--purple-muted)]">· heredado de la tarea</span>}
               </span>
-              <select className="input" value={projectId} onChange={(e) => setProjectId(e.target.value)} disabled={inheritedProject}>
+              <select className="input" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
                 <option value="">Sin proyecto</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
@@ -60,11 +62,21 @@ export default function Pomodoro() {
 
         <Card title="Log del día" icon={<IconHistory size={14} />} right={<span className="font-label text-xs text-[var(--purple-main)]">{totalMinutes} min foco</span>}>
           {sessions.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin sesiones aún.</p>}
+          {/* Las abandonadas se registran para que las horas cuadren, pero no
+              puntúan: se leen como lo que son, en tinta tenue y sin acento. */}
           {sessions.map((s) => (
-            <div key={s.id} className="flex items-center gap-2 border-b border-[var(--gr-edge)] py-1.5 text-xs text-[var(--text-body)] last:border-none">
+            <div
+              key={s.id}
+              className={`flex items-center gap-2 border-b border-[var(--gr-edge)] py-1.5 text-xs last:border-none ${
+                s.completed ? "text-[var(--text-body)]" : "text-[var(--text-faint)]"
+              }`}
+            >
               <span className="tabular text-[var(--text-muted)]">{fmtTime(s.started_at)}</span>
               <span className="truncate">{s.task_title ?? "Sesión libre"}</span>
-              <span className="ml-auto tabular text-[var(--purple-main)]">{s.work_minutes}m</span>
+              {!s.completed && <span className="shrink-0 italic">abandonada</span>}
+              <span className={`ml-auto tabular ${s.completed ? "text-[var(--purple-main)]" : ""}`}>
+                {s.work_minutes}m
+              </span>
             </div>
           ))}
         </Card>

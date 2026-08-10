@@ -251,6 +251,12 @@ class PomodoroCreate(BaseModel):
     task_id: int | None = None
     project_id: int | None = None
     work_minutes: int = 25
+    # False = el bloque se abandonó a medias. Queda registrado para que las horas
+    # cuadren, pero no otorga XP ni cuenta para logros ni misiones.
+    completed: bool = True
+    # Arranque real del bloque. Sin esto, `started_at` tomaba su default y
+    # guardaba la hora de fin, que es la única que el servidor puede conocer.
+    started_at: datetime | None = None
 
 
 class PomodoroOut(ORMModel):

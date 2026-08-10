@@ -68,8 +68,15 @@ export const Api = {
   backupDownloadUrl: (kind: "json" | "db") => `${API_BASE}/backup/export.${kind}`,
 
   // pomodoro
-  createSession: (data: { task_id?: number | null; project_id?: number | null; work_minutes: number }) =>
-    api.post<XPEventResponse>("/pomodoro/sessions", data),
+  createSession: (data: {
+    task_id?: number | null;
+    project_id?: number | null;
+    work_minutes: number;
+    /** false = bloque abandonado: se registra, pero no puntúa */
+    completed?: boolean;
+    /** ISO del arranque real del bloque */
+    started_at?: string;
+  }) => api.post<XPEventResponse>("/pomodoro/sessions", data),
   todaySessions: () => api.get<PomodoroSession[]>("/pomodoro/today"),
   sessionsRange: (start: string, end: string) =>
     api.get<PomodoroSession[]>(`/pomodoro/range?start=${start}&end=${end}`),

@@ -1,5 +1,5 @@
 import { IconPlayerPlay, IconPlayerPause, IconRotateClockwise, IconPlayerSkipForward } from "@tabler/icons-react";
-import { formatTime, type Phase } from "../../hooks/usePomodoro";
+import { formatTime, CYCLE_LENGTH, type Phase } from "../../hooks/usePomodoro";
 
 const PHASE_LABEL: Record<Phase, string> = {
   work: "Foco",
@@ -8,13 +8,15 @@ const PHASE_LABEL: Record<Phase, string> = {
 };
 
 export function PomodoroTimer({
-  phase, secondsLeft, running, progress, subtitle, onStart, onPause, onReset, onSkip, big = true,
+  phase, secondsLeft, running, progress, subtitle, cycleDone = 0, onStart, onPause, onReset, onSkip, big = true,
 }: {
   phase: Phase;
   secondsLeft: number;
   running: boolean;
   progress: number;
   subtitle?: string;
+  /** bloques de foco completados del ciclo vivo */
+  cycleDone?: number;
   onStart: () => void;
   onPause: () => void;
   onReset?: () => void;
@@ -45,6 +47,24 @@ export function PomodoroTimer({
           {/* El tiempo transcurrido no es recompensa: usaba el degradado de XP
               y terminaba en dorado. Aquí el arcano es lo correcto. */}
           <div className="h-full rounded" style={{ width: `${progress * 100}%`, background: "linear-gradient(90deg, var(--gr-xp-from), var(--gr-arcane))" }} />
+        </div>
+      )}
+      {/* Dónde va el ciclo de cuatro. El bloque cumplido sí es recompensa —cuenta
+          para el descanso largo y para los logros de foco—, así que va en oro;
+          lo que falta se queda en el filo. */}
+      {big && (
+        <div
+          className="mx-auto flex items-center justify-center gap-1.5"
+          role="img"
+          aria-label={`${cycleDone} de ${CYCLE_LENGTH} bloques de foco del ciclo`}
+        >
+          {Array.from({ length: CYCLE_LENGTH }, (_, i) => (
+            <span
+              key={i}
+              className="h-1 w-6 rounded-xs"
+              style={{ background: i < cycleDone ? "var(--gr-gilded)" : "var(--gr-edge)" }}
+            />
+          ))}
         </div>
       )}
       <div className="mt-2 flex items-center justify-center gap-2">

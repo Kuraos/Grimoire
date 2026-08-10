@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { IconPlus, IconFolder, IconTrash, IconEdit, IconList, IconLayoutKanban, IconChecklist } from "@tabler/icons-react";
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
+import { usePomodoroCtx } from "../pomodoro-context";
 import { Card } from "../components/ui/Card";
 import { TaskCard } from "../components/ui/TaskCard";
 import { KanbanBoard } from "../components/ui/KanbanBoard";
@@ -18,6 +20,8 @@ const STATUS_LABEL: Record<string, string> = { active: "Activo", paused: "Pausad
 
 export default function Tasks() {
   const { handleXP } = useApp();
+  const { startWithTask } = usePomodoroCtx();
+  const nav = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [filterProject, setFilterProject] = useState<string>("");
@@ -105,6 +109,13 @@ export default function Tasks() {
 
   const projColor = (id: number | null) => projects.find((p) => p.id === id)?.color;
 
+  // Vincular, arrancar y llevar al temporizador: pulsar «iniciar» y quedarse en
+  // Tareas dejaría el pomodoro corriendo sin nada que lo muestre.
+  const startFocus = (t: Task) => {
+    startWithTask(t);
+    nav("/pomodoro");
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -183,7 +194,8 @@ export default function Tasks() {
           {tasks.length === 0 && <Card><p className="text-xs text-[var(--text-muted)]">Sin tareas.</p></Card>}
           {tasks.map((t) => (
             <TaskCard key={t.id} task={t} projectColor={projColor(t.project_id)}
-              onComplete={complete} onUncomplete={uncomplete} onEdit={openEditTask} onDelete={remove} />
+              onComplete={complete} onUncomplete={uncomplete} onEdit={openEditTask} onDelete={remove}
+              onFocus={startFocus} />
           ))}
         </div>
       )}

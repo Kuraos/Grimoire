@@ -113,6 +113,30 @@ tabular; Cinzel es para títulos y nombres.
 `gr-*`, `index.css` las suyas. Quedan fuera a propósito `transition-colors` y
 `transition-opacity`, que no son movimiento.
 
+**Un temporizador no puede contar ticks.** El Pomodoro restaba un segundo por
+cada `setInterval` de 1 s, y el navegador estrangula los intervalos de una
+ventana oculta o minimizada —de 1/s a 1/min—, así que con Grimoire de fondo un
+bloque de 25 minutos duraba bastante más y nadie lo veía. Ahora `usePomodoro`
+guarda un `endsAt` absoluto y deduce lo que queda del reloj: el intervalo sólo
+refresca la vista, y perder ticks ya no atrasa nada. Aun así hay que
+resincronizar en `visibilitychange` y `focus`, o el final llega con hasta un
+minuto de retraso.
+
+**Nada del frontend se persiste solo.** No había un `localStorage` en toda la
+app, y eso significaba que cerrar la ventana perdía la configuración del
+Pomodoro, la tarea vinculada y el punto del ciclo de cuatro. El temporizador
+ahora se guarda entero en `grimoire.pomodoro.v1`, y `restoreSnapshot` sanea lo
+que vuelve —fase inválida, restos mayores que la fase, basura en los campos—
+porque un JSON a medio escribir no puede tumbar el arranque.
+
+**No registrar tiempo que nadie vio correr.** Es la regla que ordena las dos
+anteriores. «Saltar» invocaba el mismo camino que llegar a cero, así que
+regalaba 15 XP y una sesión de 25 minutos que no ocurrió, y contaba para
+«Centurión del foco». Por lo mismo, una fase que vence con la app cerrada
+vuelve agotada y en pausa sin registrarse: perder un pomodoro legítimo es mejor
+que inventarlo. Lo que se abandona a medias se guarda con `completed=False`,
+que era un campo que llevaba desde el commit inicial valiendo siempre `True`.
+
 ## Publicar una versión
 
 El proceso está en `DESKTOP.md`; lo que hay que recordar:

@@ -1,4 +1,4 @@
-import { IconSquare, IconSquareCheck, IconCalendarDue, IconTrash, IconEdit, IconChecklist } from "@tabler/icons-react";
+import { IconSquare, IconSquareCheck, IconCalendarDue, IconTrash, IconEdit, IconChecklist, IconPlayerPlay } from "@tabler/icons-react";
 import type { Task } from "../../types";
 import { parseTags } from "./TagInput";
 
@@ -8,13 +8,15 @@ const PRIORITY: Record<string, { label: string; color: string }> = {
   low: { label: "Baja", color: "var(--purple-muted)" },
 };
 
-export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelete, onEdit, compact }: {
+export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelete, onEdit, onFocus, compact }: {
   task: Task;
   projectColor?: string;
   onComplete: (t: Task) => void;
   onUncomplete?: (t: Task) => void;
   onDelete?: (t: Task) => void;
   onEdit?: (t: Task) => void;
+  /** Arranca un pomodoro sobre esta tarea. */
+  onFocus?: (t: Task) => void;
   compact?: boolean;
 }) {
   const pr = PRIORITY[task.priority] ?? PRIORITY.medium;
@@ -65,6 +67,13 @@ export function TaskCard({ task, projectColor, onComplete, onUncomplete, onDelet
           ))}
         </div>
       </div>
+      {/* Enfocar es la acción del día sobre una tarea, y llegar a ella obligaba a
+          ir a Pomodoro y buscarla en un desplegable de todas las pendientes. */}
+      {onFocus && !task.completed && (
+        <button onClick={() => onFocus(task)} title="Iniciar un pomodoro con esta tarea" className="text-[var(--text-faint)] hover:text-[var(--purple-main)]">
+          <IconPlayerPlay size={14} />
+        </button>
+      )}
       {onEdit && (
         <button onClick={() => onEdit(task)} title="Editar" className="text-[var(--text-faint)] hover:text-[var(--purple-main)]">
           <IconEdit size={14} />

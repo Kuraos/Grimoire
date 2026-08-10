@@ -492,3 +492,55 @@ def test_cadence_fields_are_validated_and_normalized():
         # vacío es «todos los días», no una lista vacía
         h2 = c.post("/habits", json={"name": "Vacío", "category": "Otro", "days": ""}).json()
         assert h2["days"] is None and h2["target_per_week"] == 1
+
+
+from datetime import timezone  # noqa: E402
+
+
+def test_partial_pomodoro_is_recorded_but_does_not_score():
+    """Saltar o reiniciar a media sesión registraba un bloque completo con XP."""
+    with TestClient(main.app) as c:
+        before = c.get("/user").json()["xp"]
+
+        done = c.post("/pomodoro/sessions", json={"work_minutes": 25}).json()
+        assert done["xp_earned"] == 15
+        minutes_after_done = done["total_today_minutes"]
+        assert minutes_after_done >= 25
+
+        partial = c.post("/pomodoro/sessions", json={"work_minutes": 7, "completed": False}).json()
+        assert partial["xp_earned"] == 0
+        assert partial["achievement_unlocked"] is None
+        # los siete minutos abandonados no engordan el foco del día
+        assert partial["total_today_minutes"] == minutes_after_done
+        assert c.get("/user").json()["xp"] == before + 15
+
+        sessions = c.get("/pomodoro/today").json()
+        assert [s["completed"] for s in sessions].count(False) == 1
+
+
+def test_pomodoro_records_the_real_start_time():
+    """`started_at` tomaba su default y acababa sellando la hora de fin."""
+    with TestClient(main.app) as c:
+        started = datetime.now(timezone.utc) - timedelta(minutes=41)
+        # ISO con zona, como lo manda el navegador
+        c.post("/pomodoro/sessions", json={"work_minutes": 41, "started_at": started.isoformat()})
+
+        s = next(x for x in c.get("/pomodoro/today").json() if x["work_minutes"] == 41)
+        span = datetime.fromisoformat(s["finished_at"]) - datetime.fromisoformat(s["started_at"])
+        assert timedelta(minutes=40) < span < timedelta(minutes=42)
+
+
+def test_pomodoro_takes_a_project_with_or_without_a_task():
+    with TestClient(main.app) as c:
+        p = c.post("/projects", json={"name": "Foco"}).json()
+        t = c.post("/tasks", json={"title": "Con proyecto", "project_id": p["id"]}).json()
+
+        c.post("/pomodoro/sessions", json={"work_minutes": 33, "task_id": t["id"]})
+        inherited = next(x for x in c.get("/pomodoro/today").json() if x["work_minutes"] == 33)
+        assert inherited["project_id"] == p["id"]
+
+        # y sin tarea: el caso que la UI no dejaba producir porque el campo de
+        # proyecto sólo se rellenaba heredando
+        c.post("/pomodoro/sessions", json={"work_minutes": 34, "project_id": p["id"]})
+        direct = next(x for x in c.get("/pomodoro/today").json() if x["work_minutes"] == 34)
+        assert direct["project_id"] == p["id"] and direct["task_id"] is None
