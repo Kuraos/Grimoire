@@ -22,6 +22,10 @@ export type ChartPalette = {
   arcaneDeep: string;
   xpFrom: string;
   verdigris: string;
+  /* Advertencia. La rampa del gasto diario acaba aquí y no en dorado: más gasto
+     no es mejor, y terminar en oro premiaría el día que más se gastó. */
+  amber: string;
+  oxblood: string;
   surfaceRaised: string;
 };
 
@@ -48,6 +52,8 @@ export function chartPalette(): ChartPalette {
     arcaneDeep: read("--gr-arcane-deep"),
     xpFrom: read("--gr-xp-from"),
     verdigris: read("--gr-verdigris"),
+    amber: read("--gr-amber"),
+    oxblood: read("--gr-oxblood"),
     surfaceRaised: read("--gr-surface-raised"),
   };
   return cache;

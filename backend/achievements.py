@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from models import (
     Achievement, Habit, HabitLog, Task, PomodoroSession, DiaryEntry,
     DailyCheckin, WeeklyReview, Project, User, Quest,
+    LedgerEntry, LedgerMonthReview, SavingsGoal,
 )
 from services import habit_streak
 
@@ -154,6 +155,53 @@ async def check_achievements(db: AsyncSession, user: User, event: str, **kwargs)
         count = (await db.execute(select(func.count(WeeklyReview.id)))).scalar_one()
         if count >= 4:
             if (a := await _unlock(db, "great_review")):
+                unlocked.append(a)
+
+    if event == "ledger_entry":
+        total = (await db.execute(select(func.count(LedgerEntry.id)))).scalar_one()
+        if total >= 1:
+            if (a := await _unlock(db, "first_entry")):
+                unlocked.append(a)
+        # Días DISTINTOS en que se anotó, contados por el día del acto y no por
+        # la fecha del gasto: rellenar el mes entero de una sentada es un día de
+        # constancia, no treinta.
+        days = (await db.execute(
+            select(func.count(distinct(func.date(LedgerEntry.created_at))))
+        )).scalar_one()
+        if days >= 30:
+            if (a := await _unlock(db, "ledger_30")):
+                unlocked.append(a)
+        if days >= 180:
+            if (a := await _unlock(db, "ledger_180")):
+                unlocked.append(a)
+
+    if event == "ledger_month_close":
+        closed = (await db.execute(select(func.count(LedgerMonthReview.id)))).scalar_one()
+        if closed >= 3:
+            if (a := await _unlock(db, "closed_books")):
+                unlocked.append(a)
+        # Se mira el snapshot del cierre, no el estado de hoy: el logro premia
+        # haber cerrado limpio, y eso no se puede perder ni ganar después.
+        clean = (await db.execute(
+            select(func.count(LedgerMonthReview.id)).where(
+                LedgerMonthReview.unclassified_count == 0
+            )
+        )).scalar_one()
+        if clean >= 1:
+            if (a := await _unlock(db, "full_ledger")):
+                unlocked.append(a)
+
+    if event == "relic_achieved":
+        # se cuentan las selladas, no las que hoy dan la cifra: una reliquia
+        # alcanzada no se pierde por sacar el dinero después
+        n = (await db.execute(
+            select(func.count(SavingsGoal.id)).where(SavingsGoal.achieved_at.is_not(None))
+        )).scalar_one()
+        if n >= 1:
+            if (a := await _unlock(db, "first_relic")):
+                unlocked.append(a)
+        if n >= 3:
+            if (a := await _unlock(db, "relic_hoard")):
                 unlocked.append(a)
 
     return unlocked[0] if unlocked else None

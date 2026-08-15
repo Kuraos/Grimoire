@@ -12,13 +12,17 @@ from sqlalchemy import select
 
 from database import engine, Base, SessionLocal
 import models  # noqa: F401  (register models on Base)
-from models import User, Achievement, Habit, HabitCategory
-from constants import PREDEFINED_ACHIEVEMENTS, HABIT_CATEGORY_DEFAULTS
+from models import User, Achievement, Habit, HabitCategory, LedgerCategory, Account
+from constants import (
+    PREDEFINED_ACHIEVEMENTS, HABIT_CATEGORY_DEFAULTS, LEDGER_CATEGORY_DEFAULTS,
+    DEFAULT_CURRENCY,
+)
 
 
 def _ensure_columns(sync_conn):
     """Lightweight migration: add new columns to existing tables (no Alembic)."""
     from sqlalchemy import inspect
+    from datetime import date
     insp = inspect(sync_conn)
     tables = set(insp.get_table_names())
     wanted = {
@@ -35,6 +39,9 @@ def _ensure_columns(sync_conn):
         "calendar_events": [("recurrence", "VARCHAR DEFAULT 'none'"), ("recurrence_until", "DATE"),
                             ("ics_uid", "VARCHAR")],
         "projects": [("vault_note_path", "VARCHAR")],
+        # `ledger_entries` nació en la fase del libro, antes que las reliquias:
+        # create_all no toca una tabla que ya existe, así que la columna entra por aquí.
+        "ledger_entries": [("goal_id", "INTEGER")],
     }
     for table, cols in wanted.items():
         if table not in tables:
@@ -47,6 +54,25 @@ def _ensure_columns(sync_conn):
         sync_conn.exec_driver_sql(
             "UPDATE tasks SET status='done' WHERE completed=1 AND (status IS NULL OR status='todo')"
         )
+
+    # El cerco pasó de columna única en `ledger_categories` a fila con mes en
+    # `category_budgets`. Los valores que hubiera se mudan al mes en curso —que
+    # es desde cuándo se sabe que valían— y sólo entonces se tira la columna.
+    if "ledger_categories" in tables and "category_budgets" in tables:
+        legacy = {c["name"] for c in insp.get_columns("ledger_categories")}
+        if "budget_minor" in legacy:
+            month = date.today().strftime("%Y-%m")
+            sync_conn.exec_driver_sql(
+                "INSERT OR IGNORE INTO category_budgets (category_id, month_key, amount_minor) "
+                "SELECT id, ?, budget_minor FROM ledger_categories WHERE budget_minor IS NOT NULL",
+                (month,),
+            )
+            # SQLite admite DROP COLUMN desde 3.35; si la versión fuera anterior
+            # la columna se queda muerta pero nadie la lee, y no rompe nada.
+            try:
+                sync_conn.exec_driver_sql("ALTER TABLE ledger_categories DROP COLUMN budget_minor")
+            except Exception as e:  # noqa: BLE001
+                print(f"[migración] budget_minor no se pudo eliminar, queda inerte: {e}")
 
 
 async def seed():
@@ -89,6 +115,23 @@ async def seed():
             for name, cat, color, xp in samples:
                 db.add(Habit(name=name, category=cat, color=color, xp_reward=xp))
 
+        # partidas del erario (idempotente por nombre+tipo, como las de hábitos)
+        known_parts = {
+            (n, k) for n, k in
+            (await db.execute(select(LedgerCategory.name, LedgerCategory.kind))).all()
+        }
+        for name, kind, color, icon in LEDGER_CATEGORY_DEFAULTS:
+            if (name, kind) not in known_parts:
+                db.add(LedgerCategory(name=name, kind=kind, color=color, icon=icon))
+
+        # un arca para poder anotar desde el primer minuto. Sólo si no hay
+        # ninguna: crear una segunda "Efectivo" en cada arranque sería un desastre
+        # silencioso, porque los saldos se reparten entre las dos.
+        has_account = (await db.execute(select(Account))).scalars().first()
+        if has_account is None:
+            db.add(Account(name="Efectivo", kind="cash", currency=DEFAULT_CURRENCY,
+                           color="#5aa885"))
+
         await db.commit()
 
 
@@ -123,11 +166,12 @@ app.add_middleware(
 
 from routers import (  # noqa: E402
     user, habits, tasks, projects, pomodoro, calendar, diary, checkins,
-    stats, achievements, reviews, quests, tags, habit_categories, backup,
+    stats, achievements, reviews, quests, tags, habit_categories, backup, ledger,
 )
 
 for r in (user, habits, tasks, projects, pomodoro, calendar, diary, checkins,
-          stats, achievements, reviews, quests, tags, habit_categories, backup):
+          stats, achievements, reviews, quests, tags, habit_categories, backup,
+          ledger):
     app.include_router(r.router)
 
 

@@ -1,11 +1,11 @@
 from datetime import date, datetime, timedelta
 from tz import now as _now, today as _today
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func, delete
+from sqlalchemy import select, func, delete, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import Quest, HabitLog, PomodoroSession, Task, DiaryEntry
+from models import Quest, HabitLog, PomodoroSession, Task, DiaryEntry, LedgerEntry
 from schemas import QuestOut, XPEventResponse, AchievementOut
 from services import get_user, award_xp
 from constants import QUEST_TEMPLATES
@@ -44,6 +44,15 @@ async def _progress(db: AsyncSession, metric: str, start: date, end: date) -> in
     if metric == "diary_entries":
         return (await db.execute(select(func.count(DiaryEntry.id)).where(
             DiaryEntry.entry_date >= start, DiaryEntry.entry_date <= end, DiaryEntry.content != ""))).scalar_one()
+    # Las dos del erario van por `created_at`, el día del ACTO, igual que su XP.
+    # Por `occurred_on` se podrían cumplir anotando gastos viejos, que es
+    # exactamente la constancia que no ocurrió.
+    if metric == "ledger_entries":
+        return (await db.execute(select(func.count(LedgerEntry.id)).where(
+            func.date(LedgerEntry.created_at) >= s, func.date(LedgerEntry.created_at) <= e))).scalar_one()
+    if metric == "ledger_days":
+        return (await db.execute(select(func.count(distinct(func.date(LedgerEntry.created_at)))).where(
+            func.date(LedgerEntry.created_at) >= s, func.date(LedgerEntry.created_at) <= e))).scalar_one()
     return 0
 
 

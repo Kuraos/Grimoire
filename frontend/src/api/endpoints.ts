@@ -4,6 +4,8 @@ import type {
   DiaryEntry, Checkin, Achievement, Quest, StreakEval, WeeklyReview, XPEventResponse, IcsImportResult,
   DaySummary, Stats, WeekSummary,
   BackupEntry,
+  Account, LedgerCategory, LedgerEntry, LedgerSummary,
+  LedgerMonthReview, LedgerEntryCreated, SavingsGoal, LedgerStats, BudgetMonth,
 } from "../types";
 
 export const Api = {
@@ -121,4 +123,52 @@ export const Api = {
   listReviews: () => api.get<WeeklyReview[]>("/weekly-reviews"),
   weekSummary: () => api.get<WeekSummary>("/weekly-reviews/summary"),
   saveReview: (data: Partial<WeeklyReview>) => api.post<XPEventResponse>("/weekly-reviews", data),
+
+  // erario — arcas
+  listAccounts: (includeArchived = false) =>
+    api.get<Account[]>(`/ledger/accounts?include_archived=${includeArchived}`),
+  createAccount: (data: Partial<Account>) => api.post<Account>("/ledger/accounts", data),
+  updateAccount: (id: number, data: Partial<Account>) =>
+    api.patch<Account>(`/ledger/accounts/${id}`, data),
+  deleteAccount: (id: number) => api.del<void>(`/ledger/accounts/${id}`),
+
+  // erario — partidas
+  listLedgerCategories: (includeArchived = false) =>
+    api.get<LedgerCategory[]>(`/ledger/categories?include_archived=${includeArchived}`),
+  createLedgerCategory: (data: Partial<LedgerCategory>) =>
+    api.post<LedgerCategory>("/ledger/categories", data),
+  updateLedgerCategory: (id: number, data: Partial<LedgerCategory>) =>
+    api.patch<LedgerCategory>(`/ledger/categories/${id}`, data),
+  deleteLedgerCategory: (id: number) => api.del<void>(`/ledger/categories/${id}`),
+
+  // erario — asientos
+  listEntries: (params = "") => api.get<LedgerEntry[]>(`/ledger/entries${params}`),
+  createEntry: (data: Partial<LedgerEntry>) =>
+    api.post<LedgerEntryCreated>("/ledger/entries", data),
+  updateEntry: (id: number, data: Partial<LedgerEntry>) =>
+    api.patch<LedgerEntry>(`/ledger/entries/${id}`, data),
+  deleteEntry: (id: number) => api.del<void>(`/ledger/entries/${id}`),
+  ledgerSummary: (month: string) => api.get<LedgerSummary>(`/ledger/summary?month=${month}`),
+
+  // erario — cercos (siempre de un mes concreto)
+  ledgerBudgets: (month: string) => api.get<BudgetMonth>(`/ledger/budgets?month=${month}`),
+  saveBudgets: (month: string, items: { category_id: number; amount_minor: number }[]) =>
+    api.put<BudgetMonth>("/ledger/budgets", { month, items }),
+
+  // erario — reliquias
+  listGoals: (includeArchived = false) =>
+    api.get<SavingsGoal[]>(`/ledger/goals?include_archived=${includeArchived}`),
+  createGoal: (data: Partial<SavingsGoal>) => api.post<SavingsGoal>("/ledger/goals", data),
+  updateGoal: (id: number, data: Partial<SavingsGoal>) =>
+    api.patch<SavingsGoal>(`/ledger/goals/${id}`, data),
+  deleteGoal: (id: number) => api.del<void>(`/ledger/goals/${id}`),
+
+  // erario — la mirada larga
+  ledgerStats: (months = 6) => api.get<LedgerStats>(`/ledger/stats?months=${months}`),
+
+  // erario — cierre del mes
+  monthReview: (month: string) =>
+    api.get<LedgerMonthReview | null>(`/ledger/reviews/${month}`),
+  closeMonth: (data: Partial<LedgerMonthReview> & { month_key: string }) =>
+    api.post<XPEventResponse>("/ledger/reviews", data),
 };

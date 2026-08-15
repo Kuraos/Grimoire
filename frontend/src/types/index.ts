@@ -232,6 +232,142 @@ export interface Stats {
   heatmap: { date: string; count: number }[];
 }
 
+/* ---- Erario. Todo importe es un entero en unidades menores; ver utils.ts. ---- */
+
+export interface Account {
+  id: number;
+  name: string;
+  kind: string; // cash|bank|savings|debt
+  currency: string;
+  opening_minor: number;
+  color: string;
+  archived: boolean;
+  created_at: string;
+  /** calculado en el backend a partir de los asientos; nunca persistido */
+  balance_minor: number;
+}
+
+export interface LedgerCategory {
+  id: number;
+  name: string;
+  kind: string; // expense|income
+  color: string;
+  icon: string;
+  archived: boolean;
+  entry_count: number;
+  // El cerco NO vive aquí: es de un mes. Ver BudgetMonth.
+}
+
+export interface BudgetLine {
+  category_id: number;
+  name: string;
+  color: string;
+  amount_minor: number;
+  /** mes de la fila que lo fija. Distinto del consultado = viene arrastrado. */
+  source_month: string | null;
+}
+
+export interface BudgetMonth {
+  month: string;
+  currency: string;
+  total_minor: number;
+  lines: BudgetLine[];
+}
+
+export interface LedgerEntry {
+  id: number;
+  account_id: number;
+  /** null = sin clasificar, que es un estado válido y visible */
+  category_id: number | null;
+  kind: string; // expense|income|transfer
+  /** siempre positivo: el signo lo pone `kind` */
+  amount_minor: number;
+  occurred_on: string; // YYYY-MM-DD
+  concept: string;
+  note: string | null;
+  tags: string | null;
+  counter_account_id: number | null;
+  /** aporte a una reliquia; sólo tiene sentido en un traspaso */
+  goal_id: number | null;
+  created_at: string;
+}
+
+export interface CategoryTotal {
+  category_id: number | null;
+  name: string;
+  color: string;
+  kind: string;
+  total_minor: number;
+  /** el cerco vigente del mes; null = partida sin asignación */
+  budget_minor: number | null;
+}
+
+export interface LedgerSummary {
+  month: string; // YYYY-MM
+  currency: string;
+  income_minor: number;
+  expense_minor: number;
+  /** ingresos − gastos; los traspasos no cuentan */
+  net_minor: number;
+  entry_count: number;
+  unclassified_count: number;
+  days_with_entries: number;
+  /** suma de los cercos de las partidas activas; 0 = todavía no hay asignaciones */
+  budget_total_minor: number;
+  budgeted_spent_minor: number;
+  /** gasto real que no cuenta contra ningún cerco: sin asignación o sin partida */
+  unbudgeted_spent_minor: number;
+  /** asignado − gastado con cerco; puede ser negativo */
+  available_minor: number;
+  /** días del mes que quedan, hoy incluido; 0 si el mes ya cerró */
+  days_left: number;
+  by_category: CategoryTotal[];
+}
+
+export interface SavingsGoal {
+  id: number;
+  name: string;
+  target_minor: number;
+  account_id: number;
+  deadline: string | null;
+  /** sellado al alcanzarla; nunca se reabre */
+  achieved_at: string | null;
+  color: string;
+  icon: string;
+  archived: boolean;
+  created_at: string;
+  /** deducido de los traspasos marcados; nunca persistido */
+  saved_minor: number;
+}
+
+export interface LedgerStats {
+  currency: string;
+  daily: { date: string; expense_minor: number }[];
+  monthly: { month: string; expense_minor: number; income_minor: number }[];
+  series: { month: string; category_id: number; name: string; color: string; total_minor: number }[];
+}
+
+export interface LedgerMonthReview {
+  id: number;
+  month_key: string; // YYYY-MM
+  what_worked: string | null;
+  what_leaked: string | null;
+  next_change: string | null;
+  rating: number | null;
+  /** cifras congeladas al cerrar: los cercos son globales y cambiarlos después
+   *  reescribiría lo que decía esta revisión */
+  budget_total_minor: number;
+  spent_minor: number;
+  unclassified_count: number;
+  created_at: string;
+}
+
+/** El alta devuelve la fila y, si tocaba, el XP del día. */
+export interface LedgerEntryCreated {
+  entry: LedgerEntry;
+  xp: XPEventResponse | null;
+}
+
 export interface WeekSummary {
   week_iso: string;
   xp_total: number;

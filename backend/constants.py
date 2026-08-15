@@ -61,6 +61,17 @@ BASE_XP = {
     "diary_entry": 5,
     "weekly_review": 30,
     "daily_checkin": 5,
+    # El erario es un goteo, no un grifo. Anotar paga como el diario o el
+    # check-in —el acto, una vez al día— y no como un hábito: si asentar pagara
+    # lo mismo que cumplir un rito, la mejor forma de subir de nivel sería
+    # apuntar cafés, y el nivel dejaría de medir constancia.
+    "ledger_day": 5,
+    # El cierre paga como la revisión semanal: es el momento en que de verdad
+    # cambia la conducta, y es lo que dice toda la literatura del tema.
+    "ledger_month_close": 30,
+    # PLANO, no proporcional al monto. Proporcional significaría que tener más
+    # dinero da más XP, y el nivel dejaría de medir constancia para medir renta.
+    "relic_achieved": 50,
 }
 
 
@@ -104,6 +115,15 @@ PREDEFINED_ACHIEVEMENTS = [
     ("great_review", "Gran revisión", "Completa 4 revisiones semanales.", "notebook", "common"),
     ("polymath", "Polímata", "Ten hábitos activos en al menos 4 categorías distintas.", "atom", "rare"),
     ("quest_devotee", "Buscador de designios", "Reclama 10 misiones.", "target-arrow", "rare"),
+    # Erario. Todos sobre la práctica de llevar el libro, ninguno sobre cuánto
+    # dinero hay: un logro por tener saldo premiaría la suerte, no la constancia.
+    ("first_entry", "Primer asiento", "Anota tu primer movimiento en el erario.", "feather", "common"),
+    ("ledger_30", "Escriba del erario", "Anota algo en 30 días distintos.", "receipt", "common"),
+    ("ledger_180", "Tenedor de libros", "Anota algo en 180 días distintos.", "books", "epic"),
+    ("closed_books", "Cuentas cuadradas", "Cierra 3 meses del erario.", "scale", "rare"),
+    ("full_ledger", "Nada sin partida", "Cierra un mes sin asientos sin clasificar.", "tags", "epic"),
+    ("first_relic", "Primera reliquia", "Alcanza una meta de ahorro.", "diamond", "rare"),
+    ("relic_hoard", "Tesoro", "Alcanza tres metas de ahorro.", "diamond", "legendary"),
 ]
 
 
@@ -118,8 +138,46 @@ QUEST_TEMPLATES = [
     ("weekly_focus_120", "weekly", "focus_minutes", 120, "2 horas de foco", "clock-hour-4", 60),
     ("weekly_habits_15", "weekly", "habits_completed", 15, "15 hábitos en la semana", "flame", 60),
     ("weekly_diary_3", "weekly", "diary_entries", 3, "3 entradas de diario", "book", 50),
+    # Erario: dos, y sobre el acto de anotar. La evidencia dice que los «retos»
+    # son el elemento más flojo de la gamificación financiera, así que llenar el
+    # tablero de misiones de dinero sería puro ruido.
+    ("daily_ledger", "daily", "ledger_entries", 1, "Asienta el día", "feather", 15),
+    ("weekly_ledger_5", "weekly", "ledger_days", 5, "Cinco días de cuentas", "receipt", 50),
 ]
 
 MAX_LIVES = 3
 STREAK_BREAK_XP_PENALTY = 15
+
+
+# ---------------------------------------------------------------------------
+# ERARIO
+# ---------------------------------------------------------------------------
+# Exponente de las unidades menores. NO es la tabla de ISO 4217: el peso
+# colombiano declara 2 decimales y en la práctica nadie usa centavos, así que
+# aquí vale 0 y un asiento de $18.000 se guarda como 18000, no como 1800000.
+# Es la autoridad para guardar Y para mostrar; utils.ts lleva el espejo.
+# Cambiar el exponente de una moneda ya usada reinterpreta lo guardado.
+MONEY_DECIMALS = {
+    "COP": 0, "CLP": 0, "PYG": 0, "ISK": 0, "JPY": 0, "KRW": 0, "VND": 0,
+}
+DEFAULT_CURRENCY = "COP"
+
+
+def money_decimals(currency: str) -> int:
+    return MONEY_DECIMALS.get((currency or "").upper(), 2)
+
+
+# Partidas sembradas en el primer arranque (nombre, tipo, color, icono tabler).
+# Los colores salen de --gr-cat-* : paleta de datos, fría y saturada. Ninguno es
+# dorado: el oro no marca dinero, marca lo que se ganó.
+LEDGER_CATEGORY_DEFAULTS = [
+    ("Alimentación", "expense", "#5aa885", "tools-kitchen-2"),
+    ("Transporte", "expense", "#6f93e0", "bus"),
+    ("Universidad", "expense", "#a98bf0", "school"),
+    ("Salud", "expense", "#63a9c4", "heartbeat"),
+    ("Ocio", "expense", "#cf7ba6", "movie"),
+    ("Hogar", "expense", "#b8807f", "home"),
+    ("Otros gastos", "expense", "#9a90b5", "dots"),
+    ("Ingreso", "income", "#5aa885", "coins"),
+]
 
