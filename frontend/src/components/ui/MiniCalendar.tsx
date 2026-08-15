@@ -1,4 +1,4 @@
-import { MONTHS_ES, WEEKDAYS_ES, isoDate } from "../../utils";
+import { WEEKDAYS_ES, isoDate, monthCells } from "../../utils";
 
 /**
  * Small month grid (week starts Monday). `marks` maps ISO date → array of dot colors.
@@ -12,17 +12,8 @@ export function MiniCalendar({
   selected?: string;
   onSelect?: (iso: string) => void;
 }) {
-  const first = new Date(year, month, 1);
-  const startOffset = (first.getDay() + 6) % 7; // Monday-first
-  // Día 0 del mes siguiente = último del actual. Con `1` en vez de `0` esto
-  // devolvía el día 1 de septiembre, o sea 1, para cualquier mes: el
-  // minicalendario llevaba desde el commit inicial pintando un solo día.
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayIso = isoDate(new Date());
-
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < startOffset; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const cells = monthCells(year, month);
 
   return (
     <div>
@@ -63,5 +54,3 @@ export function MiniCalendar({
     </div>
   );
 }
-
-export { MONTHS_ES };

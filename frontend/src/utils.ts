@@ -18,13 +18,28 @@ export function romanDate(d: Date): string {
   return `${toRoman(d.getDate())} · ${toRoman(d.getMonth() + 1)} · ${toRoman(d.getFullYear())}`;
 }
 
-export function todayISO(): string {
-  const d = new Date();
+export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export function todayISO(): string {
+  return isoDate(new Date());
+}
+
+/** Celdas de una rejilla mensual que empieza en lunes: `null` es hueco previo.
+ *
+ *  Vive aquí porque estaba copiada en el minicalendario y en la vista de mes, y
+ *  el bug que pintaba un solo día —pedir el día 1 del mes siguiente en vez del
+ *  0— era de estas cuatro líneas. Duplicado, arreglarlo en un sitio dejaba el
+ *  otro roto. `month` es 0-indexado, como en `Date`. */
+export function monthCells(year: number, month: number): (number | null)[] {
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+  // día 0 del mes siguiente = el último de éste
+  const days = new Date(year, month + 1, 0).getDate();
+  return [
+    ...Array(offset).fill(null),
+    ...Array.from({ length: days }, (_, i) => i + 1),
+  ];
 }
 
 export const MONTHS_ES = [

@@ -1,5 +1,6 @@
 """Smoke tests for the Grimoire API. Uses a throwaway DB via GRIMOIRE_DB."""
 import os
+import re
 import tempfile
 import pathlib
 from datetime import datetime
@@ -13,6 +14,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from fastapi.testclient import TestClient  # noqa: E402
 import main  # noqa: E402
+from constants import MAX_MINOR, MONEY_DECIMALS, money_decimals  # noqa: E402
 
 
 def test_full_flow():
@@ -657,6 +659,48 @@ def test_ledger_rejects_what_would_silently_corrupt_the_book():
         assert c.post("/ledger/entries", json={
             **base, "kind": "expense", "amount_minor": 100, "counter_account_id": b["id"]},
         ).status_code == 400
+
+        # Pasado el entero seguro, el frontend redondea al mostrar: la cifra
+        # guardada deja de ser la que se ve, y ninguna suma vuelve a cuadrar.
+        # SQLite lo aceptaría tal cual, así que el corte va aquí.
+        assert c.post("/ledger/entries", json={
+            **base, "kind": "expense", "amount_minor": MAX_MINOR + 1},
+        ).status_code == 422
+        # el propio techo sí entra: un `lt` en vez de `le` pasaría el caso de
+        # arriba y recortaría un peso al mayor monto legítimo
+        ok = c.post("/ledger/entries", json={
+            **base, "kind": "expense", "amount_minor": MAX_MINOR})
+        assert ok.status_code == 201
+        # y se retira: la base es compartida y este gasto desfiguraría el mes
+        c.delete(f"/ledger/entries/{ok.json()['entry']['id']}")
+        # y por las otras tres puertas por donde entra dinero
+        assert c.post("/ledger/accounts", json={
+            "name": "Desbordada", "opening_minor": MAX_MINOR + 1},
+        ).status_code == 422
+        assert c.post("/ledger/goals", json={
+            "name": "Imposible", "target_minor": MAX_MINOR + 1, "account_id": a["id"]},
+        ).status_code == 422
+        assert _cerco(c, "2026-08", food["id"], MAX_MINOR + 1).status_code == 422
+
+
+def test_money_decimals_mirror_matches_the_frontend():
+    """MONEY_DECIMALS vive en dos lenguajes y sólo el de JS tenía test.
+
+    El espejo de Python no se usa para convertir —el frontend manda `amount_minor`
+    ya en unidades menores—, así que nada lo ejerce y podía separarse del otro sin
+    que fallara nada. Y si se separan, uno de los dos reinterpreta por cien todo lo
+    ya anotado. Este test es lo único que los mantiene atados.
+    """
+    utils_ts = (pathlib.Path(__file__).resolve().parents[2]
+                / "frontend" / "src" / "utils.ts").read_text(encoding="utf-8")
+    block = re.search(r"const MONEY_DECIMALS[^=]*=\s*\{(.*?)\}", utils_ts, re.S)
+    assert block, "no se encontró MONEY_DECIMALS en utils.ts"
+    js = {m.group(1): int(m.group(2))
+          for m in re.finditer(r"(\w{3})\s*:\s*(\d+)", block.group(1))}
+
+    assert js == MONEY_DECIMALS
+    # el defecto de las que no están en la tabla también es espejo
+    assert "USD" not in js and money_decimals("USD") == 2
 
 
 def test_ledger_refuses_to_mix_currencies():

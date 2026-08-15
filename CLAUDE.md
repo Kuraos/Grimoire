@@ -118,10 +118,21 @@ usa centavos, así que aquí vale 0 y $18.000 se guarda como `18000`. Es la
 autoridad para guardar *y* para mostrar.
 
 Quien lo «corrija» a 2 reinterpreta por cien todo lo ya anotado. `utils.test.ts`
-fija el valor del lado JS y saltaría; **el espejo de Python no tiene test y no
-saltaría**, y ninguno de los dos puede proteger los datos ya escritos. Si algún
-día hay que cambiarlo de verdad, hace falta migrar las filas, no sólo la
+fija el valor del lado JS; el espejo de Python **no lo ejerce nada** —el frontend
+manda `amount_minor` ya convertido, así que el backend no convierte en ningún
+sitio—, y por eso lo ata `test_money_decimals_mirror_matches_the_frontend`, que
+lee la tabla de `utils.ts` y la compara. Sin ese test, los dos lados podían
+separarse en silencio. Con él siguen sin poder proteger los datos ya escritos: si
+algún día hay que cambiarlo de verdad, hace falta migrar las filas, no sólo la
 constante.
+
+El otro límite del dinero entero es `MAX_MINOR` (2⁵³−1), y no es capricho:
+guardar enteros evita que un float pierda exactitud al sumar, pero toda la
+aritmética del frontend se hace en `Number`, que deja de ser exacto justo ahí.
+`parseMoney` ya cortaba al teclear; el mismo monto entraba por la API, se
+guardaba exacto y se mostraba redondeado, y la cifra guardada dejaba de ser la
+que se ve sin que nada fallara. El techo va en el esquema —asiento, apertura de
+arca, cerco y meta de reliquia—, que es donde entra el dinero.
 
 `amount_minor` es siempre positivo y el signo lo pone `kind`. Con montos con
 signo se puede escribir un gasto negativo que suma en vez de restar, y no se ve

@@ -5,7 +5,7 @@ import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
 import { Modal, Field } from "../components/ui/Modal";
 import { confirm } from "../confirm";
-import { MONTHS_ES, WEEKDAYS_ES, DOT_COLORS, isoDate, isoDateTime, fmtTime } from "../utils";
+import { MONTHS_ES, WEEKDAYS_ES, DOT_COLORS, isoDate, isoDateTime, fmtTime, monthCells } from "../utils";
 import type { CalendarEvent, Task, PomodoroSession } from "../types";
 
 export default function Calendar() {
@@ -169,13 +169,8 @@ function MonthGrid({ cursor, dots, selected, onSelect }: {
 }) {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
-  const first = new Date(year, month, 1);
-  const offset = (first.getDay() + 6) % 7;
-  const days = new Date(year, month + 1, 0).getDate();
   const todayIso = isoDate(new Date());
-  const cells: (number | null)[] = [];
-  for (let i = 0; i < offset; i++) cells.push(null);
-  for (let d = 1; d <= days; d++) cells.push(d);
+  const cells = monthCells(year, month);
 
   return (
     <Card title={`${MONTHS_ES[month]} ${year}`}>

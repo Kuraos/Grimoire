@@ -47,7 +47,7 @@ export interface PomodoroHandlers {
   onBreakEnd: (phase: Phase) => void;
 }
 
-export function phaseMinutes(phase: Phase, config: PomodoroConfig): number {
+function phaseMinutes(phase: Phase, config: PomodoroConfig): number {
   return phase === "work" ? config.work : phase === "short" ? config.short : config.long;
 }
 

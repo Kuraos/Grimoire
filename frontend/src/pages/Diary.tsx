@@ -3,10 +3,10 @@ import { IconChevronLeft, IconChevronRight, IconSearch, IconEye, IconPencil, Ico
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
-import { MiniCalendar, MONTHS_ES } from "../components/ui/MiniCalendar";
+import { MiniCalendar } from "../components/ui/MiniCalendar";
 import { TagInput } from "../components/ui/TagInput";
 import { useAutoSave } from "../hooks/useAutoSave";
-import { isoDate, todayISO, renderMarkdown, fmtTime } from "../utils";
+import { isoDate, todayISO, renderMarkdown, fmtTime, MONTHS_ES } from "../utils";
 import type { DaySummary } from "../types";
 
 export default function Diary() {

@@ -10,11 +10,11 @@ import { XPBar } from "../components/ui/XPBar";
 import { HabitRow } from "../components/ui/HabitRow";
 import { TaskCard } from "../components/ui/TaskCard";
 import { EnergyCheckin } from "../components/ui/EnergyCheckin";
-import { MiniCalendar, MONTHS_ES } from "../components/ui/MiniCalendar";
+import { MiniCalendar } from "../components/ui/MiniCalendar";
 import { PomodoroTimer } from "../components/ui/PomodoroTimer";
 import { QuestsCard } from "../components/ui/QuestsCard";
 import { Card } from "../components/ui/Card";
-import { todayISO, isoDateTime, streakMultiplier, DOT_COLORS } from "../utils";
+import { todayISO, isoDateTime, streakMultiplier, DOT_COLORS, MONTHS_ES } from "../utils";
 import type { Habit, Task, Checkin, DaySummary } from "../types";
 
 export default function Dashboard() {

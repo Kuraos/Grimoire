@@ -3,6 +3,8 @@ from datetime import datetime, date
 from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
+from constants import MAX_MINOR
+
 Priority = Literal["high", "medium", "low"]
 TaskStatus = Literal["todo", "doing", "done"]
 Frequency = Literal["daily", "weekly"]
@@ -424,7 +426,7 @@ class AccountCreate(BaseModel):
     name: str = Field(min_length=1)
     kind: AccountKind = "bank"
     currency: str = Field(default="COP", min_length=3, max_length=3)
-    opening_minor: int = 0
+    opening_minor: int = Field(default=0, le=MAX_MINOR)
     color: str = "#9b7fc4"
 
     @field_validator("currency")
@@ -436,7 +438,7 @@ class AccountCreate(BaseModel):
 class AccountUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     kind: AccountKind | None = None
-    opening_minor: int | None = None
+    opening_minor: int | None = Field(default=None, le=MAX_MINOR)
     color: str | None = None
     archived: bool | None = None
     # `currency` no se puede cambiar: el exponente de unidades menores depende de
@@ -502,7 +504,7 @@ class BudgetItemIn(BaseModel):
     category_id: int
     # 0 = «este mes, sin cerco». Distinto de no mandar la partida, que la deja
     # como estuviera.
-    amount_minor: int = Field(ge=0)
+    amount_minor: int = Field(ge=0, le=MAX_MINOR)
 
 
 class BudgetMonthIn(BaseModel):
@@ -515,7 +517,8 @@ class LedgerEntryBase(BaseModel):
     category_id: int | None = None
     kind: EntryKind = "expense"
     # gt=0: el signo lo pone `kind`. Un monto negativo sumaría donde debe restar.
-    amount_minor: int = Field(gt=0)
+    # le: por encima del entero seguro el frontend redondea al mostrar (MAX_MINOR).
+    amount_minor: int = Field(gt=0, le=MAX_MINOR)
     occurred_on: date
     concept: str = Field(min_length=1)
     note: str | None = None
@@ -532,7 +535,7 @@ class LedgerEntryUpdate(BaseModel):
     account_id: int | None = None
     category_id: int | None = None
     kind: EntryKind | None = None
-    amount_minor: int | None = Field(default=None, gt=0)
+    amount_minor: int | None = Field(default=None, gt=0, le=MAX_MINOR)
     occurred_on: date | None = None
     concept: str | None = Field(default=None, min_length=1)
     note: str | None = None
@@ -590,7 +593,7 @@ class CategoryTotalOut(BaseModel):
 
 class SavingsGoalCreate(BaseModel):
     name: str = Field(min_length=1)
-    target_minor: int = Field(gt=0)
+    target_minor: int = Field(gt=0, le=MAX_MINOR)
     account_id: int
     deadline: date | None = None
     color: str = "#a98bf0"
@@ -599,7 +602,7 @@ class SavingsGoalCreate(BaseModel):
 
 class SavingsGoalUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
-    target_minor: int | None = Field(default=None, gt=0)
+    target_minor: int | None = Field(default=None, gt=0, le=MAX_MINOR)
     deadline: date | None = None
     color: str | None = None
     icon: str | None = None

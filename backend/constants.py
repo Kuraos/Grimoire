@@ -75,8 +75,6 @@ BASE_XP = {
 }
 
 
-HABIT_CATEGORIES = ["Físico", "Académico", "Idioma", "Proyecto", "TCG", "Otro"]
-
 # Seeded into the habit_categories catalog on first run (name, color).
 # Users can add their own and delete any that no habit is using.
 HABIT_CATEGORY_DEFAULTS = [
@@ -87,13 +85,10 @@ HABIT_CATEGORY_DEFAULTS = [
     ("TCG", "#c4a87f"),
     ("Otro", "#8a7a9c"),
 ]
-PROJECT_CATEGORIES = ["Académico", "Personal", "TCG", "Trabajo"]
-
-
-# tiers, from least to most prestigious (frontend colors them)
-ACHIEVEMENT_TIERS = ["common", "rare", "epic", "legendary"]
 
 # (key, name, description, tabler icon name, tier)
+# tier va de menos a más prestigioso: common, rare, epic, legendary. El frontend
+# los colorea (TIER_META en utils.ts).
 PREDEFINED_ACHIEVEMENTS = [
     ("first_blood", "Primera sangre", "Completa tu primer hábito.", "droplet", "common"),
     ("iron_constancy", "Constancia de hierro", "Mantén una racha de 7 días en cualquier hábito.", "flame", "common"),
@@ -165,6 +160,17 @@ DEFAULT_CURRENCY = "COP"
 
 def money_decimals(currency: str) -> int:
     return MONEY_DECIMALS.get((currency or "").upper(), 2)
+
+
+# Techo de un monto en unidades menores: el entero seguro de JavaScript.
+#
+# Guardar enteros evita que un float pierda exactitud al sumar, pero sólo hasta
+# aquí: por encima de 2^53-1 la aritmética de `Number` deja de ser exacta, y toda
+# la del frontend —saldos, totales, carriles— se hace en `Number`. `parseMoney`
+# ya rechaza pasado este punto al teclear; el mismo monto entraba sin problema
+# por la API, se guardaba entero y exacto, y el frontend lo redondeaba al leerlo.
+# La cifra guardada dejaba de ser la que se muestra sin que nada fallara.
+MAX_MINOR = 2 ** 53 - 1
 
 
 # Partidas sembradas en el primer arranque (nombre, tipo, color, icono tabler).
