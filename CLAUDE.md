@@ -50,6 +50,14 @@ Si el oro aparece donde no hay recompensa, deja de significar recompensa. Ya
 pasó una vez: la barra del Pomodoro usaba el degradado de XP y terminaba en
 dorado sin serlo.
 
+Por eso los carriles de presupuesto del erario **no pueden usar
+`--gr-xp-from → --gr-xp-to`**: ese degradado va de arcano a dorado porque
+representa avance hacia una recompensa, y un carril lleno significa lo
+contrario —te lo gastaste todo—, así que premiaría en oro el peor mes. Es el bug
+del Pomodoro con otra ropa. Por lo mismo la rampa del mapa de calor del gasto
+acaba en ámbar y no en dorado: la del heatmap de hábitos va hacia arcano porque
+más marcas es mejor, pero aquí más gasto no lo es.
+
 ### Escalas
 
 Tipografía — seis peldaños con función asignada:
@@ -87,6 +95,76 @@ Una card no puede significar tres cosas. `<Card rank>` acepta:
 `surface` no se puede subir más sin bajar `ink-faint` de AA. Es un límite
 medido, no una preferencia: si alguien quiere más separación entre card y
 fondo, hay que subir también la tinta tenue y revalidar los pares.
+
+## El erario
+
+El módulo de finanzas. La tesis larga está en la cabecera de
+`backend/routers/ledger.py` y cabe en una línea: **el XP premia el acto de
+asentar y revisar, jamás el monto.** Premiar la cifra produce conducta
+transaccional de corto plazo; premiar el registro y la revisión es lo que
+sostiene la práctica.
+
+De ahí sale la regla estética: **el dinero no es oro.** Un saldo sano es
+circunstancia, no mérito. Los montos van en tinta tabular y el estado de un cerco
+en los semánticos. En todo el módulo hay exactamente dos dorados legítimos —una
+reliquia alcanzada y un mes cerrado—, y los dos son metas que el usuario fijó y
+cumplió, igual que una misión.
+
+### El dinero se guarda en enteros
+
+`MONEY_DECIMALS` (en `constants.py`, con espejo en `utils.ts`) **no es la tabla
+de ISO 4217**. El peso colombiano declara dos decimales y en la práctica nadie
+usa centavos, así que aquí vale 0 y $18.000 se guarda como `18000`. Es la
+autoridad para guardar *y* para mostrar.
+
+Quien lo «corrija» a 2 reinterpreta por cien todo lo ya anotado. `utils.test.ts`
+fija el valor del lado JS y saltaría; **el espejo de Python no tiene test y no
+saltaría**, y ninguno de los dos puede proteger los datos ya escritos. Si algún
+día hay que cambiarlo de verdad, hace falta migrar las filas, no sólo la
+constante.
+
+`amount_minor` es siempre positivo y el signo lo pone `kind`. Con montos con
+signo se puede escribir un gasto negativo que suma en vez de restar, y no se ve
+en la lista porque el «−» lo pinta el tipo, no el dato.
+
+`occurred_on` es `Date`, no `DateTime`: un gasto pertenece a un día, no a un
+instante. Evita de raíz la clase de bug que obligó a `tz._now`.
+
+### Nada que se pueda deducir se guarda
+
+El saldo de un arca y el progreso de una reliquia se calculan de los asientos. Un
+total guardado y una lista de movimientos son dos fuentes de verdad del mismo
+dato, y acaban discrepando.
+
+El progreso de una reliquia sale de los **traspasos marcados con ella**, no del
+saldo de su arca: si fuera el saldo, dos reliquias en la misma hucha mostrarían
+las dos la misma cifra y la segunda parecería casi cumplida sin haber recibido
+nada.
+
+Un traspaso no es gasto ni ingreso, y por eso tampoco lleva partida. Si contara,
+el resumen mentiría cada vez que se pasa dinero al ahorro.
+
+### Las cinco prohibiciones
+
+Protegen bugs silenciosos: no rompen nada, sólo inflan el nivel, y no se ven
+hasta revisar el `xp_log` meses después. Cada una tiene su test.
+
+1. **Sin XP retroactivo.** Se sella contra `earned_at` —el día del acto— y nunca
+   contra `occurred_on`. Rellenar el mes entero de una sentada es un día de
+   constancia, no treinta. Las misiones cuentan por `created_at` por lo mismo.
+2. **Sin farmeo.** La marca vive en `xp_log`, no en el número de asientos:
+   borrar y reponer no vuelve a pagar.
+3. **Sin penalización.** Ninguna mecánica resta XP ni gasta vidas por un
+   resultado financiero. Se penaliza no anotar —no cobrando—, nunca gastar de
+   más: una racha rota por dinero produce ansiedad justo en quien tiene menos
+   margen.
+4. **Sin multiplicador de racha.** `streak_multiplier()` es de hábitos; aplicarlo
+   aquí haría que un mes de gimnasio inflara el XP de apuntar el almuerzo.
+5. **Sin re-otorgar.** El `achieved_at` de una reliquia y el cierre de un mes se
+   sellan una vez. Bajar la meta por debajo de lo ya ahorrado **no** la marca
+   sola: hace falta un aporte posterior, o editar la cifra sería la forma más
+   barata de cobrar 50 XP. El XP de reliquia es plano por la misma razón —
+   proporcional al monto premiaría la renta, no la constancia.
 
 ## Trampas que ya han mordido
 
@@ -136,6 +214,21 @@ regalaba 15 XP y una sesión de 25 minutos que no ocurrió, y contaba para
 vuelve agotada y en pausa sin registrarse: perder un pomodoro legítimo es mejor
 que inventarlo. Lo que se abandona a medias se guarda con `completed=False`,
 que era un campo que llevaba desde el commit inicial valiendo siempre `True`.
+
+**El cerco era una columna y mentía.** `budget_minor` vivía en
+`ledger_categories`: uno por partida, sin mes. Cambiarlo en noviembre reescribía
+lo que decía agosto, así que un mes que cerraste en verde pasaba a rojo por una
+decisión tomada tres meses después. Un presupuesto es un dato de un mes concreto,
+no una propiedad permanente de la partida. Ahora vive en `category_budgets` con
+su `month_key` y se arrastra desde la fila explícita más reciente: fijarlo en
+agosto vale para septiembre sin repetirlo, y escribir la fila de noviembre no
+toca ninguna anterior. Un cero es «este mes, sin cerco» y corta el arrastre a
+propósito; no tener fila es heredar. El snapshot que congela el cierre mensual
+sigue ahí, pero ya es cinturón además de tirantes.
+
+**Un cerco de una partida archivada inflaba el asignado.** Sumaba al total sin
+que nadie pudiera gastarlo, y el disponible salía más alto de lo real. El resumen
+sólo cuenta partidas de gasto vivas.
 
 ## Publicar una versión
 
