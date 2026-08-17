@@ -88,7 +88,7 @@ export default function App() {
   }, [pomo]);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="gr-cielo gr-motion flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />

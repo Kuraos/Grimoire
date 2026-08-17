@@ -8,7 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import DiaryEntry, HabitLog, Habit, PomodoroSession, Task, XPLog, DailyCheckin
-from schemas import DiaryOut, DiaryUpdate, DiarySearchResult, CheckinOut, PomodoroOut
+from schemas import (
+    DiaryOut, DiaryUpdate, DiarySearchResult, DiaryVolumePoint, CheckinOut, PomodoroOut,
+)
 from services import get_user, award_xp, like_escape
 from constants import BASE_XP
 from achievements import check_achievements
@@ -33,6 +35,26 @@ async def entry_dates(db: AsyncSession = Depends(get_db)):
         select(DiaryEntry.entry_date).where(DiaryEntry.content != "")
     )).scalars().all()
     return rows
+
+
+@router.get("/volume", response_model=list[DiaryVolumePoint])
+async def entry_volume(db: AsyncSession = Depends(get_db)):
+    """Fecha y longitud de cada entrada escrita, para «el volumen».
+
+    Va aparte de `/dates` y no como un campo más: `/dates` alimenta las marcas
+    del minicalendario, que sólo necesitan saber si el día tiene entrada, y
+    cambiarle la forma habría obligado a tocar sus dos consumidores para nada.
+
+    Devuelve la longitud, no el texto: el volumen sólo gradúa el brillo de una
+    estrella, y mandar el diario entero al frontend para contar caracteres es
+    caro y —tratándose de un diario— innecesariamente indiscreto.
+    """
+    rows = (await db.execute(
+        select(DiaryEntry.entry_date, func.length(DiaryEntry.content))
+        .where(DiaryEntry.content != "")
+        .order_by(DiaryEntry.entry_date)
+    )).all()
+    return [DiaryVolumePoint(entry_date=d, length=n) for d, n in rows]
 
 
 @router.get("/{entry_date}", response_model=DiaryOut)

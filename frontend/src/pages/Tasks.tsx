@@ -5,6 +5,9 @@ import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { usePomodoroCtx } from "../pomodoro-context";
 import { Card } from "../components/ui/Card";
+import { SectionBand } from "../components/ui/SectionBand";
+import { ProgressSigil } from "../components/ui/ProgressSigil";
+import { PageHeader } from "../components/layout/PageHeader";
 import { TaskCard } from "../components/ui/TaskCard";
 import { KanbanBoard } from "../components/ui/KanbanBoard";
 import { TagInput } from "../components/ui/TagInput";
@@ -12,7 +15,7 @@ import { TagFilterBar } from "../components/ui/TagFilterBar";
 import { VaultNoteField } from "../components/ui/VaultNoteField";
 import { Modal, Field } from "../components/ui/Modal";
 import { confirm } from "../confirm";
-import { CATEGORY_COLORS } from "../utils";
+import { CATEGORY_COLORS, isoDate } from "../utils";
 import type { Task, Project, ChecklistItem } from "../types";
 
 const PROJECT_CATEGORIES = ["Académico", "Personal", "TCG", "Trabajo"];
@@ -109,6 +112,17 @@ export default function Tasks() {
 
   const projColor = (id: number | null) => projects.find((p) => p.id === id)?.color;
 
+  // La línea de contexto de la cabecera. Cuenta sobre `projects`, que llega sin
+  // filtrar, y no sobre `tasks`, que sí los lleva puestos: si no, elegir un
+  // proyecto en el filtro haría que la cabecera dijera que sólo queda ese.
+  const pending = projects.reduce((s, p) => s + p.tasks_pending, 0);
+  const dueSoon = tasks.filter(
+    (t) => !t.completed && t.due_date && t.due_date <= isoDate(new Date(Date.now() + 7 * 864e5)),
+  ).length;
+  const headerContext =
+    `${pending} pendientes en ${projects.length} proyecto${projects.length === 1 ? "" : "s"}` +
+    (dueSoon > 0 ? ` · ${dueSoon} vence${dueSoon === 1 ? "" : "n"} esta semana` : "");
+
   // Vincular, arrancar y llevar al temporizador: pulsar «iniciar» y quedarse en
   // Tareas dejaría el pomodoro corriendo sin nada que lo muestre.
   const startFocus = (t: Task) => {
@@ -118,49 +132,53 @@ export default function Tasks() {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h1 className="gr-title-module">Tareas y Proyectos</h1>
-        <div className="flex gap-2">
-          <div className="flex overflow-hidden rounded-md border border-[var(--border-accent)]">
-            <button onClick={() => setView("list")} title="Lista"
-              className={`px-2 py-1 ${view === "list" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
-              <IconList size={15} />
-            </button>
-            <button onClick={() => setView("board")} title="Tablero"
-              className={`px-2 py-1 ${view === "board" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
-              <IconLayoutKanban size={15} />
-            </button>
-          </div>
-          <button className="btn" onClick={openNewProject}><IconFolder size={14} /> Proyecto</button>
-          <button className="btn btn-primary" onClick={openNewTask}><IconPlus size={14} /> Tarea</button>
+      <PageHeader title="Tareas y Proyectos" context={headerContext}>
+        <div className="flex overflow-hidden rounded-md border border-[var(--border-accent)]">
+          <button onClick={() => setView("list")} title="Lista"
+            className={`px-2 py-1 ${view === "list" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
+            <IconList size={15} />
+          </button>
+          <button onClick={() => setView("board")} title="Tablero"
+            className={`px-2 py-1 ${view === "board" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
+            <IconLayoutKanban size={15} />
+          </button>
         </div>
-      </div>
+        <button className="btn" onClick={openNewProject}><IconFolder size={14} /> Proyecto</button>
+        <button className="btn btn-primary" onClick={openNewTask}><IconPlus size={14} /> Tarea</button>
+      </PageHeader>
 
       {/* Projects */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
         {projects.map((p) => (
-          <div key={p.id} className="card" style={{ borderLeft: `2px solid ${p.color}` }}>
-            <div className="flex items-center gap-1">
-              <span className="truncate font-display text-sm text-[var(--text-primary)]">{p.name}</span>
-              <button className="ml-auto text-[var(--text-faint)] hover:text-[var(--purple-main)]" title="Editar" onClick={() => openEditProject(p)}>
-                <IconEdit size={12} />
-              </button>
-              <button className="text-[var(--text-faint)] hover:text-[var(--gr-oxblood)]" title="Eliminar" onClick={() => removeProject(p)}>
-                <IconTrash size={12} />
-              </button>
+          <div key={p.id} className="card flex items-start gap-3" style={{ borderLeft: `2px solid ${p.color}` }}>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <span className="truncate font-display text-sm text-[var(--text-primary)]">{p.name}</span>
+                <button className="ml-auto text-[var(--text-faint)] hover:text-[var(--purple-main)]" title="Editar" onClick={() => openEditProject(p)}>
+                  <IconEdit size={12} />
+                </button>
+                <button className="text-[var(--text-faint)] hover:text-[var(--gr-oxblood)]" title="Eliminar" onClick={() => removeProject(p)}>
+                  <IconTrash size={12} />
+                </button>
+              </div>
+              <div className="mt-1 font-label text-2xs text-[var(--text-muted)]">
+                {STATUS_LABEL[p.status]} · {p.category ?? "—"}
+              </div>
+              <div className="mt-2.5 flex justify-between text-xs tabular text-[var(--text-body)]">
+                <span>{p.tasks_total - p.tasks_pending}/{p.tasks_total} pend.</span>
+                <span className="text-[var(--purple-main)]">{p.pomodoro_hours}h foco</span>
+              </div>
             </div>
-            <div className="mt-1 text-xs text-[var(--text-muted)]">{STATUS_LABEL[p.status]} · {p.category ?? "—"}</div>
-            <div className="mt-2 flex justify-between text-xs tabular text-[var(--text-body)]">
-              <span>{p.tasks_pending}/{p.tasks_total} pend.</span>
-              <span>{p.pomodoro_hours}h foco</span>
-            </div>
+            {/* La rueda cuenta las tareas cerradas del proyecto. Al lado del
+                «7/12» dice lo mismo, pero se lee sin leer. */}
+            <ProgressSigil done={p.tasks_total - p.tasks_pending} total={p.tasks_total} />
           </div>
         ))}
       </div>
 
       {/* Filters */}
       <Card>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="gr-sangrado flex flex-wrap items-center gap-2 text-xs">
           <select className="input w-auto" value={filterProject} onChange={(e) => setFilterProject(e.target.value)}>
             <option value="">Todos los proyectos</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -186,23 +204,143 @@ export default function Tasks() {
         </div>
       </Card>
 
-      {/* Tasks */}
-      {view === "board" ? (
-        <KanbanBoard tasks={tasks} projectColor={projColor} onReorder={handleReorder} onEdit={openEditTask} />
-      ) : (
-        <div className="space-y-2">
-          {tasks.length === 0 && <Card><p className="text-xs text-[var(--text-muted)]">Sin tareas.</p></Card>}
-          {tasks.map((t) => (
-            <TaskCard key={t.id} task={t} projectColor={projColor(t.project_id)}
-              onComplete={complete} onUncomplete={uncomplete} onEdit={openEditTask} onDelete={remove}
-              onFocus={startFocus} />
-          ))}
-        </div>
-      )}
+      {/* La rúbrica va antes que la banda: el tablero es a lo que se viene, y
+          los vencimientos son el contexto con el que se cierra la vista.
+          Al revés, lo primero que se leía era un calendario de plazos —lo que
+          aprieta— en vez del trabajo. */}
+      <Card rank="rubric" title={view === "board" ? "Tablero" : "Tareas"} right={
+        <span className="normal-case tracking-normal text-xs italic text-[var(--text-faint)]">
+          arrastra entre columnas; cruzar a Hecho concede el XP
+        </span>
+      }>
+        {view === "board" ? (
+          <KanbanBoard tasks={tasks} projectColor={projColor} onReorder={handleReorder} onEdit={openEditTask} />
+        ) : (
+          <div className="space-y-2">
+            {tasks.length === 0 && <p className="text-xs text-[var(--text-muted)]">Sin tareas.</p>}
+            {tasks.map((t) => (
+              <TaskCard key={t.id} task={t} projectColor={projColor(t.project_id)}
+                onComplete={complete} onUncomplete={uncomplete} onEdit={openEditTask} onDelete={remove}
+                onFocus={startFocus} />
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <DueBand tasks={tasks} projectColor={projColor} />
 
       {taskModal && <TaskForm task={editTask} projects={projects} onClose={() => setTaskModal(false)} onSaved={() => { setTaskModal(false); load(); }} />}
       {projectModal && <ProjectForm project={editProject} onClose={() => setProjectModal(false)} onSaved={() => { setProjectModal(false); load(); }} />}
     </div>
+  );
+}
+
+/* La banda de vencimientos: veintiún días desde hoy, en línea.
+ *
+ * La lista ordenada por fecha ya dice qué vence antes; lo que no dice es si
+ * vencen repartidos o los cinco el mismo jueves. Eso sólo se ve en una recta.
+ *
+ * Se calla si no hay nada en el horizonte: una banda vacía con su rótulo
+ * ocupa el mismo sitio que una llena y no informa de nada. */
+const DUE_DAYS = 21;
+
+function DueBand({ tasks, projectColor }: {
+  tasks: Task[];
+  projectColor: (id: number | null) => string | undefined;
+}) {
+  const today = new Date(isoDate(new Date()) + "T00:00");
+  const due = tasks
+    .filter((t) => !t.completed && t.due_date)
+    .map((t) => ({
+      task: t,
+      day: Math.round((new Date(t.due_date! + "T00:00").getTime() - today.getTime()) / 864e5),
+    }))
+    .filter((m) => m.day >= 0 && m.day <= DUE_DAYS);
+
+  /* Una marca por día, no por tarea.
+   *
+   * Con una por tarea, los diecisiete vencimientos reales de este mes salían
+   * apilados: cinco rótulos en la misma abscisa, superpuestos e ilegibles, y el
+   * único caso donde la banda sirve de algo —varias cosas el mismo día— era
+   * justo el que no se podía leer. Agrupadas, el día dice cuántas caen y el
+   * `title` las nombra. */
+  const marks = Object.values(
+    due.reduce<Record<number, { day: number; items: Task[] }>>((acc, m) => {
+      (acc[m.day] ??= { day: m.day, items: [] }).items.push(m.task);
+      return acc;
+    }, {}),
+  ).sort((a, b) => a.day - b.day);
+
+  if (marks.length === 0) return null;
+
+  return (
+    <Card>
+      {/* La única cadena de Tareas: la banda es la sección que ordena la vista
+          en el tiempo, y el tablero —que es la rúbrica— manda por su nudo. */}
+      <div className="gr-sangrado">
+        <SectionBand sigil="reloj" label={`Los vencimientos · próximos ${DUE_DAYS} días`}
+                     count={marks.length} fill="cadena" />
+      </div>
+      <div className="relative ml-7 mt-3 h-[76px]">
+        <div
+          className="absolute inset-x-0 top-11 h-px"
+          style={{ background: "repeating-linear-gradient(to right, var(--gr-edge) 0 2px, transparent 2px 7px)" }}
+        />
+        {Array.from({ length: DUE_DAYS + 1 }, (_, i) => {
+          const d = new Date(today.getTime() + i * 864e5);
+          const major = i === 0 || d.getDate() % 5 === 0;
+          return (
+            <span key={i} className="absolute" style={{ left: `${(i / DUE_DAYS) * 100}%` }}>
+              <span
+                className="absolute top-11 block w-px bg-[var(--gr-edge)]"
+                style={{ height: major ? 7 : 4 }}
+              />
+              {major && (
+                <span className="absolute top-[54px] block -translate-x-1/2 text-2xs tabular text-[var(--text-faint)]">
+                  {d.getDate()}
+                </span>
+              )}
+            </span>
+          );
+        })}
+        {marks.map((m, i) => (
+          <span
+            key={m.day}
+            className="absolute"
+            style={{ left: `${(m.day / DUE_DAYS) * 100}%`, top: i % 2 ? 22 : 2 }}
+            title={m.items.map((t) => t.title).join("\n")}
+          >
+            <span
+              className="absolute left-0 top-4 block w-px bg-[var(--gr-edge-strong)]"
+              style={{ height: i % 2 ? 22 : 42 }}
+            />
+            <span
+              className="flex max-w-[120px] items-center gap-1 rounded-sm border-l-2 bg-[var(--bg-elevated)] px-1.5 py-0.5 text-2xs text-[var(--text-body)]"
+              style={{ borderLeftColor: projectColor(m.items[0].project_id) ?? "var(--border-accent)" }}
+            >
+              <span className="truncate">{m.items[0].title}</span>
+              {m.items.length > 1 && (
+                <span className="shrink-0 tabular text-[var(--text-faint)]">+{m.items.length - 1}</span>
+              )}
+            </span>
+          </span>
+        ))}
+      </div>
+      {/* La prioridad es dato, no acento: tres colores semánticos y ningún oro.
+          Un vencimiento cercano no es una recompensa. */}
+      <div className="ml-7 mt-2 flex flex-wrap items-center gap-4 font-label text-2xs text-[var(--text-faint)]">
+        {([["Alta", "var(--gr-oxblood)"], ["Media", "var(--gr-amber)"], ["Baja", "var(--gr-ink-dim)"]] as const).map(
+          ([l, c]) => (
+            <span key={l} className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />{l}
+            </span>
+          ),
+        )}
+        <span className="ml-auto font-normal normal-case italic tracking-normal">
+          la prioridad es dato, no acento: el oro no entra aquí
+        </span>
+      </div>
+    </Card>
   );
 }
 

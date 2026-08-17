@@ -4,6 +4,8 @@ import { Api } from "../../api/endpoints";
 import { useApp } from "../../context";
 import { TablerIcon } from "../TablerIcon";
 import { Card } from "./Card";
+import { SectionBand } from "./SectionBand";
+import type { SigilName } from "./Sigil";
 import type { Quest } from "../../types";
 
 export function QuestsCard() {
@@ -24,18 +26,29 @@ export function QuestsCard() {
 
   return (
     <Card title="Misiones" icon={<IconTargetArrow size={14} />}>
-      <Group label="Diarias" quests={daily} onClaim={claim} />
-      <div className="mt-2 border-t border-[var(--border)] pt-2">
-        <Group label="Semanales" quests={weekly} onClaim={claim} />
+      {/* Diarias y semanales cuelgan cada una de su sigilo y su espina, igual
+          que las categorías de hábitos: son dos plazos distintos, no una lista
+          con un subtítulo en medio. El reloj es el día; el libro, la semana. */}
+      <Group sigil="reloj" label="Diarias" quests={daily} onClaim={claim} />
+      <div className="mt-3">
+        <Group sigil="libro" label="Semanales" quests={weekly} onClaim={claim} />
+      </div>
+      {/* Filete de cierre: la card termina en algo en vez de cortarse contra
+          el borde inferior. */}
+      <div className="mt-3 flex items-center gap-2.5">
+        <span className="gr-filete" />
+        <span className="gr-rombo" />
       </div>
     </Card>
   );
 }
 
-function Group({ label, quests, onClaim }: { label: string; quests: Quest[]; onClaim: (q: Quest) => void }) {
+function Group({ sigil, label, quests, onClaim }: {
+  sigil: SigilName; label: string; quests: Quest[]; onClaim: (q: Quest) => void;
+}) {
   return (
-    <div>
-      <div className="mb-1.5 font-label text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</div>
+    <SectionBand sigil={sigil} label={label} count={quests.filter((q) => q.claimed).length || undefined}
+                 fill="linea" spine>
       <div className="space-y-2">
         {quests.map((q) => {
           const pct = Math.min(100, Math.round((q.progress / q.target) * 100));
@@ -62,6 +75,6 @@ function Group({ label, quests, onClaim }: { label: string; quests: Quest[]; onC
           );
         })}
       </div>
-    </div>
+    </SectionBand>
   );
 }

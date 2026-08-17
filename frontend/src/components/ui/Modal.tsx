@@ -1,13 +1,42 @@
 import { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { IconX } from "@tabler/icons-react";
+
+/**
+ * Todo diálogo se monta en `document.body`, no donde se escribe.
+ *
+ * `position: fixed` se resuelve contra el viewport **salvo** que algún
+ * antepasado tenga `transform`, y la animación de entrada de las vistas
+ * (`gr-enter`, que desplaza 6px) le da uno a la raíz de cada página durante y
+ * después de la animación. Con el modal dentro del árbol de la vista, «fijo»
+ * pasaba a significar «fijo respecto a la página», y el diálogo aparecía fuera
+ * de la pantalla o recortado por el scroll de `main`.
+ *
+ * En un portal el problema no puede volver: no hay antepasado que transformar.
+ */
+export function Overlay({ onClose, children, align = "center" }: {
+  onClose: () => void;
+  children: ReactNode;
+  /** `start` deja el diálogo arriba y con scroll propio, para los largos. */
+  align?: "center" | "start";
+}) {
+  return createPortal(
+    <div
+      className={`fixed inset-0 z-[90] flex justify-center overflow-y-auto p-4 ${
+        align === "start" ? "items-start py-8" : "items-center"
+      }`}
+      style={{ background: "rgba(10,8,16,0.72)" }}
+      onClick={onClose}
+    >
+      {children}
+    </div>,
+    document.body,
+  );
+}
 
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
-      style={{ background: "rgba(10,8,16,0.7)" }}
-      onClick={onClose}
-    >
+    <Overlay onClose={onClose}>
       <div
         className="w-full max-w-md rounded-lg p-5"
         style={{ background: "var(--bg-deep)", border: "1px solid var(--border-accent)" }}
@@ -21,7 +50,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </Overlay>
   );
 }
 

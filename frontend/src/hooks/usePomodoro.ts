@@ -285,6 +285,10 @@ export function usePomodoro(
   return {
     phase: timer.phase,
     secondsLeft: Math.ceil(left / 1000),
+    /* El dial dibuja una marca por minuto de la fase, así que necesita la
+       duración además de lo que queda. Deducirla de `progress` fallaba al
+       llegar a cero, que es justo cuando la esfera tiene que estar llena. */
+    totalSeconds: Math.round(total / 1000),
     running: timer.running,
     workCount: timer.workCount,
     progress,

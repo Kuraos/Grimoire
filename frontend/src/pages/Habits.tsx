@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import { IconPlus, IconArchive, IconFlame, IconEdit, IconX, IconTag, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconArchive, IconFlame, IconEdit, IconX, IconTag, IconTrash, IconCalendar } from "@tabler/icons-react";
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
+import { Figure } from "../components/ui/Figure";
+import { SectionBand } from "../components/ui/SectionBand";
+import { sigilDeCategoria } from "../components/ui/Sigil";
+import { PageHeader } from "../components/layout/PageHeader";
 import { HabitCardGothic } from "../components/ui/HabitCardGothic";
-import { Modal, Field } from "../components/ui/Modal";
+import { Modal, Overlay, Field } from "../components/ui/Modal";
 import { HabitHeatmap } from "../components/charts/HabitHeatmap";
+import { HabitConstellation } from "../components/charts/HabitConstellation";
 import { HabitXPChart } from "../components/charts/HabitXPChart";
 import { TagInput } from "../components/ui/TagInput";
 import { confirm } from "../confirm";
@@ -96,52 +101,96 @@ export default function Habits() {
     items: habits.filter((h) => h.category === cat),
   })).filter((g) => g.items.length > 0);
 
+  const bestStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
+  const avgRate = habits.length
+    ? Math.round(habits.reduce((s, h) => s + h.completion_rate, 0) / habits.length)
+    : 0;
+  const marks = heat.reduce((s, d) => s + d.count, 0);
+
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <div className="flex items-center justify-between lg:col-span-3">
-        <h1 className="gr-title-module">Hábitos</h1>
-        <div className="flex gap-2">
-          <button
-            className="btn"
-            onClick={() => setShowArchived((v) => !v)}
-            title={showArchived ? "Ocultar los archivados" : "Mostrar también los archivados"}
-            style={showArchived ? { borderColor: "var(--gr-edge-focus)", color: "var(--gr-arcane)" } : undefined}
-          >
-            <IconArchive size={14} /> {showArchived ? "Ocultar archivados" : "Ver archivados"}
-          </button>
-          <button className="btn" onClick={() => setCatsOpen(true)}>
-            <IconTag size={14} /> Categorías
-          </button>
-          <button className="btn btn-primary" onClick={() => setCreating(true)}>
-            <IconPlus size={14} /> Nuevo hábito
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Hábitos"
+        className="lg:col-span-3"
+        context={`${habits.length} activos · ${habits.filter((h) => h.done_today).length} cumplidos hoy · racha más larga ${bestStreak} días`}
+      >
+        <button
+          className="btn"
+          onClick={() => setShowArchived((v) => !v)}
+          title={showArchived ? "Ocultar los archivados" : "Mostrar también los archivados"}
+          style={showArchived ? { borderColor: "var(--gr-edge-focus)", color: "var(--gr-arcane)" } : undefined}
+        >
+          <IconArchive size={14} /> {showArchived ? "Ocultar archivados" : "Ver archivados"}
+        </button>
+        <button className="btn" onClick={() => setCatsOpen(true)}>
+          <IconTag size={14} /> Categorías
+        </button>
+        <button className="btn btn-primary" onClick={() => setCreating(true)}>
+          <IconPlus size={14} /> Nuevo hábito
+        </button>
+      </PageHeader>
 
-      <div className="space-y-3 lg:col-span-2">
-        {byCategory.length === 0 && (
-          <Card><p className="text-xs text-[var(--text-muted)]">Aún no hay hábitos activos.</p></Card>
-        )}
-        {byCategory.map((g) => (
-          <section key={g.cat}>
-            <h2 className="section-title mb-2">{g.cat}</h2>
-            <div className="space-y-2">
-              {g.items.map((h) => (
-                <HabitCardGothic key={h.id} habit={h} onComplete={complete} onUndo={undo} onOpen={openDetail} onRestore={restore} />
+      {/* La rúbrica ocupa el ancho entero y lleva el mapa a la izquierda con
+          las tres cifras del año a la derecha: el mapa dice la forma y las
+          cifras la magnitud, y separados en dos cards no se leían juntos. */}
+      <Card rank="rubric" title="Consistencia · 12 meses" icon={<IconCalendar size={14} />} className="lg:col-span-3">
+        <div className="flex flex-wrap items-start gap-7">
+          <div className="min-w-0 flex-1">
+            <HabitHeatmap data={heat} />
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 font-label text-2xs text-[var(--text-faint)]">
+              <span>menos</span>
+              {["var(--gr-surface-raised)", "#4d3f70", "#7663ad", "var(--gr-arcane)"].map((c) => (
+                <span key={c} className="h-[11px] w-[11px] rounded-xs" style={{ background: c }} />
               ))}
+              <span>más</span>
+              <span className="ml-3 h-[11px] w-[11px] rounded-xs bg-[var(--gr-surface-raised)] outline outline-1 outline-[var(--gr-arcane)]" />
+              <span>hoy</span>
             </div>
-          </section>
+          </div>
+          <div className="flex gap-7">
+            <Figure value={`${bestStreak}`} label="Racha más larga" gold />
+            <Figure value={`${avgRate}`} suffix="%" label="Constancia media" />
+            <Figure value={marks.toLocaleString("es")} label="Marcas en 12 meses" />
+          </div>
+        </div>
+      </Card>
+
+      <div className="space-y-1 lg:col-span-2">
+        {byCategory.length === 0 && (
+          <Card><p className="gr-sangrado text-xs text-[var(--text-muted)]">Aún no hay hábitos activos.</p></Card>
+        )}
+        {/* Cada categoría cuelga de su sigilo y de una espina: la marca dice qué
+            grupo es antes de leer el rótulo, y la espina ata las tarjetas al
+            bloque en vez de dejarlas sueltas bajo un título. */}
+        {byCategory.map((g) => (
+          <div key={g.cat} className="pt-2.5">
+            <SectionBand
+              sigil={sigilDeCategoria(g.cat)}
+              label={g.cat}
+              count={g.items.length}
+              fill="linea"
+              spine
+            >
+              <div className="space-y-2">
+                {g.items.map((h) => (
+                  <HabitCardGothic key={h.id} habit={h} onComplete={complete} onUndo={undo} onOpen={openDetail} onRestore={restore} />
+                ))}
+              </div>
+            </SectionBand>
+          </div>
         ))}
       </div>
 
       <div className="space-y-3">
-        <Card title="Consistencia · 12 meses">
-          <HabitHeatmap data={heat} />
-        </Card>
-        {detail && (
-          <DetailPanel habit={detail} logs={logs} xpSeries={xpSeries} onClose={() => setDetail(null)} onArchive={archive} onEdit={() => { setEditing(detail); setDetail(null); }} />
-        )}
+        <HabitConstellation habits={habits} />
       </div>
+
+      {/* Fuera de las columnas: es una capa sobre la vista, no una card de la
+          rejilla. Dejarlo dentro funcionaba —está en `fixed`— pero el marcado
+          decía lo contrario de lo que hace. */}
+      {detail && (
+        <DetailPanel habit={detail} logs={logs} xpSeries={xpSeries} onClose={() => setDetail(null)} onArchive={archive} onEdit={() => { setEditing(detail); setDetail(null); }} />
+      )}
 
       {(creating || editing) && (
         <HabitForm
@@ -163,6 +212,7 @@ export default function Habits() {
     </div>
   );
 }
+
 
 function CategoriesModal({ categories, onClose, onChanged, notify }: {
   categories: HabitCategory[];
@@ -256,49 +306,90 @@ function CategoriesModal({ categories, onClose, onChanged, notify }: {
   );
 }
 
+/**
+ * El detalle de un hábito, como pliego suelto sobre la vista.
+ *
+ * Era una card más en la columna derecha, debajo del heatmap: para leer la
+ * racha de un hábito había que buscar dónde había aparecido el panel, y con la
+ * constelación al lado competían dos cosas por el mismo sitio. Abierto encima
+ * y centrado, el hábito es lo único que hay mientras se mira.
+ *
+ * Las cuatro cifras van en cajas hundidas y grandes —es lo que se viene a ver—,
+ * y tres de las cuatro en oro: racha, mejor racha y XP son lo que se ganó.
+ * «Completado» es un porcentaje, o sea dato, y se queda en tinta.
+ */
 function DetailPanel({ habit, logs, xpSeries, onClose, onArchive, onEdit }: {
   habit: Habit; logs: HabitLog[]; xpSeries: { date: string; xp: number }[]; onClose: () => void; onArchive: (h: Habit) => void; onEdit: () => void;
 }) {
   return (
-    <Card>
-      <div className="mb-2 flex items-center">
-        <span className="font-display text-sm text-[var(--text-primary)]">{habit.name}</span>
-        <button onClick={onClose} className="ml-auto text-[var(--text-muted)]"><IconX size={14} /></button>
-      </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
-        <Metric label="Racha actual" value={`${habit.streak} días`} icon={<IconFlame size={11} />} gold />
-        <Metric label="Mejor racha" value={`${habit.best_streak} días`} gold />
-        <Metric label="Completado" value={`${habit.completion_rate}%`} />
-        <Metric label="XP total" value={`${habit.total_xp}`} gold />
-      </div>
-      <div className="mt-3">
-        <div className="section-title mb-1">XP acumulado</div>
-        <HabitXPChart series={xpSeries} />
-      </div>
-      <div className="mt-3 max-h-48 overflow-y-auto">
-        <div className="section-title mb-1">Historial</div>
-        {logs.length === 0 && <p className="text-xs text-[var(--text-muted)]">Sin registros.</p>}
-        {logs.map((l) => (
-          <div key={l.id} className="border-b border-[var(--gr-edge)] py-1 text-xs tabular text-[var(--text-body)]">
-            {new Date(l.completed_at).toLocaleString()}
+    <Overlay onClose={onClose} align="start">
+      <div
+        className="card card-rubric w-full max-w-2xl"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label={habit.name}
+      >
+        <span className="gr-nudo gr-nudo--oro" />
+        <span className="gr-nudo gr-nudo--oro gr-nudo--contra" />
+
+        <div className="gr-sangrado mb-4 flex items-center gap-3">
+          <h2 className="gr-rubrica">{habit.name}</h2>
+          <button onClick={onClose} title="Cerrar"
+                  className="ml-auto text-[var(--text-muted)] hover:text-[var(--text-primary)]">
+            <IconX size={16} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <Metric label="Racha actual" value={`${habit.streak} días`} icon={<IconFlame size={16} />} gold />
+          <Metric label="Mejor racha" value={`${habit.best_streak} días`} gold />
+          <Metric label="Completado" value={`${habit.completion_rate}%`} />
+          <Metric label="XP total" value={habit.total_xp.toLocaleString("es")} gold />
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center gap-2.5">
+            <span className="font-label text-xs text-[var(--text-muted)]">XP acumulado</span>
+            <span className="gr-filete" />
+            <span className="gr-rombo" />
           </div>
-        ))}
+          <HabitXPChart series={xpSeries} />
+        </div>
+
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center gap-2.5">
+            <span className="font-label text-xs text-[var(--text-muted)]">Historial</span>
+            <span className="gr-filete" />
+            <span className="gr-rombo" />
+          </div>
+          <div className="max-h-56 overflow-y-auto">
+            {logs.length === 0 && <p className="text-xs text-[var(--text-muted)]">Sin registros.</p>}
+            {logs.map((l) => (
+              <div key={l.id} className="border-b border-[var(--gr-edge)] py-2 text-sm tabular text-[var(--text-body)] last:border-none">
+                {new Date(l.completed_at).toLocaleString("es", {
+                  day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4 flex gap-2.5">
+          <button className="btn flex-1 justify-center" onClick={onEdit}><IconEdit size={13} /> Editar</button>
+          <button className="btn flex-1 justify-center" onClick={() => onArchive(habit)}><IconArchive size={13} /> Archivar</button>
+        </div>
       </div>
-      <div className="mt-3 flex gap-2">
-        <button className="btn flex-1 justify-center" onClick={onEdit}><IconEdit size={13} /> Editar</button>
-        <button className="btn flex-1 justify-center" onClick={() => onArchive(habit)}><IconArchive size={13} /> Archivar</button>
-      </div>
-    </Card>
+    </Overlay>
   );
 }
 
 /** `gold` marca lo que el usuario se ha ganado; el resto es dato, y va en tinta. */
 function Metric({ label, value, icon, gold }: { label: string; value: string; icon?: React.ReactNode; gold?: boolean }) {
   return (
-    <div className="rounded-md bg-[var(--bg-elevated)] p-2">
+    <div className="rounded-md border border-[var(--gr-edge)] bg-[var(--gr-surface-sunken)] px-3.5 py-3">
       <div className="text-2xs font-label text-[var(--text-muted)]">{label}</div>
       <div
-        className="flex items-center gap-1 text-base tabular"
+        className="mt-1.5 flex items-center gap-1.5 text-2xl tabular"
         style={{ color: gold ? "var(--gr-gilded)" : "var(--text-primary)" }}
       >
         {icon}{value}

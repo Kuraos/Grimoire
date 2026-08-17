@@ -3,9 +3,15 @@ import { IconChevronLeft, IconChevronRight, IconPlus, IconTrash, IconEdit, IconC
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
+import { SectionBand } from "../components/ui/SectionBand";
+import { PageHeader } from "../components/layout/PageHeader";
 import { Modal, Field } from "../components/ui/Modal";
+import { MoonDisc, moonIllum, moonName, moonPath, moonPhase } from "../components/charts/MoonPhase";
 import { confirm } from "../confirm";
-import { MONTHS_ES, WEEKDAYS_ES, DOT_COLORS, isoDate, isoDateTime, fmtTime, monthCells } from "../utils";
+import {
+  MONTHS_ES, WEEKDAYS_ES, WEEKDAY_NAMES_ES, DOT_COLORS, toRoman,
+  isoDate, isoDateTime, fmtTime, monthCells,
+} from "../utils";
 import type { CalendarEvent, Task, PomodoroSession } from "../types";
 
 export default function Calendar() {
@@ -99,27 +105,30 @@ export default function Calendar() {
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="gr-title-module">Calendario</h1>
-        <div className="ml-auto flex items-center gap-1">
-          <button className="btn" onClick={() => move(-1)}><IconChevronLeft size={14} /></button>
-          <button className="btn" onClick={() => { setCursor(new Date()); setSelected(isoDate(new Date())); }}>Hoy</button>
-          <button className="btn" onClick={() => move(1)}><IconChevronRight size={14} /></button>
-          <div className="ml-2 flex rounded-md border border-[var(--border-accent)] overflow-hidden">
-            <button className={`px-3 py-1 text-xs font-display ${view === "month" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("month")}>Mes</button>
-            <button className={`px-3 py-1 text-xs font-display ${view === "week" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("week")}>Semana</button>
-          </div>
-          <input ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden" onChange={onPickFile} />
-          <button className="btn" onClick={() => fileRef.current?.click()} disabled={importing}
-                  title="Importar un archivo .ics (horario de clases, etc.)">
-            <IconCalendarPlus size={14} /> {importing ? "Importando…" : "Importar .ics"}
-          </button>
-          <button className="btn btn-primary" onClick={() => { setEditEvent(null); setModal(true); }}><IconPlus size={14} /> Evento</button>
+      <PageHeader
+        title="Calendario"
+        context={`${moonName(moonPhase(new Date()))} · ${Math.round(moonIllum(moonPhase(new Date())) * 100)}% iluminada`}
+      >
+        <button className="btn" onClick={() => move(-1)}><IconChevronLeft size={14} /></button>
+        <button className="btn" onClick={() => { setCursor(new Date()); setSelected(isoDate(new Date())); }}>Hoy</button>
+        <button className="btn" onClick={() => move(1)}><IconChevronRight size={14} /></button>
+        <div className="flex rounded-md border border-[var(--border-accent)] overflow-hidden">
+          <button className={`px-3 py-1 text-xs font-display ${view === "month" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("month")}>Mes</button>
+          <button className={`px-3 py-1 text-xs font-display ${view === "week" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("week")}>Semana</button>
         </div>
-      </div>
+        <input ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden" onChange={onPickFile} />
+        <button className="btn" onClick={() => fileRef.current?.click()} disabled={importing}
+                title="Importar un archivo .ics (horario de clases, etc.)">
+          <IconCalendarPlus size={14} /> {importing ? "Importando…" : "Importar .ics"}
+        </button>
+        <button className="btn btn-primary" onClick={() => { setEditEvent(null); setModal(true); }}><IconPlus size={14} /> Evento</button>
+      </PageHeader>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      {/* La rejilla ocupa dos tercios largos: un mes es una superficie, no una
+          lista, y a un tercio las celdas caían por debajo de lo que hace falta
+          para ver los puntos de cada día. */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.75fr_1fr]">
+        <div>
           {view === "month" ? (
             <MonthGrid cursor={cursor} dots={dots} selected={selected} onSelect={setSelected} />
           ) : (
@@ -131,11 +140,24 @@ export default function Calendar() {
           </div>
         </div>
 
-        <Card title={selected}>
+        <div className="space-y-3">
+        <Card>
+          {/* El día en Cinzel y la fecha ISO al lado en tinta tenue: el nombre
+              del día es cómo se le llama, el ISO es cómo se le identifica. */}
+          <div className="gr-sangrado mb-3 flex items-baseline gap-2.5">
+            <span className="gr-rubrica">
+              {WEEKDAY_NAMES_ES[(new Date(selected + "T00:00").getDay() + 6) % 7]} {Number(selected.slice(8))}
+            </span>
+            <span className="font-label text-2xs text-[var(--text-faint)]">{selected}</span>
+          </div>
           {dayEvents.length === 0 && <p className="text-xs text-[var(--text-muted)]">Sin eventos este día.</p>}
           {dayEvents.map((e) => (
-            <div key={`${e.id}-${e.start_dt}`} className="mb-2 rounded-md p-2" style={{ background: "var(--bg-elevated)", borderLeft: `2px solid ${e.color}` }}>
+            <div key={`${e.id}-${e.start_dt}`} className="mb-2 rounded-md p-2.5" style={{ background: "var(--bg-elevated)", borderLeft: `2px solid ${e.color}` }}>
               <div className="flex items-center gap-1">
+                {/* El punto repite el color del filete a la izquierda: en una
+                    lista de tres, el filete solo no basta para atar el evento
+                    a su categoría cuando se lee la hora y no el borde. */}
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: e.color }} />
                 <span className="text-sm text-[var(--text-primary)]">{e.title}</span>
                 <button className="ml-auto text-[var(--text-faint)] hover:text-[var(--purple-main)]" title="Editar" onClick={() => { setEditEvent(e); setModal(true); }}>
                   <IconEdit size={12} />
@@ -153,6 +175,9 @@ export default function Calendar() {
             </div>
           ))}
         </Card>
+
+        <MoonPanel date={selected} />
+        </div>
       </div>
 
       {modal && <EventForm event={editEvent} defaultDate={selected} onClose={() => { setModal(false); setEditEvent(null); }} onSaved={() => { setModal(false); setEditEvent(null); load(); }} />}
@@ -164,6 +189,62 @@ function Legend({ c, l }: { c: string; l: string }) {
   return <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: c }} /> {l}</span>;
 }
 
+/* La luna del día seleccionado, con la lunación entera debajo en ocho discos.
+   Lleva la única cadena de la vista: es la sección con nombre propio. */
+function MoonPanel({ date }: { date: string }) {
+  const d = new Date(date + "T00:00");
+  const ph = moonPhase(d);
+  const illum = Math.round(moonIllum(ph) * 100);
+  const age = Math.round(ph * 29.53);
+
+  // Ocho fases repartidas por el mes del día seleccionado.
+  const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const strip = Array.from({ length: 8 }, (_, i) => {
+    const day = Math.round(1 + (i * (days - 1)) / 7);
+    return { day, date: new Date(d.getFullYear(), d.getMonth(), day) };
+  });
+
+  return (
+    <Card rank="pozo" className="flex flex-col">
+      <SectionBand sigil="circulo" label="La luna" fill="cadena" count={`${illum}%`} />
+
+      <div className="mt-4 flex items-center gap-5">
+        <svg width="132" height="132" viewBox="-70 -70 140 140" fill="none" className="shrink-0"
+             role="img" aria-label={`${moonName(ph)}, ${illum}% iluminada`}>
+          <circle cx="0" cy="0" r="64" stroke="var(--gr-edge)" strokeWidth="1" />
+          <circle cx="0" cy="0" r="52" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="2 5" />
+          <path d={moonPath(ph, 46)} fill="var(--gr-ink-bright)" fillOpacity="0.88" />
+          <circle cx="0" cy="0" r="46" stroke="var(--border-strong)" strokeWidth="0.8" />
+        </svg>
+        <div className="min-w-0">
+          <div className="gr-emphasis">{moonName(ph)}</div>
+          <div className="mt-1.5 tabular text-xs text-[var(--text-muted)]">{illum}% iluminada</div>
+          <div className="tabular text-xs text-[var(--text-muted)]">día {age} de la lunación</div>
+        </div>
+      </div>
+
+      <div className="mt-auto pt-4">
+        <div className="mb-2.5 flex items-center gap-2">
+          <span className="font-label text-xs text-[var(--text-muted)]">
+            La lunación de {MONTHS_ES[d.getMonth()].toLowerCase()}
+          </span>
+          <span className="h-px flex-1 bg-[var(--gr-edge)]" />
+        </div>
+        <div className="flex justify-between gap-1">
+          {strip.map((m) => (
+            <div key={m.day} className="flex flex-col items-center gap-1.5">
+              <MoonDisc date={m.date} opacity={m.day === d.getDate() ? 1 : 0.55} />
+              <span className={`tabular text-2xs ${m.day === d.getDate() ? "text-[var(--gr-arcane-bright)]" : "text-[var(--text-faint)]"}`}>
+                {m.day}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 function MonthGrid({ cursor, dots, selected, onSelect }: {
   cursor: Date; dots: Record<string, string[]>; selected: string; onSelect: (d: string) => void;
 }) {
@@ -173,9 +254,21 @@ function MonthGrid({ cursor, dots, selected, onSelect }: {
   const cells = monthCells(year, month);
 
   return (
-    <Card title={`${MONTHS_ES[month]} ${year}`}>
+    <Card rank="rubric">
+      {/* El mes en Cinzel de 24px y el año en números romanos a su lado: es la
+          portada del mes, no un rótulo de card. Los días de dentro siguen en
+          Inter tabular — Cinzel no tiene cifras tabulares y una rejilla de
+          treinta y un números con anchos distintos baila. */}
+      <div className="gr-sangrado mb-3.5 flex items-baseline gap-3">
+        <span className="gr-emphasis tracking-[0.08em] uppercase">{MONTHS_ES[month]}</span>
+        <span className="gr-rubrica text-[var(--text-muted)]">{toRoman(year)}</span>
+        <span className="h-px flex-1 self-center bg-[var(--gr-edge)]" />
+        <span className="gr-rombo self-center" />
+      </div>
       <div className="grid grid-cols-7 gap-1">
-        {WEEKDAYS_ES.map((w) => <div key={w} className="pb-1 text-center text-xs text-[var(--text-faint)]">{w}</div>)}
+        {WEEKDAYS_ES.map((w) => (
+          <div key={w} className="pb-1.5 text-center font-label text-2xs tracking-[0.1em] text-[var(--text-faint)]">{w}</div>
+        ))}
         {cells.map((d, i) => {
           if (d === null) return <div key={i} />;
           const iso = isoDate(new Date(year, month, d));
@@ -184,15 +277,17 @@ function MonthGrid({ cursor, dots, selected, onSelect }: {
             <button
               key={i}
               onClick={() => onSelect(iso)}
-              className={`flex h-16 flex-col rounded-md p-1 text-left text-xs tabular transition-colors ${
-                iso === selected ? "border border-[var(--border-accent)] bg-[var(--bg-elevated)]" : "hover:bg-[var(--bg-elevated)]"
+              className={`flex min-h-[96px] flex-col rounded-md border p-2 text-left text-sm tabular transition-colors ${
+                iso === selected
+                  ? "border-[var(--gr-arcane)] bg-[var(--gr-arcane-deep)]"
+                  : "border-[var(--gr-edge)] bg-[var(--gr-surface-sunken)] hover:border-[var(--border-strong)]"
               } ${iso === todayIso ? "text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`}
             >
               {/* Hoy se marca con color, no cambiando de tipografía: un dígito
                   en Cinzel entre treinta en Inter rompe la rejilla tabular. */}
               <span className={iso === todayIso ? "font-semibold" : ""}>{d}</span>
-              <span className="mt-auto flex flex-wrap gap-[2px]">
-                {ds.slice(0, 6).map((c, j) => <span key={j} className="h-[4px] w-[4px] rounded-full" style={{ background: c }} />)}
+              <span className="mt-auto flex flex-wrap gap-[3px]">
+                {ds.slice(0, 6).map((c, j) => <span key={j} className="h-[5px] w-[5px] rounded-full" style={{ background: c }} />)}
               </span>
             </button>
           );

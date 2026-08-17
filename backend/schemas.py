@@ -350,6 +350,12 @@ class DiarySearchResult(ORMModel):
     content: str
 
 
+class DiaryVolumePoint(ORMModel):
+    """Un punto de «el volumen»: qué día se escribió y cuánto."""
+    entry_date: date
+    length: int
+
+
 # ---------- Check-ins ----------
 class CheckinCreate(BaseModel):
     energy: int = Field(ge=1, le=5)

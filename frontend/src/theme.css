@@ -69,6 +69,9 @@
   --gr-edge-danger: #6e2c3f;
   /* Filo interior: da volumen de objeto (piedra/vitela) sin sombras */
   --gr-edge-inner: rgba(201, 180, 255, 0.09);
+  /* Regla teñida de arcano: marca la sección donde el sistema espera que
+     escribas, sin subir a `--gr-edge-focus`, que es foco de verdad. */
+  --gr-edge-arcane: rgba(169, 139, 240, 0.22);
 
   /* --- Cromo de la app: sidebar y topbar, apenas elevados del abismo --- */
   --gr-chrome: #100c1c;

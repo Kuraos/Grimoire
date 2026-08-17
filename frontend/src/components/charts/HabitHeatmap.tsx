@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { isoDate } from "../../utils";
+import { isoDate, MONTHS_ES } from "../../utils";
 import { chartPalette, toRgb } from "../../theme-tokens";
 
 /**
@@ -9,7 +9,7 @@ export function HabitHeatmap({ data, weeks = 53 }: {
   data: { date: string; count: number }[];
   weeks?: number;
 }) {
-  const { columns, max } = useMemo(() => {
+  const { columns, max, months } = useMemo(() => {
     const map = new Map(data.map((d) => [d.date, d.count]));
     const max = Math.max(1, ...data.map((d) => d.count));
 
@@ -33,7 +33,27 @@ export function HabitHeatmap({ data, weeks = 53 }: {
       }
       cols.push(col);
     }
-    return { columns: cols, max };
+
+    /* Rótulo de mes sobre la primera columna de cada mes.
+     *
+     * Sale de las columnas y no de doce cajas de ancho fijo: las semanas no
+     * caen en múltiplos exactos de mes, así que un reparto uniforme se desvía
+     * hasta media columna según el año y el rótulo acaba señalando el mes de
+     * al lado. Anclado a la columna, no puede desalinearse.
+     *
+     * Se salta el primer mes si su columna arranca a menos de dos semanas del
+     * borde: ahí el rótulo se sale del lienzo por la izquierda. */
+    const months: { col: number; label: string }[] = [];
+    let lastMonth = -1;
+    cols.forEach((col, i) => {
+      const m = new Date(col[0].date + "T00:00").getMonth();
+      if (m !== lastMonth) {
+        lastMonth = m;
+        if (i > 1) months.push({ col: i, label: MONTHS_ES[m].slice(0, 3) });
+      }
+    });
+
+    return { columns: cols, max, months };
   }, [data, weeks]);
 
   // La rampa se interpola entre dos tokens del tema, no entre hexadecimales
@@ -51,8 +71,22 @@ export function HabitHeatmap({ data, weeks = 53 }: {
 
   const todayIso = isoDate(new Date());
 
+  // 11px de celda + 3px de hueco: el paso con el que se colocan los rótulos.
+  const STEP = 14;
+
   return (
     <div className="overflow-x-auto">
+      <div className="relative mb-1.5 h-4" style={{ width: columns.length * STEP }}>
+        {months.map((m) => (
+          <span
+            key={m.col}
+            className="absolute top-0 font-label text-2xs text-[var(--text-faint)]"
+            style={{ left: m.col * STEP }}
+          >
+            {m.label}
+          </span>
+        ))}
+      </div>
       <div className="flex gap-[3px]">
         {columns.map((col, ci) => (
           <div key={ci} className="flex flex-col gap-[3px]">

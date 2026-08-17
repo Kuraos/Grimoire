@@ -2,14 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IconChevronLeft, IconChevronRight, IconPlus, IconSearch, IconPencil,
   IconTrash, IconArrowsExchange, IconAlertTriangle, IconAdjustments,
-  IconLock, IconCheck,
+  IconLock, IconCheck, IconWallet,
 } from "@tabler/icons-react";
 import { BudgetRail } from "../components/ui/BudgetRail";
 import { RelicRail } from "../components/ui/RelicRail";
-import { SpendHeatmap } from "../components/charts/SpendHeatmap";
+import { SpendDaily } from "../components/charts/SpendDaily";
 import { CategoryTrend } from "../components/charts/CategoryTrend";
 import { Api } from "../api/endpoints";
 import { Card } from "../components/ui/Card";
+import { SectionBand } from "../components/ui/SectionBand";
+import { PageHeader } from "../components/layout/PageHeader";
 import { Modal, Field } from "../components/ui/Modal";
 import { confirm } from "../confirm";
 import {
@@ -20,6 +22,73 @@ import type {
   Account, CategoryTotal, LedgerCategory, LedgerEntry, LedgerSummary,
   LedgerMonthReview, XPEventResponse, SavingsGoal, LedgerStats, BudgetMonth,
 } from "../types";
+
+/**
+ * El reparto del gasto del mes, en anillo.
+ *
+ * Va en los colores de las partidas y **ningún dorado**: es la regla del
+ * módulo. El dinero que sale no es mérito, y un anillo con un sector de oro
+ * habría premiado gastar mucho en algo.
+ *
+ * Anillo y no tarta porque el hueco del centro sirve: ahí va el total, que es
+ * la cifra que se busca antes que cualquier porcentaje.
+ */
+function SpendDonut({ rows, total, currency }: {
+  rows: CategoryTotal[]; total: number; currency: string;
+}) {
+  const gastos = rows.filter((r) => r.kind === "expense" && r.total_minor > 0);
+  if (gastos.length === 0 || total <= 0) return null;
+
+  const R = 46;
+  const W = 14;
+  const C = 2 * Math.PI * R;
+  let offset = 0;
+
+  return (
+    <div className="flex items-center gap-4">
+      <svg width="124" height="124" viewBox="0 0 124 124" fill="none" className="shrink-0"
+           role="img" aria-label={`Gasto del mes por partida: ${formatMoney(total, currency)}`}>
+        {gastos.map((r) => {
+          const frac = r.total_minor / total;
+          const dash = frac * C;
+          const el = (
+            <circle
+              key={r.name}
+              cx="62" cy="62" r={R}
+              stroke={r.color} strokeWidth={W}
+              strokeDasharray={`${dash} ${C - dash}`}
+              strokeDashoffset={-offset}
+              transform="rotate(-90 62 62)"
+            />
+          );
+          offset += dash;
+          return el;
+        })}
+        <circle cx="62" cy="62" r={R - W / 2} stroke="var(--gr-edge)" strokeWidth="1" />
+        <circle cx="62" cy="62" r={R + W / 2} stroke="var(--gr-edge)" strokeWidth="1" />
+        <text x="62" y="60" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="15"
+              fontWeight="600" fill="var(--gr-ink-bright)">
+          {formatMoney(total, currency)}
+        </text>
+        <text x="62" y="74" textAnchor="middle" fontFamily="Inter, sans-serif" fontSize="9"
+              fontWeight="600" letterSpacing="1.2" fill="var(--gr-ink-faint)">
+          GASTADO
+        </text>
+      </svg>
+      <div className="min-w-0 space-y-1">
+        {gastos.slice(0, 7).map((r) => (
+          <div key={r.name} className="flex items-baseline gap-2 text-xs">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.color }} />
+            <span className="truncate text-[var(--text-muted)]">{r.name}</span>
+            <span className="ml-auto tabular text-[var(--text-body)]">
+              {Math.round((r.total_minor / total) * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /** "2026-08" del día de hoy. */
 function currentMonth(): string {
@@ -124,28 +193,37 @@ export default function Erario() {
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <div className="flex flex-wrap items-center gap-2 lg:col-span-3">
-        <h1 className="gr-title-module">Erario</h1>
-        <div className="ml-auto flex items-center gap-1">
-          <button className="btn" onClick={() => setMonth(shiftMonth(month, -1))} title="Mes anterior">
-            <IconChevronLeft size={14} />
-          </button>
-          <span className="px-2 font-label text-xs tabular text-[var(--text-body)]">
-            {monthLabel(month)}
-          </span>
-          <button className="btn" onClick={() => setMonth(shiftMonth(month, 1))} title="Mes siguiente">
-            <IconChevronRight size={14} />
-          </button>
-          <button className="btn btn-primary ml-2" onClick={() => setEditing("new")}>
-            <IconPlus size={13} /> Nuevo asiento
-          </button>
-        </div>
-      </div>
+      {/* La línea de contexto cuenta asientos, no dinero: el dinero no es oro ni
+          mérito, y un titular con el saldo convertiría la cabecera en marcador. */}
+      <PageHeader
+        title="Erario"
+        className="lg:col-span-3"
+        context={`${summary?.entry_count ?? 0} asiento${(summary?.entry_count ?? 0) === 1 ? "" : "s"} este mes`}
+      >
+        <button className="btn" onClick={() => setMonth(shiftMonth(month, -1))} title="Mes anterior">
+          <IconChevronLeft size={14} />
+        </button>
+        <span className="gr-rubrica min-w-[168px] text-center text-[var(--text-primary)]">
+          {monthLabel(month)}
+        </span>
+        <button className="btn" onClick={() => setMonth(shiftMonth(month, 1))} title="Mes siguiente">
+          <IconChevronRight size={14} />
+        </button>
+        <button className="btn btn-primary" onClick={() => setEditing("new")}>
+          <IconPlus size={13} /> Nuevo asiento
+        </button>
+      </PageHeader>
 
       {/* La rúbrica de la vista. En esta fase son totales planos: «lo que queda»
           necesita las asignaciones, que llegan en la fase siguiente. */}
       <div className="lg:col-span-3">
         <Card rank="rubric" title={monthLabel(month)}>
+          {/* Cifras a la izquierda, reparto a la derecha. El anillo va en el
+              cuerpo y no en la fila del rótulo: ahí quedaba pegado al título,
+              a media altura de nada, en vez de enfrentado a los totales que
+              explica. */}
+          <div className="flex flex-wrap items-start gap-x-10 gap-y-5">
+          <div className="min-w-[280px] flex-1">
           {/* Un mes vacío no se anuncia con cuatro ceros de 34px: leen como una
               vista rota, no como un mes sin empezar. */}
           {(summary?.entry_count ?? 0) === 0 ? (
@@ -249,6 +327,11 @@ export default function Erario() {
               />
             </div>
           )}
+          </div>
+          {summary && summary.by_category.length > 0 && (
+            <SpendDonut rows={summary.by_category} total={summary.expense_minor} currency={currency} />
+          )}
+          </div>
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
             {(summary?.unclassified_count ?? 0) > 0 && (
               <button
@@ -279,6 +362,7 @@ export default function Erario() {
       {/* El libro de cuentas */}
       <div className="lg:col-span-2">
         <Card
+          named
           title="El libro de cuentas"
           right={
             <div className="flex items-center gap-1.5">
@@ -419,18 +503,18 @@ export default function Erario() {
       </div>
 
       <div className="space-y-3">
-        <Card title="Arcas">
+        <Card named title="Arcas">
           {accounts.length === 0 ? (
             <p className="text-xs text-[var(--text-muted)]">Ninguna arca todavía.</p>
           ) : (
             <div className="space-y-2">
               {accounts.map((a) => (
-                <div key={a.id} className="flex items-baseline justify-between gap-3 text-xs">
-                  <span className="flex items-center gap-1.5 text-[var(--text-body)]">
-                    <span
-                      className="inline-block h-2 w-2 rounded-sm"
-                      style={{ background: a.color }}
-                    />
+                <div key={a.id} className="flex items-baseline justify-between gap-3 border-b border-[var(--gr-edge)] py-1.5 text-sm last:border-none">
+                  <span className="flex items-center gap-2 text-[var(--text-body)]">
+                    {/* La billetera dice «arca» antes que el nombre; el color
+                        de la cuenta va en el trazo del icono, no en un punto
+                        aparte, que era una segunda marca para el mismo dato. */}
+                    <IconWallet size={15} style={{ color: a.color }} />
                     {a.name}
                   </span>
                   <span
@@ -452,6 +536,7 @@ export default function Erario() {
             no hay contra qué medir, y pintar una barra llena al 100% sugeriría
             un cerco que no existe. Los carriles llegan con las asignaciones. */}
         <Card
+          named
           title="Partidas del mes"
           right={
             <button
@@ -472,30 +557,41 @@ export default function Erario() {
           )}
         </Card>
 
-        <Card
-          title="Reliquias"
-          right={
-            <button className="btn" onClick={() => setGoalForm("new")} title="Nueva meta de ahorro">
-              <IconPlus size={12} /> Nueva
-            </button>
-          }
-        >
-          {goals.length === 0 ? (
-            <p className="text-xs text-[var(--text-muted)]">
-              Ninguna meta de ahorro. Una reliquia es lo único del erario que se gana.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {goals.map((g) => (
-                <RelicRail
-                  key={g.id}
-                  goal={g}
-                  currency={currency}
-                  onContribute={setContributing}
-                />
-              ))}
-            </div>
-          )}
+        {/* Las reliquias bajan al pozo: son lo único del erario que se aspira a
+            alcanzar, y el campo estelar dice eso mejor que otra caja igual a
+            las dos de arriba. */}
+        <Card rank="pozo">
+          {/* La única cadena del erario. Se la lleva la sección de las metas y
+              no la del dinero corriente: la cadena es orfebrería, y en este
+              módulo lo único que se gana es una reliquia. */}
+          <SectionBand
+            sigil="hexagono"
+            label="Reliquias"
+            count={goals.length || undefined}
+            fill="cadena"
+            right={
+              <button className="btn" onClick={() => setGoalForm("new")} title="Nueva meta de ahorro">
+                <IconPlus size={12} /> Nueva
+              </button>
+            }
+          >
+            {goals.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                Ninguna meta de ahorro. Una reliquia es lo único del erario que se gana.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {goals.map((g) => (
+                  <RelicRail
+                    key={g.id}
+                    goal={g}
+                    currency={currency}
+                    onContribute={setContributing}
+                  />
+                ))}
+              </div>
+            )}
+          </SectionBand>
         </Card>
       </div>
 
@@ -504,14 +600,14 @@ export default function Erario() {
       {stats && (stats.daily.length > 0 || stats.series.length > 0) && (
         <div className="lg:col-span-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <Card title="Gasto día a día" rank="marginalia">
-              <SpendHeatmap data={stats.daily} currency={stats.currency} />
-              <p className="mt-2 text-2xs text-[var(--text-muted)]">
-                La intensidad es relativa a tu día más caro del periodo, no a una
-                cifra absoluta.
+            <Card title="Gasto día a día" rank="pozo">
+              <SpendDaily data={stats.daily} currency={stats.currency} month={month} />
+              <p className="mt-2 text-2xs italic text-[var(--text-faint)]">
+                El día más caro del mes va en rojo. No porque gastar esté mal:
+                porque merece una mirada.
               </p>
             </Card>
-            <Card title="Por partida, mes a mes" rank="marginalia">
+            <Card title="Por partida, mes a mes" rank="pozo">
               <CategoryTrend stats={stats} />
             </Card>
           </div>

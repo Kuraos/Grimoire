@@ -104,6 +104,7 @@ export const Api = {
     api.patch<DiaryEntry>(`/diary/${date}`, { content, ...(tags !== undefined ? { tags } : {}) }),
   searchDiary: (q: string) => api.get<{ entry_date: string; content: string }[]>(`/diary/search?q=${encodeURIComponent(q)}`),
   diaryDates: () => api.get<string[]>("/diary/dates"),
+  diaryVolume: () => api.get<{ entry_date: string; length: number }[]>("/diary/volume"),
   daySummary: (date: string) => api.get<DaySummary>(`/diary/${date}/summary`),
   exportDiaryObsidian: (date: string) =>
     api.post<{ exported: boolean; path: string }>(`/diary/${date}/export-obsidian`),

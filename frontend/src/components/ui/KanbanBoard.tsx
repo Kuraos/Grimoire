@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { IconChecklist, IconEdit } from "@tabler/icons-react";
 import type { Task } from "../../types";
+import { Sigil, SigilName } from "./Sigil";
 import { parseTags } from "./TagInput";
 
-const COLUMNS: { key: Task["status"]; label: string }[] = [
-  { key: "todo", label: "Por hacer" },
-  { key: "doing", label: "En curso" },
-  { key: "done", label: "Hecho" },
+/* El sigilo de cada columna cuenta el mismo estado que el rótulo, en geometría:
+   la caja vacía es lo que no se ha tocado, la caja partida lo que está a medio,
+   la caja con marca lo despachado. Se lee antes que el texto. */
+const COLUMNS: { key: Task["status"]; label: string; sigil: SigilName }[] = [
+  { key: "todo", label: "Por hacer", sigil: "caja" },
+  { key: "doing", label: "En curso", sigil: "cajaMedia" },
+  { key: "done", label: "Hecho", sigil: "cajaMarcada" },
 ];
 
 // Prioridad es dato semántico, no acento. Mismo criterio que TaskCard.
@@ -51,6 +55,7 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
         return (
           <div
             key={col.key}
+            data-col={col.key}
             onDragOver={(e) => { e.preventDefault(); setOverCol(col.key); setOverCard(null); }}
             onDrop={() => drop(col.key)}
             className="rounded-lg border p-2 transition-colors"
@@ -60,9 +65,12 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
               minHeight: 120,
             }}
           >
-            <div className="mb-2 flex items-center justify-between px-1">
+            <div className="mb-2 flex items-center gap-2 px-1">
+              <span className="text-[var(--text-muted)]"><Sigil name={col.sigil} size={18} /></span>
               <span className="font-label text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">{col.label}</span>
               <span className="tabular text-xs text-[var(--text-faint)]">{items.length}</span>
+              <span className="gr-filete" />
+              <span className="gr-rombo" />
             </div>
             <div className="space-y-2">
               {items.map((t) => (

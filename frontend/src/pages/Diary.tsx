@@ -3,6 +3,8 @@ import { IconChevronLeft, IconChevronRight, IconSearch, IconEye, IconPencil, Ico
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
+import { PageHeader } from "../components/layout/PageHeader";
+import { DiaryVolume } from "../components/charts/DiaryVolume";
 import { MiniCalendar } from "../components/ui/MiniCalendar";
 import { TagInput } from "../components/ui/TagInput";
 import { useAutoSave } from "../hooks/useAutoSave";
@@ -90,49 +92,72 @@ export default function Diary() {
   const marks: Record<string, string[]> = {};
   marked.forEach((d) => { marks[d] = ["var(--gr-arcane)"]; });
 
-  return (
-    <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <div className="flex items-center gap-2 lg:col-span-3">
-        <h1 className="gr-title-module">Diario</h1>
-        <div className="ml-auto flex items-center gap-1">
-          <button className="btn" onClick={() => move(-1)}><IconChevronLeft size={14} /></button>
-          <span className="px-2 font-label text-xs tabular text-[var(--text-body)]">{date}</span>
-          <button className="btn" onClick={() => move(1)}><IconChevronRight size={14} /></button>
-        </div>
-      </div>
+  const words = content.trim() ? content.trim().split(/\s+/).length : 0;
 
-      <div className="space-y-2 lg:col-span-2">
-        <Card right={
-          <div className="flex items-center gap-2">
-            <span className="text-xs italic text-[var(--text-muted)]">{statusLabel}</span>
-            <button className="btn" onClick={() => setPreview(!preview)}>
-              {preview ? <><IconPencil size={12} /> Editar</> : <><IconEye size={12} /> Vista</>}
-            </button>
-            <button className="btn" onClick={exportObsidian} title="Escribe {vault}/06-Diario/{fecha}.md">
-              <IconFileExport size={12} /> Exportar a Obsidian
-            </button>
-          </div>
-        } title="Entrada del día">
+  return (
+    /* 1.9 : 1 y no 2 : 1. La columna de escritura tiene que ganar sin dejar la
+       de contexto en una tira: con dos tercios exactos, el minicalendario y el
+       volumen se estrechaban por debajo de lo que necesitan. */
+    <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.9fr_1fr]">
+      <PageHeader
+        title="Diario"
+        className="lg:col-span-2"
+        context={`${words} palabra${words === 1 ? "" : "s"} · ${marked.size} entrada${marked.size === 1 ? "" : "s"} en el volumen`}
+      >
+        <button className="btn" onClick={() => move(-1)}><IconChevronLeft size={14} /></button>
+        <span className="px-2 font-label text-xs tabular text-[var(--text-body)]">{date}</span>
+        <button className="btn" onClick={() => move(1)}><IconChevronRight size={14} /></button>
+      </PageHeader>
+
+      <Card rank="rubric" className="flex flex-col">
+        <div className="gr-sangrado flex items-center gap-2">
+          <span className="gr-rubrica">Entrada del día</span>
+          <span className="h-px flex-1 bg-[var(--gr-edge)]" />
+          <span className="text-xs italic text-[var(--text-faint)]">{statusLabel}</span>
+          <button className="btn" onClick={() => setPreview(!preview)}>
+            {preview ? <><IconPencil size={12} /> Editar</> : <><IconEye size={12} /> Vista</>}
+          </button>
+          <button className="btn" onClick={exportObsidian} title="Escribe {vault}/06-Diario/{fecha}.md">
+            <IconFileExport size={12} /> Exportar a Obsidian
+          </button>
+          <span className="gr-rombo" />
+        </div>
+
+        <div className="mt-4 gr-sangrado">
           {!loaded ? (
             <p className="text-xs text-[var(--text-muted)]">Cargando…</p>
           ) : preview ? (
-            <div className="prose-diary font-prose min-h-[300px] text-[var(--text-body)]"
+            /* La capitular vive sólo aquí. El Diario es la única vista con prosa
+               de verdad, y una inicial de 62px repetida deja de ser una inicial.
+               Va en la vista renderizada y no en el textarea a propósito: al
+               escribir, una letra flotada de tres líneas mueve el cursor. */
+            <div className="prose-diary gr-prosa min-h-[340px]"
                  dangerouslySetInnerHTML={{ __html: renderMarkdown(content) || "<p style='color:var(--gr-ink-dim)'>Nada escrito.</p>" }} />
           ) : (
             <textarea
-              className="input font-prose min-h-[300px] resize-y"
+              className="input font-prose min-h-[340px] resize-y bg-[var(--gr-surface-sunken)] text-[17px] leading-[1.7]"
               placeholder="Escribe tu día… (Markdown: **negrita**, *cursiva*, - listas)"
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onBlur={() => saveNow()}
             />
           )}
-          <div className="mt-2">
-            <div className="mb-1 font-label text-xs uppercase tracking-[0.12em] text-[var(--text-muted)]">Etiquetas</div>
+        </div>
+
+        {/* El pie de la entrada: dos filetes con un rombo en medio. Cierra la
+            página escrita antes de las etiquetas, que son metadato y no texto. */}
+        <div className="mt-auto gr-sangrado pt-4">
+          <div className="mb-2.5 flex items-center gap-2.5">
+            <span className="h-px flex-1 bg-[var(--gr-edge)]" />
+            <span className="gr-rombo" />
+            <span className="h-px flex-1 bg-[var(--gr-edge)]" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-label text-xs text-[var(--text-muted)]">Etiquetas</span>
             <TagInput value={tags} onChange={(v) => { setTags(v); Api.saveDiary(date, content, v).catch(() => {}); }} />
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
 
       <div className="space-y-3">
         <Card title="Resumen del día">
@@ -157,7 +182,7 @@ export default function Diary() {
           <MiniCalendar month={calCursor.getMonth()} year={calCursor.getFullYear()} marks={marks} selected={date} onSelect={goToDate} />
         </Card>
 
-        <Card title="Buscar" icon={<IconSearch size={13} />}>
+        <Card title="Buscar en el volumen" icon={<IconSearch size={13} />}>
           <input className="input" placeholder="Buscar en entradas…" value={search} onChange={(e) => setSearch(e.target.value)} />
           <div className="mt-2 max-h-48 overflow-y-auto">
             {results.map((r) => (
@@ -169,6 +194,8 @@ export default function Diary() {
             ))}
           </div>
         </Card>
+
+        <DiaryVolume today={date} />
       </div>
     </div>
   );

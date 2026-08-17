@@ -14,6 +14,10 @@ import { MiniCalendar } from "../components/ui/MiniCalendar";
 import { PomodoroTimer } from "../components/ui/PomodoroTimer";
 import { QuestsCard } from "../components/ui/QuestsCard";
 import { Card } from "../components/ui/Card";
+import { SectionBand } from "../components/ui/SectionBand";
+import { sigilDeCategoria } from "../components/ui/Sigil";
+import { PageHeader } from "../components/layout/PageHeader";
+import { DaySigil } from "../components/charts/DaySigil";
 import { todayISO, isoDateTime, streakMultiplier, DOT_COLORS, MONTHS_ES } from "../utils";
 import type { Habit, Task, Checkin, DaySummary } from "../types";
 
@@ -111,69 +115,130 @@ export default function Dashboard() {
   const bestStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
   const bonus = streakMultiplier(bestStreak);
 
+  // Agrupa conservando el orden de aparición: ordenar por nombre haría que
+  // crear un hábito reordenara la card entera.
+  const byCategory: { cat: string; items: Habit[] }[] = [];
+  for (const h of habits) {
+    const found = byCategory.find((g) => g.cat === h.category);
+    if (found) found.items.push(h);
+    else byCategory.push({ cat: h.category, items: [h] });
+  }
+
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3">
       {/* Era la única vista sin título. Con la rúbrica a 44px en las otras
           ocho, la ausencia se notaba más que la presencia. */}
-      <h1 className="gr-title-module md:col-span-2 lg:col-span-3">Hoy</h1>
-
-      <div className="md:col-span-2 lg:col-span-3">
-        <XPBar xpToday={summary?.xp_earned} streakBonus={bonus} />
-      </div>
-
-      {/* Rúbrica: el bucle diario es lo que la vista existe para servir. */}
-      <Card
-        rank="rubric"
-        title="Hábitos de hoy"
-        icon={<IconRepeat size={14} />}
-        right={
-          /* Peldaño de cifra (34px). A 24px la rúbrica pesaba menos que el
-             temporizador del Pomodoro, que es una hoja: el rango no mandaba. */
-          <span className="gr-figure">
-            <span className="text-[var(--gr-gilded)]">{doneCount}</span>
-            <span className="text-[var(--text-faint)]">/{habits.length}</span>
-          </span>
+      <PageHeader
+        title="Hoy"
+        context={
+          habits.length > 0
+            ? `${doneCount} de ${habits.length} hábitos · ${summary?.xp_earned ?? 0} XP · ${summary?.pomodoro_minutes ?? 0} min de foco`
+            : "Sin hábitos todavía"
         }
-      >
-        {habits.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin hábitos. Créalos en la sección Hábitos.</p>}
-        {habits.map((h) => (
-          <HabitRow key={h.id} habit={h} onComplete={completeHabit} onUndo={undoHabit} onClick={() => nav("/habitos")} />
-        ))}
-      </Card>
+      />
 
-      <Card title="Pomodoro" icon={<IconClock size={14} />}>
-        <PomodoroTimer
-          phase={pomo.phase}
-          secondsLeft={pomo.secondsLeft}
-          running={pomo.running}
-          progress={pomo.progress}
-          subtitle={pomo.activeTask?.title}
-          big={false}
-          onStart={pomo.start}
-          onPause={pomo.pause}
-          onReset={pomo.reset}
-        />
-        <button className="btn mt-3 w-full justify-center" onClick={() => nav("/pomodoro")}>
-          {pomo.running ? "Ver sesión" : "Configurar sesión"}
-        </button>
-      </Card>
+      <XPBar xpToday={summary?.xp_earned} streakBonus={bonus} />
 
-      <Card title="Tareas prioritarias" icon={<IconListCheck size={14} />}>
-        {tasks.length === 0 && <p className="text-sm text-[var(--text-muted)]">Nada pendiente. ✦</p>}
-        {tasks.map((t) => (
-          <TaskCard key={t.id} task={t} compact onComplete={completeTask} />
-        ))}
-      </Card>
+      {/* Tres columnas flex, no una rejilla.
+          Con `grid` las filas igualan alturas, así que el Pomodoro y el
+          check-in de energía —que ocupan cuatro líneas— se estiraban hasta la
+          altura de la lista de hábitos y pesaban en la vista lo mismo que la
+          rúbrica. En columnas, cada tarjeta mide lo que mide su contenido y la
+          jerarquía vuelve a leerse. La primera va a 1.4 porque el bucle diario
+          es lo que la vista existe para servir. */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="min-w-0 lg:flex-[1.4]">
+          <Card
+            rank="rubric"
+            title="Hábitos de hoy"
+            icon={<IconRepeat size={14} />}
+            right={
+              /* Peldaño de cifra (34px). A 24px la rúbrica pesaba menos que el
+                 temporizador del Pomodoro, que es una hoja: el rango no mandaba. */
+              <span className="gr-figure">
+                <span className="text-[var(--gr-gilded)]">{doneCount}</span>
+                <span className="text-[var(--text-faint)]">/{habits.length}</span>
+              </span>
+            }
+          >
+            {habits.length === 0 && <p className="text-sm text-[var(--text-muted)]">Sin hábitos. Créalos en la sección Hábitos.</p>}
+            {/* Agrupados por categoría, cada bloque colgando de su sigilo y su
+                espina. En lista plana, catorce hábitos seguidos son catorce
+                cosas; agrupados son cinco frentes, y el contador de cada uno
+                dice dónde va el día sin sumar a mano. */}
+            {byCategory.map((g) => (
+              <div key={g.cat} className="pt-2 first:pt-0">
+                <SectionBand
+                  sigil={sigilDeCategoria(g.cat)}
+                  label={g.cat}
+                  count={`${g.items.filter((h) => h.done_today).length}/${g.items.length}`}
+                  fill="linea"
+                  spine
+                >
+                  {g.items.map((h) => (
+                    <HabitRow key={h.id} habit={h} onComplete={completeHabit} onUndo={undoHabit} onClick={() => nav("/habitos")} />
+                  ))}
+                </SectionBand>
+              </div>
+            ))}
+          </Card>
+        </div>
 
-      <QuestsCard />
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <Card title="Pomodoro" icon={<IconClock size={14} />}>
+            <PomodoroTimer
+              phase={pomo.phase}
+              secondsLeft={pomo.secondsLeft}
+              running={pomo.running}
+              progress={pomo.progress}
+              subtitle={pomo.activeTask?.title}
+              big={false}
+              onStart={pomo.start}
+              onPause={pomo.pause}
+              side={
+                <button className="btn justify-center" onClick={() => nav("/pomodoro")}>
+                  {pomo.running ? "Ver sesión" : "Configurar"}
+                </button>
+              }
+            />
+          </Card>
 
-      <Card title="Energía / Ánimo" icon={<IconBolt size={14} />}>
-        <EnergyCheckin existing={checkin} onSave={saveCheckin} />
-      </Card>
+          <QuestsCard />
 
-      <Card title={`${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`} icon={<IconCalendar size={14} />}>
-        <MiniCalendar month={now.getMonth()} year={now.getFullYear()} marks={marks} onSelect={() => nav("/calendario")} />
-      </Card>
+          <Card title="Energía / Ánimo" icon={<IconBolt size={14} />}>
+            <EnergyCheckin existing={checkin} onSave={saveCheckin} />
+          </Card>
+        </div>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <Card title="Tareas prioritarias" icon={<IconListCheck size={14} />}>
+            {tasks.length === 0 && <p className="text-sm text-[var(--text-muted)]">Nada pendiente. ✦</p>}
+            {tasks.map((t) => (
+              <TaskCard key={t.id} task={t} compact onComplete={completeTask} />
+            ))}
+            {/* Dos filetes de cierre, el segundo más tenue: la lista se apaga
+                en vez de cortarse, y dice que hay más tareas de las que caben
+                sin tener que escribirlo. */}
+            <div className="mt-2 flex items-center gap-2.5">
+              <span className="gr-filete" />
+              <span className="gr-rombo" />
+            </div>
+            <div className="mt-2 flex items-center gap-2.5">
+              <span className="gr-filete" />
+              <span className="gr-rombo opacity-40" />
+            </div>
+          </Card>
+
+          <Card title={`${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`} icon={<IconCalendar size={14} />}>
+            <MiniCalendar month={now.getMonth()} year={now.getFullYear()} marks={marks} onSelect={() => nav("/calendario")} />
+          </Card>
+
+          {/* El sigilo cierra la esquina inferior derecha: es lo último que se
+              mira y lo único que se lee sin leer nada. Crece con lo que sobre
+              en la columna, que es lo que le da sitio para la rueda. */}
+          <DaySigil habits={habits} />
+        </div>
+      </div>
 
       {/* Marginalia: contar tres cifras no necesita un marco. Pierde la caja y
           se convierte en el pie de la vista. */}
@@ -181,7 +246,6 @@ export default function Dashboard() {
         rank="marginalia"
         title="Resumen del día"
         icon={<IconChartBar size={14} />}
-        className="md:col-span-2 lg:col-span-3"
       >
         <div className="flex flex-wrap gap-x-10 gap-y-3">
           <Stat value={`${summary?.xp_earned ?? 0}`} label="XP hoy" gold />

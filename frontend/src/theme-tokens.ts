@@ -27,6 +27,12 @@ export type ChartPalette = {
   amber: string;
   oxblood: string;
   surfaceRaised: string;
+  /* Las tres piezas de ornamento —sigilo, constelación, volumen— son SVG
+     escrito a mano, y sus `stroke`/`fill` son atributos de presentación
+     igual que los de recharts: tampoco sustituyen `var()`. */
+  gilded: string;
+  gildedBright: string;
+  gildedDeep: string;
 };
 
 let cache: ChartPalette | null = null;
@@ -55,6 +61,9 @@ export function chartPalette(): ChartPalette {
     amber: read("--gr-amber"),
     oxblood: read("--gr-oxblood"),
     surfaceRaised: read("--gr-surface-raised"),
+    gilded: read("--gr-gilded"),
+    gildedBright: read("--gr-gilded-bright"),
+    gildedDeep: read("--gr-gilded-deep"),
   };
   return cache;
 }

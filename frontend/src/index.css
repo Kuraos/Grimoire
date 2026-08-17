@@ -1,6 +1,9 @@
 @import "./fonts.css";
 /* Sistema visual gótico: theme.css es la única fuente de verdad de los tokens. */
 @import "./theme.css";
+/* Capa de ornamento: cielo, nudo, cadena, rúbrica y capitular. Va después
+   porque consume los tokens de theme.css y no define ninguno propio. */
+@import "./styles/ornamento.css";
 
 @tailwind base;
 @tailwind components;
@@ -210,7 +213,29 @@ body {
   border-color: var(--gr-edge-strong);
   padding: 18px 20px;
   box-shadow: inset 0 1px 0 0 rgba(220, 174, 92, 0.30);
+  overflow: hidden;
 }
+
+/* La orla parcial: dos filos de oro que bajan por los cantos laterales y se
+   apagan a los 120px. El filo superior solo marcaba el borde de ataque; con
+   los dos verticales la rúbrica queda enmarcada por arriba en tres lados y
+   deja de leerse como una card cualquiera con degradado.
+
+   Parcial y no entera a propósito: una orla completa de oro convertiría la
+   superficie en el objeto, y el oro tiene que seguir señalando el contenido. */
+.card-rubric::before,
+.card-rubric::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 1px;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(220, 174, 92, 0.30), rgba(220, 174, 92, 0));
+  pointer-events: none;
+}
+
+.card-rubric::before { left: 0; }
+.card-rubric::after { right: 0; }
 
 .card-rubric:hover {
   border-color: var(--gr-gilded-deep);
@@ -245,6 +270,39 @@ body {
   background: transparent;
   border-color: var(--gr-edge);
 }
+
+/* El pozo: paneles de gráfico y las piezas de dato dibujadas. No es un rango de
+   importancia sino de profundidad —hunde en vez de elevar—, y por eso pierde la
+   caja igual que la marginalia y se queda con un filo arriba.
+
+   Va aquí, con sus hermanos, por la misma razón que ellos: `.card` vive en esta
+   hoja, y `.card:hover` tiene que poder sobrescribirlo. Declarado en
+   ornamento.css perdía contra `.card:hover` por especificidad y el panel se
+   aclaraba al pasar el ratón — justo lo contrario de un hueco.
+
+   El campo estelar se repite aquí en vez de heredarse de `.gr-pozo`, y no es
+   duplicación gratuita: `.card` declara `background` en forma abreviada, que
+   resetea `background-image` a `none`, y al declararse después con la misma
+   especificidad se comía las estrellas del pozo. El panel salía negro liso.
+   `.gr-pozo` sigue sirviendo para los pozos que no son card. */
+.card-pozo {
+  background-color: var(--gr-surface-sunken);
+  background-image: var(--gr-estrellas-a);
+  border: 0;
+  border-top: 1px solid var(--gr-edge);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 18px 20px;
+}
+
+.card-pozo:hover {
+  background-color: var(--gr-surface-sunken);
+  border-color: var(--gr-edge);
+}
+
+/* El pozo no tiene rótulo propio: lo abre una `<SectionBand>`, que trae su
+   sigilo, su relleno y su rombo de remate. Un `title` en un pozo sería una
+   segunda forma de encabezar la misma sección. */
 
 /* Sólo `.input`: las variantes `textarea.input` y `select.input` no añadían
    nada —una clase de autor ya gana a los estilos de usuario-agente— y en cambio
