@@ -10,7 +10,7 @@ import { XPBarChart } from "../components/charts/XPBarChart";
 import { MoodEnergyLine } from "../components/charts/MoodEnergyLine";
 import { ProjectHoursBar } from "../components/charts/ProjectHoursBar";
 import { HabitHeatmap } from "../components/charts/HabitHeatmap";
-import { CATEGORY_COLORS } from "../utils";
+import { CATEGORY_COLORS, streakUnit } from "../utils";
 import { CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../theme-tokens";
 import type { Stats as StatsType } from "../types";
 
@@ -42,6 +42,7 @@ export default function Stats() {
   if (!data) return <p className="text-xs text-[var(--text-muted)]">Cargando estadísticas…</p>;
 
   const marks = data.heatmap.reduce((s, d) => s + d.count, 0);
+  const vivas = data.top_streaks.filter((s) => s.streak > 0);
 
   return (
     <div className="space-y-3">
@@ -135,15 +136,21 @@ export default function Stats() {
             <span className="gr-rombo" />
           </div>
           <div className="mt-1.5">
-            {data.top_streaks.length === 0 ? (
-              <p className="text-xs text-[var(--text-muted)]">Sin hábitos.</p>
+            {/* Sólo las rachas VIVAS. La lista incluía las de cero, así que
+                cuatro hábitos sin racha llenaban la card de «0 días» — y en
+                oro, que es el acento de lo que se ha ganado. Una racha de cero
+                no se ganó nada. */}
+            {vivas.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                {data.top_streaks.length === 0 ? "Sin hábitos." : "Ninguna racha viva."}
+              </p>
             ) : (
-              data.top_streaks.slice(0, 4).map((s) => (
+              vivas.slice(0, 4).map((s) => (
                 <div key={s.name} className="flex items-center gap-2 border-b border-[var(--gr-edge)] py-1.5 text-xs last:border-none">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: s.color }} />
                   <span className="truncate text-[var(--text-body)]">{s.name}</span>
                   <span className="ml-auto shrink-0 tabular text-[var(--gr-gilded)]">
-                    <IconFlame size={12} className="inline" /> {s.streak} días
+                    <IconFlame size={12} className="inline" /> {s.streak} {streakUnit(s, s.streak)}
                   </span>
                 </div>
               ))

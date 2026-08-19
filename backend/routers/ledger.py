@@ -142,6 +142,25 @@ async def effective_budgets(db: AsyncSession, month: str) -> dict[int, tuple[int
     return {cid: v for cid, v in latest.items() if v[0] > 0}
 
 
+def _drop_transfer_fields(data: dict, current: LedgerEntry) -> dict:
+    """Un asiento que deja de ser traspaso suelta lo que sólo un traspaso lleva.
+
+    Va ANTES de validar, y ahí está el arreglo. La limpieza vivía al final de
+    `update_entry`, pero `_validate_entry` ya había heredado del asiento actual
+    el `goal_id` que el PATCH no manda y cortaba con «Sólo un traspaso puede
+    aportar a una reliquia»: un aporte mal anotado no se podía rectificar desde
+    ningún sitio, porque el código que lo arreglaba estaba detrás del que lo
+    rechazaba.
+
+    Sólo se aplica al editar. En un alta los campos vienen explícitos del
+    cliente, y una contradicción declarada merece el 400 en vez del silencio.
+    """
+    if data.get("kind", current.kind) != "transfer":
+        data["counter_account_id"] = None
+        data["goal_id"] = None
+    return data
+
+
 async def _validate_entry(db: AsyncSession, data: dict, current: LedgerEntry | None = None) -> None:
     """Reglas que el esquema no puede comprobar solo, porque miran otras filas."""
     kind = data.get("kind", current.kind if current else "expense")
@@ -508,15 +527,12 @@ async def update_entry(entry_id: int, payload: LedgerEntryUpdate, db: AsyncSessi
     e = await db.get(LedgerEntry, entry_id)
     if not e:
         raise HTTPException(404, "Asiento no encontrado")
-    data = payload.model_dump(exclude_unset=True)
+    # pasar a gasto/ingreso suelta el arca de destino y la reliquia, o queda un
+    # traspaso a medias que descuadraría el saldo del arca que ya no participa
+    data = _drop_transfer_fields(payload.model_dump(exclude_unset=True), current=e)
     await _validate_entry(db, data, current=e)
     for k, v in data.items():
         setattr(e, k, v)
-    # pasar a gasto/ingreso debe soltar el arca de destino y la reliquia, o queda
-    # un traspaso a medias que descuadraría el saldo del arca que ya no participa
-    if data.get("kind") in ("expense", "income"):
-        e.counter_account_id = None
-        e.goal_id = None
     # editar un asiento puede completar una reliquia igual que crearlo
     await _seal_reached_goal(db, e.goal_id)
     await db.commit()

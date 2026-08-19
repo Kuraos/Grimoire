@@ -6,6 +6,7 @@ import {
   type PomodoroConfig, type PomodoroSnapshot, type Phase, type WorkResult,
 } from "./hooks/usePomodoro";
 import { Api } from "./api/endpoints";
+import { onConnectionChange } from "./api/client";
 import { useApp } from "./context";
 import { playChime } from "./sounds";
 import { notify } from "./notify";
@@ -95,12 +96,29 @@ export function PomodoroProvider({ children }: { children: ReactNode }) {
   const reloadTasks = useCallback(async () => {
     try { setTasks(await Api.listTasks("?completed=false")); } catch { /* offline */ }
   }, []);
+  const reloadProjects = useCallback(async () => {
+    try { setProjects(await Api.listProjects()); } catch { /* offline */ }
+  }, []);
 
-  useEffect(() => {
+  /*
+   * Las tres listas se piden contra la señal de conexión y no al montar.
+   *
+   * En el escritorio el WebView abre antes que el sidecar, así que las tres
+   * peticiones del arranque fallaban. El usuario se recuperaba solo —`AppProvider`
+   * lo repregunta cada 30 s, que es lo que retira el banner—, pero aquí no había
+   * reintento ninguno: proyectos ni siquiera tenía función de recarga, y el
+   * desplegable se quedaba vacío el resto de la sesión. Cerrar y volver a abrir
+   * lo «arreglaba» porque el sidecar ya estaba levantado.
+   *
+   * `onConnectionChange` invoca al suscribirse con el estado actual, así que esto
+   * cubre el arranque normal y el reintento con el mismo camino.
+   */
+  useEffect(() => onConnectionChange((up) => {
+    if (!up) return;
     reloadTasks();
+    reloadProjects();
     reloadSessions();
-    Api.listProjects().then(setProjects).catch(() => {});
-  }, [reloadTasks, reloadSessions]);
+  }), [reloadTasks, reloadProjects, reloadSessions]);
 
   const onWorkEnd = useCallback(async (r: WorkResult) => {
     if (r.completed) playChime();

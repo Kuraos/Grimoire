@@ -8,6 +8,7 @@ file. A class at 17:00 in a Bogotá-issued schedule stays 17:00 in Grimoire.
 Converting to the local zone would silently shift a timetable the user reads
 literally, which is worse than ignoring the offset.
 """
+import hashlib
 import html
 import re
 from datetime import datetime, date, timedelta
@@ -134,6 +135,23 @@ def parse_events(text: str) -> list[dict]:
     return events
 
 
+def _synthetic_uid(title: str, start: datetime, recurrence: str) -> str:
+    """Clave estable para un VEVENT que no trae UID.
+
+    Sin ella `import-ics` no tenía con qué buscar la fila previa y volvía a crear
+    el evento en cada importación: la idempotencia que promete sólo funcionaba
+    con los exports que sí traen UID —los de un calendario institucional—, y
+    fallaba justo con los archivos hechos a mano.
+
+    El hash va sobre lo que identifica al evento: título, arranque y recurrencia.
+    Reimportar el mismo archivo cae en la misma fila; cambiar el título en el
+    origen crea una nueva, que es lo correcto — sin UID no hay forma de saber que
+    siguen siendo el mismo evento.
+    """
+    raw = f"{title}|{start.isoformat()}|{recurrence}"
+    return "grimoire:" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:20]
+
+
 def _first_on_weekday(anchor: datetime, weekday: int) -> datetime:
     """First datetime on `weekday` at or after `anchor`, keeping time of day."""
     delta = (weekday - anchor.weekday()) % 7
@@ -162,6 +180,10 @@ def expand(ev: dict) -> tuple[list[dict], str | None]:
     until: date | None = until_dt.date() if until_dt else None
 
     def make(anchor: datetime, recurrence: str, suffix: str = "") -> dict:
+        # el sintético se calcula sobre el arranque del propio evento, no el de
+        # cada rama: así las dos ramas de un BYDAY comparten raíz y se
+        # distinguen sólo por el sufijo, igual que cuando hay UID
+        key = uid or _synthetic_uid(ev["summary"], start, recurrence)
         return {
             "title": ev["summary"],
             "start_dt": anchor,
@@ -170,7 +192,7 @@ def expand(ev: dict) -> tuple[list[dict], str | None]:
             "description": ev.get("description"),
             "recurrence": recurrence,
             "recurrence_until": until if recurrence != "none" else None,
-            "ics_uid": f"{uid}#{suffix}" if suffix else uid,
+            "ics_uid": f"{key}#{suffix}" if suffix else key,
         }
 
     if not freq:
@@ -190,10 +212,12 @@ def expand(ev: dict) -> tuple[list[dict], str | None]:
             anchor = _first_on_weekday(start, d)
             if until and anchor.date() > until:
                 continue
-            out.append(make(anchor, "weekly", suffix=days[weekdays.index(d)] if d in weekdays else str(d)))
-        # keep suffixes stable and unique
-        for o, d in zip(out, sorted(set(weekdays))):
-            o["ics_uid"] = f"{uid}#{d}"
+            # El sufijo es el propio día de la semana: estable entre
+            # importaciones y único dentro del evento. Se ponía después, con un
+            # zip contra la lista de días SIN filtrar, así que en cuanto UNTIL
+            # descartaba una rama los sufijos se corrían y el viernes quedaba
+            # guardado bajo la clave del miércoles.
+            out.append(make(anchor, "weekly", suffix=str(d)))
         return out, warning
 
     if freq == "DAILY":

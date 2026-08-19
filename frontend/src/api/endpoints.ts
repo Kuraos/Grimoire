@@ -91,6 +91,9 @@ export const Api = {
     const qs = q.toString();
     return api.get<CalendarEvent[]>(`/calendar/events${qs ? "?" + qs : ""}`);
   },
+  /** El evento tal cual está guardado. La lista devuelve ocurrencias expandidas,
+   *  que llevan el id del maestro pero la fecha de su repetición. */
+  getEvent: (id: number) => api.get<CalendarEvent>(`/calendar/events/${id}`),
   createEvent: (data: Partial<CalendarEvent>) => api.post<CalendarEvent>("/calendar/events", data),
   updateEvent: (id: number, data: Partial<CalendarEvent>) =>
     api.patch<CalendarEvent>(`/calendar/events/${id}`, data),

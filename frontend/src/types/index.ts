@@ -227,7 +227,7 @@ export interface Stats {
   avg_mood: number | null;
   xp_by_category: { category: string; xp: number }[];
   mood_energy: { date: string; energy: number; mood: number; xp: number }[];
-  top_streaks: { name: string; color: string; streak: number }[];
+  top_streaks: { name: string; color: string; frequency: string; streak: number }[];
   hours_by_project: { project: string; color: string; hours: number }[];
   heatmap: { date: string; count: number }[];
 }

@@ -60,6 +60,21 @@ async def list_events(
     return out
 
 
+@router.get("/events/{event_id}", response_model=EventOut)
+async def get_event(event_id: int, db: AsyncSession = Depends(get_db)):
+    """El evento tal cual está guardado, sin expandir.
+
+    La lista devuelve ocurrencias: todas llevan el id del maestro pero la fecha
+    de su repetición. Editar una desde la lista guardaba esa fecha en el maestro
+    y desplazaba la serie entera —la clase de los martes pasaba a ser de los
+    jueves—, así que el formulario pide aquí la fila real antes de abrirse.
+    """
+    e = await db.get(CalendarEvent, event_id)
+    if not e:
+        raise HTTPException(404, "Evento no encontrado")
+    return e
+
+
 @router.post("/import-ics", response_model=IcsImportResult)
 async def import_ics(payload: IcsImportRequest, db: AsyncSession = Depends(get_db)):
     """Import VEVENTs from an .ics file. Idempotent: re-importing the same file

@@ -214,7 +214,10 @@ function ConfigRow({ label, value, onChange }: { label: string; value: number; o
       <span className="flex-1">{label}</span>
       <input
         type="number" min={1} max={90} value={value}
-        onChange={(e) => onChange(Math.max(1, Number(e.target.value)))}
+        /* El mismo techo que aplica `restoreConfig` al recuperar la sesión. Sin
+           él se podían teclear 500 minutos y al reabrir la app volvían 90: la
+           configuración cambiaba sola entre sesiones, sin avisar. */
+        onChange={(e) => onChange(Math.min(90, Math.max(1, Math.trunc(Number(e.target.value)) || 1)))}
         className="input w-16 text-center"
       />
       <span className="text-[var(--text-muted)]">min</span>

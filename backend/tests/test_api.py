@@ -1287,3 +1287,264 @@ def test_archived_category_budget_does_not_inflate_the_total():
         c.patch(f"/ledger/categories/{cat['id']}", json={"archived": True})
         despues = c.get("/ledger/summary?month=2029-09").json()["budget_total_minor"]
         assert despues == antes - 700000
+
+
+# ---------------------------------------------------------------------------
+# LO QUE ATÓ LA RONDA DE DEPURACIÓN
+# ---------------------------------------------------------------------------
+
+def test_a_contribution_can_be_corrected_into_a_plain_expense():
+    """Un aporte mal anotado tiene que poder rectificarse.
+
+    `_validate_entry` heredaba el `goal_id` del asiento cuando el PATCH no lo
+    mandaba y devolvía 400 «Sólo un traspaso puede aportar a una reliquia»; la
+    limpieza que lo resolvía corría DESPUÉS de validar, así que nunca se llegaba
+    a ejecutar y el asiento quedaba atrapado en su tipo para siempre.
+    """
+    with TestClient(main.app) as c:
+        origen = _arca(c, "Corriente rectifica")
+        hucha = _arca(c, "Hucha rectifica")
+        goal = _relic(c, "Rectificable", 500000, hucha["id"])
+        entry = _aporte(c, origen["id"], hucha["id"], 100000, goal["id"]).json()["entry"]
+
+        def guardado() -> int:
+            return next(g for g in c.get("/ledger/goals").json() if g["id"] == goal["id"])["saved_minor"]
+
+        assert guardado() == 100000
+
+        cat = c.post("/ledger/categories", json={"name": "Rectificado", "kind": "expense"}).json()
+        r = c.patch(f"/ledger/entries/{entry['id']}", json={"kind": "expense", "category_id": cat["id"]})
+        assert r.status_code == 200, r.json()
+        fixed = r.json()
+        assert fixed["kind"] == "expense"
+        assert fixed["counter_account_id"] is None
+        assert fixed["goal_id"] is None
+        # y la reliquia deja de contarlo: ese dinero nunca entró en la hucha
+        assert guardado() == 0
+
+
+def _habitos_activos() -> list[int]:
+    return [r[0] for r in _query("SELECT id FROM habits WHERE active = 1")]
+
+
+def _solo_estos_habitos(ids: list[int]) -> None:
+    """Deja activos únicamente los indicados.
+
+    «Disciplina total» mira TODOS los hábitos diarios activos, y este archivo
+    comparte una sola base con decenas de ellos.
+    """
+    _exec("UPDATE habits SET active = 0")
+    for hid in ids:
+        _exec("UPDATE habits SET active = 1 WHERE id = ?", hid)
+
+
+def _disciplina_total() -> bool:
+    return bool(_query("SELECT unlocked FROM achievements WHERE key = 'total_discipline'")[0][0])
+
+
+def test_total_discipline_needs_seven_real_days():
+    """Los hábitos que aún no existían se saltaban los días anteriores por no
+    existir en ellos, así que ninguno fallaba y el logro de siete días caía el
+    primero: crear un hábito y marcarlo una vez bastaba."""
+    previos = _habitos_activos()
+    _exec("UPDATE achievements SET unlocked = 0, unlocked_at = NULL WHERE key = 'total_discipline'")
+    try:
+        with TestClient(main.app) as c:
+            h = c.post("/habits", json={"name": "Recién nacido", "category": "Otro"}).json()
+            _solo_estos_habitos([h["id"]])
+            c.post(f"/habits/{h['id']}/complete")
+            assert _disciplina_total() is False
+    finally:
+        _solo_estos_habitos(previos)
+
+
+def test_total_discipline_ignores_the_days_a_habit_does_not_run():
+    """Un hábito L–V no rompe el logro los sábados.
+
+    Los días en que un hábito no toca son transparentes, igual que en la racha y
+    en la evaluación de vidas. Sin esto «Disciplina total» era inalcanzable para
+    cualquiera que usara cadencia.
+    """
+    previos = _habitos_activos()
+    _exec("UPDATE achievements SET unlocked = 0, unlocked_at = NULL WHERE key = 'total_discipline'")
+    try:
+        today = _today()
+        hueco = (today - timedelta(days=3)).weekday()
+        dias = ",".join(str(d) for d in range(7) if d != hueco)
+        with TestClient(main.app) as c:
+            h = c.post("/habits", json={"name": "Con hueco", "category": "Otro", "days": dias}).json()
+            # el hábito tiene que llevar vivo la ventana entera
+            _exec("UPDATE habits SET created_at = ? WHERE id = ?",
+                  f"{(today - timedelta(days=30)).isoformat()} 08:00:00.000000", h["id"])
+            _solo_estos_habitos([h["id"]])
+            for off in range(1, 7):
+                day = today - timedelta(days=off)
+                if day.weekday() != hueco:
+                    _log_on(h["id"], day)
+            # marcar hoy cierra los siete y dispara la evaluación
+            c.post(f"/habits/{h['id']}/complete")
+            assert _disciplina_total() is True
+    finally:
+        _solo_estos_habitos(previos)
+
+
+def test_locked_achievements_are_not_mute():
+    """«El más cercano» filtra por progreso > 0: un logro sin métrica no puede
+    proponerse nunca y su barra sale siempre vacía. Sólo se quedan a cero los
+    tres que no son «lo que llevas de N» sino un sí o un no."""
+    from routers.achievements import PROGRESS_METRICS
+
+    sin_metrica = {"total_discipline", "project_master", "full_ledger"}
+    todas = {k for k, *_ in main.PREDEFINED_ACHIEVEMENTS}
+    assert set(PROGRESS_METRICS) | sin_metrica == todas
+
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={"name": "Medible", "category": "Otro"}).json()
+        c.post(f"/habits/{h['id']}/complete")
+        c.post(f"/checkins/{_today().isoformat()}", json={"energy": 3, "mood": 3})
+        a = _arca(c, "Arca medible")
+        c.post("/ledger/entries", json={
+            "account_id": a["id"], "kind": "expense", "amount_minor": 1000,
+            "occurred_on": _today().isoformat(), "concept": "Medible",
+        })
+
+        ach = {x["key"]: x for x in c.get("/achievements").json()}
+        for key in ("iron_constancy", "streak_centurion", "introspection", "archon",
+                    "first_entry", "ledger_30", "polymath", "diary_century"):
+            assert ach[key]["unlocked"] or ach[key]["progress"] > 0, key
+        for key in sin_metrica:
+            assert ach[key]["unlocked"] or ach[key]["progress"] == 0, key
+        assert all(0.0 <= x["progress"] <= 1.0 for x in ach.values())
+
+
+ICS_SIN_UID = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:20260907T080000
+DTEND:20260907T090000
+SUMMARY:Taller sin identificador
+END:VEVENT
+END:VCALENDAR
+"""
+
+ICS_BYDAY_RECORTADO = """BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+DTSTART:20260904T100000
+DTEND:20260904T110000
+SUMMARY:Mixto recortado
+RRULE:FREQ=WEEKLY;UNTIL=20260908T235900;BYDAY=MO,WE,FR
+UID:evt-mixto
+END:VEVENT
+END:VCALENDAR
+"""
+
+
+def test_ics_without_uid_is_still_idempotent():
+    """La importación promete no duplicar al reimportar, pero sólo lo cumplía con
+    los exports que traen UID: sin él no había con qué buscar la fila previa."""
+    with TestClient(main.app) as c:
+        primera = c.post("/calendar/import-ics", json={"content": ICS_SIN_UID}).json()
+        assert primera["created"] == 1
+
+        segunda = c.post("/calendar/import-ics", json={"content": ICS_SIN_UID}).json()
+        assert (segunda["created"], segunda["updated"]) == (0, 1)
+
+        titulos = [e["title"] for e in c.get("/calendar/events").json()]
+        assert titulos.count("Taller sin identificador") == 1
+
+
+def test_byday_suffix_belongs_to_its_own_weekday():
+    """El sufijo del UID se ponía después, con un zip contra la lista de días sin
+    filtrar: en cuanto UNTIL descartaba uno, los sufijos se corrían y el viernes
+    quedaba guardado bajo la clave del miércoles."""
+    with TestClient(main.app) as c:
+        r = c.post("/calendar/import-ics", json={"content": ICS_BYDAY_RECORTADO}).json()
+        # el miércoles cae después de UNTIL: sólo entran lunes y viernes
+        assert r["created"] == 2
+        uids = sorted(x[0] for x in _query(
+            "SELECT ics_uid FROM calendar_events WHERE ics_uid LIKE 'evt-mixto%'"
+        ))
+        assert uids == ["evt-mixto#0", "evt-mixto#4"]
+
+
+def test_an_occurrence_carries_the_master_id_but_not_its_date():
+    """El contrato del que depende el formulario del calendario.
+
+    La lista expande la serie y marca cuáles son repeticiones; la fila real sólo
+    se obtiene pidiéndola por id. Sin esa distinción, editar la ocurrencia del
+    día 20 guardaba el día 20 en el maestro y movía la serie entera.
+    """
+    with TestClient(main.app) as c:
+        ev = c.post("/calendar/events", json={
+            "title": "Clase semanal", "start_dt": "2026-09-01T10:00:00",
+            "end_dt": "2026-09-01T11:00:00", "recurrence": "weekly",
+            "recurrence_until": "2026-09-30",
+        }).json()
+
+        expandidas = [e for e in c.get(
+            "/calendar/events?start=2026-09-01T00:00:00&end=2026-09-30T23:59:00"
+        ).json() if e["title"] == "Clase semanal"]
+        assert len(expandidas) > 1
+        assert {e["id"] for e in expandidas} == {ev["id"]}
+        # la primera es el maestro; las demás se declaran repeticiones
+        assert [e["is_occurrence"] for e in expandidas] == [False] + [True] * (len(expandidas) - 1)
+
+        maestro = c.get(f"/calendar/events/{ev['id']}").json()
+        assert maestro["start_dt"].startswith("2026-09-01")
+        assert maestro["is_occurrence"] is False
+        assert c.get("/calendar/events/999999").status_code == 404
+
+
+def test_the_catalog_owns_the_name_and_tier_of_an_achievement():
+    """`_ensure_columns` crea `tier` con DEFAULT 'common' y el sembrado sólo lo
+    rellenaba «si estaba vacío» — nunca lo estaba. En toda base anterior a esa
+    columna, los seis logros raros se quedaron marcados como comunes para
+    siempre: color equivocado y grupo equivocado en la vista. Un backfill que se
+    saltaba justo las filas para las que se escribió."""
+    _exec("UPDATE achievements SET tier = 'common', name = 'Nombre viejo', "
+          "description = 'Texto viejo' WHERE key = 'iron_month'")
+    _exec("UPDATE achievements SET unlocked = 1 WHERE key = 'iron_month'")
+
+    with TestClient(main.app) as c:  # el arranque vuelve a sembrar
+        a = next(x for x in c.get("/achievements").json() if x["key"] == "iron_month")
+        assert a["tier"] == "rare"
+        assert a["name"] == "Mes de hierro"
+        assert a["description"].startswith("Mantén una racha de 30")
+        # lo del usuario no se toca: reconciliar el catálogo no relockea nada
+        assert a["unlocked"] is True
+
+
+def test_habits_possible_counts_only_the_occasions_a_habit_asked_for():
+    """El denominador de «hábitos cumplidos» eran días del calendario por hábito
+    activo: a un L–V le apuntaba dos fallos cada fin de semana y a un 2×/semana,
+    cinco. `completion_rate` ya se medía contra las ocasiones reales —CLAUDE.md
+    lo cita como arreglado—; estadísticas y la revisión se quedaron con la vieja.
+    """
+    previos = _habitos_activos()
+    try:
+        today = _today()
+        with TestClient(main.app) as c:
+            h = c.post("/habits", json={
+                "name": "Sólo laborables", "category": "Otro", "days": "0,1,2,3,4",
+            }).json()
+            _exec("UPDATE habits SET created_at = ? WHERE id = ?",
+                  f"{(today - timedelta(days=60)).isoformat()} 08:00:00.000000", h["id"])
+            _solo_estos_habitos([h["id"]])
+
+            # siete días seguidos contienen exactamente cinco laborables
+            assert c.get("/stats?period=week").json()["habits_possible"] == 5
+
+            # y un semanal pide su meta por semana, no una marca por día
+            w = c.post("/habits", json={
+                "name": "Dos por semana", "category": "Otro",
+                "frequency": "weekly", "target_per_week": 2,
+            }).json()
+            _exec("UPDATE habits SET created_at = ? WHERE id = ?",
+                  f"{(today - timedelta(days=60)).isoformat()} 08:00:00.000000", w["id"])
+            _solo_estos_habitos([w["id"]])
+            semanal = c.get("/stats?period=week").json()["habits_possible"]
+            # la ventana de siete días toca una o dos semanas ISO según el día
+            assert semanal in (2, 4), semanal
+    finally:
+        _solo_estos_habitos(previos)

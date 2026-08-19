@@ -14,7 +14,7 @@ import { HabitConstellation } from "../components/charts/HabitConstellation";
 import { HabitXPChart } from "../components/charts/HabitXPChart";
 import { TagInput } from "../components/ui/TagInput";
 import { confirm } from "../confirm";
-import { CATEGORY_COLORS, WEEKDAYS_ES, WEEKDAY_NAMES_ES, habitDays } from "../utils";
+import { CATEGORY_COLORS, WEEKDAYS_ES, WEEKDAY_NAMES_ES, habitDays, streakUnit } from "../utils";
 import type { Habit, HabitCategory, HabitLog } from "../types";
 
 export default function Habits() {
@@ -101,9 +101,19 @@ export default function Habits() {
     items: habits.filter((h) => h.category === cat),
   })).filter((g) => g.items.length > 0);
 
-  const bestStreak = habits.reduce((m, h) => Math.max(m, h.streak), 0);
-  const avgRate = habits.length
-    ? Math.round(habits.reduce((s, h) => s + h.completion_rate, 0) / habits.length)
+  /* Las cifras de la cabecera y de la rúbrica cuentan sobre los ACTIVOS.
+     Con «Ver archivados» puesto, `habits` trae también los archivados y la línea
+     seguía diciendo «N activos»; la constancia media se diluía con hábitos que
+     ya nadie lleva, y la racha más larga podía ser la de uno abandonado. */
+  const activos = habits.filter((h) => h.active);
+  // el titular de la racha, no sólo su número: en un hábito semanal se cuenta
+  // en semanas, y rotularlo «días» es decir otra cosa
+  const record = activos.reduce<Habit | null>(
+    (best, h) => (!best || h.streak > best.streak ? h : best), null,
+  );
+  const bestStreak = record?.streak ?? 0;
+  const avgRate = activos.length
+    ? Math.round(activos.reduce((s, h) => s + h.completion_rate, 0) / activos.length)
     : 0;
   const marks = heat.reduce((s, d) => s + d.count, 0);
 
@@ -112,7 +122,12 @@ export default function Habits() {
       <PageHeader
         title="Hábitos"
         className="lg:col-span-3"
-        context={`${habits.length} activos · ${habits.filter((h) => h.done_today).length} cumplidos hoy · racha más larga ${bestStreak} días`}
+        context={
+          `${activos.length} activos · ${activos.filter((h) => h.done_today).length} cumplidos hoy` +
+          // sin racha viva la cláusula era «racha más larga 0 días», que ocupa
+          // sitio para no decir nada
+          (record && bestStreak > 0 ? ` · racha más larga ${bestStreak} ${streakUnit(record, bestStreak)}` : "")
+        }
       >
         <button
           className="btn"
@@ -341,8 +356,11 @@ function DetailPanel({ habit, logs, xpSeries, onClose, onArchive, onEdit }: {
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <Metric label="Racha actual" value={`${habit.streak} días`} icon={<IconFlame size={16} />} gold />
-          <Metric label="Mejor racha" value={`${habit.best_streak} días`} gold />
+          {/* La unidad la manda la cadencia: la racha de un hábito semanal se
+              cuenta en semanas, y «4 días» donde son cuatro semanas es un dato
+              distinto, no una abreviatura. */}
+          <Metric label="Racha actual" value={`${habit.streak} ${streakUnit(habit, habit.streak)}`} icon={<IconFlame size={16} />} gold />
+          <Metric label="Mejor racha" value={`${habit.best_streak} ${streakUnit(habit, habit.best_streak)}`} gold />
           <Metric label="Completado" value={`${habit.completion_rate}%`} />
           <Metric label="XP total" value={habit.total_xp.toLocaleString("es")} gold />
         </div>
@@ -415,18 +433,25 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
   );
   const [notes, setNotes] = useState(habit?.notes ?? "");
   const [tags, setTags] = useState<string>(habit?.tags ?? "");
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || saving) return;
+    setSaving(true);
     const payload = {
       name, category, frequency,
       days: frequency === "daily" && days.length && days.length < 7 ? days.join(",") : null,
       target_per_week: frequency === "weekly" ? targetPerWeek : 1,
       xp_reward: xp, color, notes, tags: tags || null,
     };
-    if (habit) await Api.updateHabit(habit.id, payload);
-    else await Api.createHabit(payload);
-    onSaved();
+    try {
+      if (habit) await Api.updateHabit(habit.id, payload);
+      else await Api.createHabit(payload);
+      onSaved();
+    } catch {
+      // el cliente ya avisa; el modal conserva lo escrito
+      setSaving(false);
+    }
   };
 
   return (
@@ -497,7 +522,9 @@ function HabitForm({ habit, categories, onClose, onSaved }: {
       <Field label="Etiquetas"><TagInput value={tags} onChange={setTags} /></Field>
       <div className="mt-2 flex justify-end gap-2">
         <button className="btn" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" onClick={save}>Guardar</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
       </div>
     </Modal>
   );

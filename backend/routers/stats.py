@@ -9,7 +9,7 @@ from database import get_db
 from models import (
     XPLog, HabitLog, Habit, PomodoroSession, Task, DailyCheckin, Project,
 )
-from services import habit_streak
+from services import habit_streak, scheduled_occasions
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -51,14 +51,12 @@ async def stats(period: Period = Query("week"), db: AsyncSession = Depends(get_d
         xp_by_day.append({"date": iso, "xp": int(xp_map.get(iso, 0))})
         cursor += timedelta(days=1)
 
-    days_count = (today - start).days + 1
-    active_habits = (await db.execute(
-        select(func.count(Habit.id)).where(Habit.active == True)
-    )).scalar_one()
     habits_completed = (await db.execute(
         select(func.count(HabitLog.id)).where(func.date(HabitLog.completed_at) >= start_iso)
     )).scalar_one()
-    habits_possible = active_habits * days_count
+    # las ocasiones que los hábitos pidieron, no los días del calendario por
+    # hábito: un L–V no falla los sábados y un 2×/semana no falla cinco veces
+    habits_possible = await scheduled_occasions(db, start, today)
 
     pomo = (await db.execute(
         select(func.count(PomodoroSession.id), func.coalesce(func.sum(PomodoroSession.work_minutes), 0))
@@ -100,7 +98,10 @@ async def stats(period: Period = Query("week"), db: AsyncSession = Depends(get_d
     habits = (await db.execute(select(Habit).where(Habit.active == True))).scalars().all()
     streaks = []
     for h in habits:
-        streaks.append({"name": h.name, "color": h.color, "streak": await habit_streak(db, h.id)})
+        # la frecuencia viaja con la racha: un hábito semanal la cuenta en
+        # semanas, y sin este campo la vista sólo podía rotularlas todas "días"
+        streaks.append({"name": h.name, "color": h.color, "frequency": h.frequency,
+                        "streak": await habit_streak(db, h.id)})
     streaks.sort(key=lambda x: x["streak"], reverse=True)
     top_streaks = streaks[:5]
 

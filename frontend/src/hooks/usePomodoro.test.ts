@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { restoreSnapshot, freshSnapshot, DEFAULT_CONFIG, type PomodoroSnapshot } from "./usePomodoro";
+import {
+  restoreSnapshot, freshSnapshot, partialResult, DEFAULT_CONFIG, type PomodoroSnapshot,
+} from "./usePomodoro";
 
 const stored = (over: Partial<PomodoroSnapshot>): PomodoroSnapshot => ({
   phase: "work",
@@ -52,5 +54,35 @@ describe("restoreSnapshot", () => {
     expect(s.remainingMs).toBe(DEFAULT_CONFIG.long * 60_000);
     expect(s.workCount).toBe(0);
     expect(s.workStartedAt).toBeNull();
+  });
+});
+
+describe("partialResult · no registrar tiempo que nadie vio correr", () => {
+  it("no inventa una sesión con la fase que venció con la app cerrada", () => {
+    // vuelve agotada y sin arranque; «lo consumido» daba la fase entera, así que
+    // Reiniciar o Saltar registraban 25 minutos que nadie vio correr
+    const vencida = restoreSnapshot(
+      stored({ running: true, endsAt: Date.now() - 60_000, workCount: 1 }),
+      DEFAULT_CONFIG
+    );
+    expect(vencida.workStartedAt).toBeNull();
+    expect(partialResult(vencida, DEFAULT_CONFIG)).toBeNull();
+  });
+
+  it("registra lo consumido de un bloque cortado a medias", () => {
+    const startedAt = Date.now() - 8 * 60_000;
+    const t = stored({ workStartedAt: startedAt, remainingMs: (DEFAULT_CONFIG.work - 8) * 60_000 });
+    expect(partialResult(t, DEFAULT_CONFIG)).toEqual({ minutes: 8, startedAt, completed: false });
+  });
+
+  it("se calla por debajo del minuto y fuera de una fase de foco", () => {
+    const casi = stored({
+      workStartedAt: Date.now(),
+      remainingMs: DEFAULT_CONFIG.work * 60_000 - 30_000,
+    });
+    expect(partialResult(casi, DEFAULT_CONFIG)).toBeNull();
+
+    const descanso = stored({ phase: "short", workStartedAt: Date.now(), remainingMs: 0 });
+    expect(partialResult(descanso, DEFAULT_CONFIG)).toBeNull();
   });
 });

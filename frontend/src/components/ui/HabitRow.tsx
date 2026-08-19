@@ -1,6 +1,6 @@
 import { IconFlame } from "@tabler/icons-react";
 import type { Habit } from "../../types";
-import { CATEGORY_COLORS } from "../../utils";
+import { CATEGORY_COLORS, streakUnit } from "../../utils";
 
 export function HabitRow({ habit, onComplete, onUndo, onClick }: {
   habit: Habit;
@@ -41,9 +41,18 @@ export function HabitRow({ habit, onComplete, onUndo, onClick }: {
       >
         {habit.name}
       </span>
-      <span className="ml-auto flex items-center gap-1 text-xs tabular text-[var(--gr-gilded)]">
-        <IconFlame size={12} /> {habit.streak}
-      </span>
+      {/* La racha sólo aparece si existe. En oro, que es el acento de lo que se
+          ha ganado, un «0» repetido en cada fila decía «recompensa» donde no hay
+          ninguna — y con nueve hábitos sin racha, la columna entera era oro sin
+          motivo. `HabitCardGothic` ya lo hacía así; ésta se quedó atrás. */}
+      {habit.streak > 0 && (
+        <span
+          className="ml-auto flex items-center gap-1 text-xs tabular text-[var(--gr-gilded)]"
+          title={`Racha de ${habit.streak} ${streakUnit(habit, habit.streak)}`}
+        >
+          <IconFlame size={12} /> {habit.streak}
+        </span>
+      )}
     </div>
   );
 }

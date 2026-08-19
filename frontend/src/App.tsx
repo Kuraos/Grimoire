@@ -73,15 +73,31 @@ export default function App() {
     return () => clearTimeout(t);
   }, [pushToast]);
 
-  // Space toggles the Pomodoro timer (unless typing in a field)
+  /* Espacio arranca y detiene el Pomodoro. Con tres salvedades, y dos faltaban.
+   *
+   * El atajo cancelaba con `preventDefault()` cualquier Espacio que no viniera
+   * de un campo de texto, y Espacio es la tecla con la que se pulsa un botón
+   * enfocado: en las diez vistas, quien navega con el teclado se quedaba sin
+   * poder activar nada — el foco decía «aquí» y la tecla arrancaba un
+   * temporizador en otra parte. Lo mismo con un diálogo abierto: la barra
+   * disparaba el Pomodoro por debajo del modal.
+   *
+   * Los diálogos se marcan con `data-overlay` en su raíz (Modal, confirm y la
+   * paleta), que es una señal explícita en vez de adivinar por el z-index. */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const el = e.target as HTMLElement;
-      const typing = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT" || el.isContentEditable);
-      if (e.code === "Space" && !typing) {
-        e.preventDefault();
-        pomo.running ? pomo.pause() : pomo.start();
-      }
+      if (e.code !== "Space" || e.repeat) return;
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      const tag = el.tagName;
+      const typing =
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable;
+      const activable = el.closest?.(
+        "button, a[href], summary, [role='button'], [role='checkbox'], [role='switch']"
+      );
+      if (typing || activable || document.querySelector("[data-overlay]")) return;
+      e.preventDefault();
+      pomo.running ? pomo.pause() : pomo.start();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

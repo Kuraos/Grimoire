@@ -116,11 +116,21 @@ export default function Tasks() {
   // filtrar, y no sobre `tasks`, que sí los lleva puestos: si no, elegir un
   // proyecto en el filtro haría que la cabecera dijera que sólo queda ese.
   const pending = projects.reduce((s, p) => s + p.tasks_pending, 0);
-  const dueSoon = tasks.filter(
-    (t) => !t.completed && t.due_date && t.due_date <= isoDate(new Date(Date.now() + 7 * 864e5)),
-  ).length;
+  /* Vencido y «vence esta semana» son dos estados, no uno.
+   *
+   * La cuenta era `due_date <= hoy+7`, así que se tragaba también todo lo que ya
+   * había pasado de plazo: con once tareas vencidas y siete próximas, la
+   * cabecera decía «17 vencen esta semana» y lo urgente —lo que ya se pasó—
+   * desaparecía dentro de lo simplemente próximo. La banda de vencimientos
+   * tampoco las pinta: empieza en hoy. */
+  const hoy = isoDate(new Date());
+  const enUnaSemana = isoDate(new Date(Date.now() + 7 * 864e5));
+  const conPlazo = tasks.filter((t) => !t.completed && t.due_date);
+  const vencidas = conPlazo.filter((t) => t.due_date! < hoy).length;
+  const dueSoon = conPlazo.filter((t) => t.due_date! >= hoy && t.due_date! <= enUnaSemana).length;
   const headerContext =
     `${pending} pendientes en ${projects.length} proyecto${projects.length === 1 ? "" : "s"}` +
+    (vencidas > 0 ? ` · ${vencidas} vencida${vencidas === 1 ? "" : "s"}` : "") +
     (dueSoon > 0 ? ` · ${dueSoon} vence${dueSoon === 1 ? "" : "n"} esta semana` : "");
 
   // Vincular, arrancar y llevar al temporizador: pulsar «iniciar» y quedarse en
@@ -165,7 +175,11 @@ export default function Tasks() {
                 {STATUS_LABEL[p.status]} · {p.category ?? "—"}
               </div>
               <div className="mt-2.5 flex justify-between text-xs tabular text-[var(--text-body)]">
-                <span>{p.tasks_total - p.tasks_pending}/{p.tasks_total} pend.</span>
+                {/* La cifra son las HECHAS, que es lo que cuenta la rueda de al
+                    lado. Decía «pend.», así que un proyecto con las cinco tareas
+                    por hacer anunciaba «0/5 pend.» — se leía como que no queda
+                    nada pendiente, justo lo contrario. */}
+                <span>{p.tasks_total - p.tasks_pending}/{p.tasks_total} hechas</span>
                 <span className="text-[var(--purple-main)]">{p.pomodoro_hours}h foco</span>
               </div>
             </div>
@@ -303,28 +317,46 @@ function DueBand({ tasks, projectColor }: {
             </span>
           );
         })}
-        {marks.map((m, i) => (
-          <span
-            key={m.day}
-            className="absolute"
-            style={{ left: `${(m.day / DUE_DAYS) * 100}%`, top: i % 2 ? 22 : 2 }}
-            title={m.items.map((t) => t.title).join("\n")}
-          >
+        {marks.map((m, i) => {
+          /* La etiqueta crece hacia la derecha desde su día, y la recta llega
+             hasta el borde de la card: cualquier vencimiento del último tramo
+             sacaba su caja de 120px fuera de la ventana y ponía scroll
+             horizontal a la vista entera. Pasado el 80% se ancla al otro lado.
+             El conector no se mueve: sigue clavado en el día. */
+          const pct = (m.day / DUE_DAYS) * 100;
+          const alFinal = pct > 80;
+          return (
             <span
-              className="absolute left-0 top-4 block w-px bg-[var(--gr-edge-strong)]"
-              style={{ height: i % 2 ? 22 : 42 }}
-            />
-            <span
-              className="flex max-w-[120px] items-center gap-1 rounded-sm border-l-2 bg-[var(--bg-elevated)] px-1.5 py-0.5 text-2xs text-[var(--text-body)]"
-              style={{ borderLeftColor: projectColor(m.items[0].project_id) ?? "var(--border-accent)" }}
+              key={m.day}
+              /* Ancho cero: la marca es un punto en la recta, no una caja. Con
+                 la etiqueta en flujo, el ancho de ésta se sumaba al del padre y
+                 la vista entera acababa con scroll horizontal aunque el rótulo
+                 ya estuviera volteado. */
+              className="absolute w-0"
+              style={{ left: `${pct}%`, top: i % 2 ? 22 : 2 }}
+              title={m.items.map((t) => t.title).join("\n")}
             >
-              <span className="truncate">{m.items[0].title}</span>
-              {m.items.length > 1 && (
-                <span className="shrink-0 tabular text-[var(--text-faint)]">+{m.items.length - 1}</span>
-              )}
+              <span
+                className="absolute left-0 top-4 block w-px bg-[var(--gr-edge-strong)]"
+                style={{ height: i % 2 ? 22 : 42 }}
+              />
+              <span
+                className={`absolute top-0 flex w-max max-w-[120px] items-center gap-1 rounded-sm bg-[var(--bg-elevated)] px-1.5 py-0.5 text-2xs text-[var(--text-body)] ${
+                  alFinal ? "right-0 border-r-2" : "left-0 border-l-2"
+                }`}
+                style={{
+                  [alFinal ? "borderRightColor" : "borderLeftColor"]:
+                    projectColor(m.items[0].project_id) ?? "var(--border-accent)",
+                }}
+              >
+                <span className="truncate">{m.items[0].title}</span>
+                {m.items.length > 1 && (
+                  <span className="shrink-0 tabular text-[var(--text-faint)]">+{m.items.length - 1}</span>
+                )}
+              </span>
             </span>
-          </span>
-        ))}
+          );
+        })}
       </div>
       {/* La prioridad es dato, no acento: tres colores semánticos y ningún oro.
           Un vencimiento cercano no es una recompensa. */}
@@ -355,18 +387,26 @@ function TaskForm({ task, projects, onClose, onSaved }: { task: Task | null; pro
   const [tags, setTags] = useState<string>(task?.tags ?? "");
   const [vaultNotePath, setVaultNotePath] = useState<string>(task?.vault_note_path ?? "");
   const [xp, setXp] = useState(task?.xp_reward ?? 15);
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || saving) return;
+    setSaving(true);
     const payload = {
       title, description: description || null, category: category || null, priority: priority as any,
       project_id: projectId ? Number(projectId) : null, due_date: dueDate || null,
       remind_at: remindAt ? remindAt : null, tags: tags || null,
       vault_note_path: vaultNotePath.trim() || null, xp_reward: xp,
     };
-    if (task) await Api.updateTask(task.id, payload);
-    else await Api.createTask(payload);
-    onSaved();
+    try {
+      if (task) await Api.updateTask(task.id, payload);
+      else await Api.createTask(payload);
+      onSaved();
+    } catch {
+      // el cliente ya avisa del error; el modal se queda con lo escrito en vez
+      // de morir en silencio con una promesa rechazada
+      setSaving(false);
+    }
   };
 
   return (
@@ -401,7 +441,9 @@ function TaskForm({ task, projects, onClose, onSaved }: { task: Task | null; pro
       {task && <ChecklistEditor task={task} />}
       <div className="mt-2 flex justify-end gap-2">
         <button className="btn" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" onClick={save}>Guardar</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
       </div>
     </Modal>
   );
@@ -451,13 +493,19 @@ function ProjectForm({ project, onClose, onSaved }: { project: Project | null; o
   const [category, setCategory] = useState(project?.category ?? "Académico");
   const [color, setColor] = useState(project?.color ?? CATEGORY_COLORS["Académico"]);
   const [vaultNotePath, setVaultNotePath] = useState<string>(project?.vault_note_path ?? "");
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || saving) return;
+    setSaving(true);
     const payload = { name, description: description || null, status, category, color, vault_note_path: vaultNotePath.trim() || null };
-    if (project) await Api.updateProject(project.id, payload);
-    else await Api.createProject(payload);
-    onSaved();
+    try {
+      if (project) await Api.updateProject(project.id, payload);
+      else await Api.createProject(payload);
+      onSaved();
+    } catch {
+      setSaving(false);
+    }
   };
 
   return (
@@ -482,7 +530,9 @@ function ProjectForm({ project, onClose, onSaved }: { project: Project | null; o
       <Field label="Nota en Obsidian"><VaultNoteField value={vaultNotePath} onChange={setVaultNotePath} /></Field>
       <div className="mt-2 flex justify-end gap-2">
         <button className="btn" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" onClick={save}>Guardar</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
       </div>
     </Modal>
   );

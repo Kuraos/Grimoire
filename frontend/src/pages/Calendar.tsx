@@ -103,6 +103,31 @@ export default function Calendar() {
 
   const dayEvents = events.filter((e) => e.start_dt.slice(0, 10) === selected);
 
+  /* Abrir para editar.
+   *
+   * La lista del día son ocurrencias expandidas: todas llevan el id del maestro
+   * pero la fecha de SU repetición. El formulario guardaba esa fecha y el
+   * maestro se mudaba con la serie entera detrás — editar la clase del jueves 20
+   * convertía la clase de los martes en clase de los jueves. El backend ya
+   * distinguía cuál era cuál (`is_occurrence`) y la interfaz no lo miraba.
+   *
+   * Por eso una repetición pide la fila real antes de abrirse. Si la petición
+   * falla no se abre nada: el cliente ya avisa, y abrir con la fecha equivocada
+   * es justo el bug. */
+  const openEdit = async (e: CalendarEvent) => {
+    if (!e.is_occurrence) {
+      setEditEvent(e);
+      setModal(true);
+      return;
+    }
+    try {
+      setEditEvent(await Api.getEvent(e.id));
+      setModal(true);
+    } catch {
+      /* el cliente ya muestra el error del backend */
+    }
+  };
+
   return (
     <div className="space-y-3">
       <PageHeader
@@ -127,8 +152,14 @@ export default function Calendar() {
       {/* La rejilla ocupa dos tercios largos: un mes es una superficie, no una
           lista, y a un tercio las celdas caían por debajo de lo que hace falta
           para ver los puntos de cada día. */}
+      {/* `min-w-0` en las dos columnas: por defecto un ítem de rejilla no baja
+          de su contenido mínimo, y la rejilla de la semana pide 640px. Con el
+          ancho de la ventana justo, esos 640 estiraban la columna izquierda, la
+          derecha —el día y la luna— se salía de la pantalla y la vista entera
+          se iba a scroll horizontal. El `overflow-x-auto` de dentro no llegaba
+          a actuar porque nunca se le pedía encoger. */}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.75fr_1fr]">
-        <div>
+        <div className="min-w-0">
           {view === "month" ? (
             <MonthGrid cursor={cursor} dots={dots} selected={selected} onSelect={setSelected} />
           ) : (
@@ -140,7 +171,7 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
         <Card>
           {/* El día en Cinzel y la fecha ISO al lado en tinta tenue: el nombre
               del día es cómo se le llama, el ISO es cómo se le identifica. */}
@@ -159,7 +190,9 @@ export default function Calendar() {
                     a su categoría cuando se lee la hora y no el borde. */}
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: e.color }} />
                 <span className="text-sm text-[var(--text-primary)]">{e.title}</span>
-                <button className="ml-auto text-[var(--text-faint)] hover:text-[var(--purple-main)]" title="Editar" onClick={() => { setEditEvent(e); setModal(true); }}>
+                <button className="ml-auto text-[var(--text-faint)] hover:text-[var(--purple-main)]"
+                        title={e.recurrence !== "none" ? "Editar (toda la serie)" : "Editar"}
+                        onClick={() => openEdit(e)}>
                   <IconEdit size={12} />
                 </button>
                 <button className="text-[var(--text-faint)] hover:text-[var(--gr-oxblood)]" title="Eliminar" onClick={async () => {
@@ -356,22 +389,39 @@ function EventForm({ event, defaultDate, onClose, onSaved }: { event: CalendarEv
   const [notes, setNotes] = useState(event?.notes ?? "");
   const [recurrence, setRecurrence] = useState(event?.recurrence ?? "none");
   const [until, setUntil] = useState(event?.recurrence_until ?? "");
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!title.trim()) return;
+    if (!title.trim() || saving) return;
+    setSaving(true);
     const payload = {
       title, category: category || null, color, notes: notes || null,
       start_dt: `${date}T${startTime}:00`,
       end_dt: endTime ? `${date}T${endTime}:00` : null,
       recurrence, recurrence_until: recurrence !== "none" && until ? until : null,
     };
-    if (event) await Api.updateEvent(event.id, payload);
-    else await Api.createEvent(payload);
-    onSaved();
+    try {
+      if (event) await Api.updateEvent(event.id, payload);
+      else await Api.createEvent(payload);
+      onSaved();
+    } catch {
+      // el cliente ya muestra el error del backend; el modal se queda abierto
+      // con lo escrito en vez de morir en silencio
+      setSaving(false);
+    }
   };
 
   return (
     <Modal title={event ? "Editar evento" : "Nuevo evento"} onClose={onClose}>
+      {/* Un evento que se repite no tiene «esta vez»: el modelo guarda un solo
+          maestro y expande las repeticiones al leerlas. Decirlo antes de tocar
+          la fecha, que es la que arrastra la serie entera. */}
+      {event && event.recurrence !== "none" && (
+        <p className="mb-3 rounded-md border border-[var(--gr-edge)] bg-[var(--gr-surface-sunken)] px-2.5 py-2 text-xs text-[var(--text-muted)]">
+          Esto edita <b className="text-[var(--text-body)]">toda la serie</b>. La fecha es la
+          del primer evento: cambiarla mueve todas las repeticiones.
+        </p>
+      )}
       <Field label="Título"><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
       <Field label="Fecha"><input type="date" className="input" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
       <div className="grid grid-cols-2 gap-3">
@@ -397,7 +447,9 @@ function EventForm({ event, defaultDate, onClose, onSaved }: { event: CalendarEv
       </div>
       <div className="mt-2 flex justify-end gap-2">
         <button className="btn" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" onClick={save}>Guardar</button>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>
+          {saving ? "Guardando…" : "Guardar"}
+        </button>
       </div>
     </Modal>
   );

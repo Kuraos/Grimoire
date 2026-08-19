@@ -9,7 +9,7 @@ from models import (
     DailyCheckin, WeeklyReview, Project, User, Quest,
     LedgerEntry, LedgerMonthReview, SavingsGoal,
 )
-from services import habit_streak
+from services import habit_streak, parse_days, scheduled_on
 
 
 async def _unlock(db: AsyncSession, key: str) -> Achievement | None:
@@ -208,18 +208,36 @@ async def check_achievements(db: AsyncSession, user: User, event: str, **kwargs)
 
 
 async def _check_total_discipline(db: AsyncSession) -> bool:
-    """True if, for 7 consecutive days ending today, every active daily habit was logged."""
+    """True si, durante 7 días seguidos hasta hoy, cada hábito diario activo que
+    TOCABA ese día quedó marcado.
+
+    Dos cosas que el logro prometía y no cumplía:
+
+    - Los días en que un hábito no toca (`habits.days`) son transparentes, igual
+      que en la racha y en la evaluación de vidas. Sin esto, un hábito L–V lo
+      rompía todos los sábados y «Disciplina total» era inalcanzable para
+      cualquiera que usara cadencia.
+    - Hacen falta siete días de verdad. Los hábitos que aún no existían se
+      saltaban los días anteriores por no existir en ellos, así que en una base
+      recién creada ninguno fallaba y el logro caía el primer día: crear un
+      hábito y marcarlo una vez bastaba para cobrar una semana de constancia.
+    """
     active = (await db.execute(
         select(Habit).where(Habit.active == True, Habit.frequency == "daily")
     )).scalars().all()
     if not active:
         return False
     today = _today()
+    window_start = today - timedelta(days=6)
+    # alguien tiene que haber llevado la ventana entera
+    if not any(h.created_at.date() <= window_start for h in active):
+        return False
+    sched = {h.id: parse_days(h.days) for h in active}
     for offset in range(7):
         day = today - timedelta(days=offset)
         for h in active:
-            # only count habits that existed on that day
-            if h.created_at.date() > day:
+            # sólo cuentan los hábitos que existían ese día y que tocaban
+            if h.created_at.date() > day or not scheduled_on(sched[h.id], day):
                 continue
             logged = (await db.execute(
                 select(func.count(HabitLog.id)).where(

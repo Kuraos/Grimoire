@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from models import (
-    WeeklyReview, HabitLog, Habit, PomodoroSession, Task, XPLog, DailyCheckin,
+    WeeklyReview, HabitLog, PomodoroSession, Task, XPLog, DailyCheckin,
 )
 from schemas import ReviewCreate, ReviewOut, XPEventResponse, AchievementOut
-from services import get_user, award_xp
+from services import get_user, award_xp, scheduled_occasions
 from constants import BASE_XP
 from achievements import check_achievements
 
@@ -45,11 +45,10 @@ async def week_summary(db: AsyncSession = Depends(get_db)):
     xp_prev = await _period_xp(db, prev_start, prev_end)
     delta_pct = round((xp_total - xp_prev) / xp_prev * 100, 1) if xp_prev else None
 
-    days_elapsed = today.weekday() + 1
-    active_habits = (await db.execute(
-        select(func.count(Habit.id)).where(Habit.active == True, Habit.frequency == "daily")
-    )).scalar_one()
-    habits_possible = active_habits * days_elapsed
+    # Lo que la semana ha pedido HASTA HOY. Contaba `hábitos diarios × días
+    # transcurridos`, que ignoraba la cadencia y dejaba fuera a los semanales
+    # —cuyas marcas sí sumaban arriba—, así que el cociente podía pasar del 100%.
+    habits_possible = await scheduled_occasions(db, start, today)
     habits_completed = (await db.execute(
         select(func.count(HabitLog.id)).where(
             func.date(HabitLog.completed_at) >= start.isoformat(),

@@ -22,6 +22,9 @@ export function Overlay({ onClose, children, align = "center" }: {
 }) {
   return createPortal(
     <div
+      /* Marca de «hay un diálogo abierto». La lee el atajo de Espacio en App:
+         sin ella, la barra arrancaba el Pomodoro por debajo del modal. */
+      data-overlay=""
       className={`fixed inset-0 z-[90] flex justify-center overflow-y-auto p-4 ${
         align === "start" ? "items-start py-8" : "items-center"
       }`}

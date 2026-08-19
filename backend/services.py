@@ -52,6 +52,38 @@ def next_scheduled(days: set[int] | None, d: date) -> date | None:
     return None
 
 
+async def scheduled_occasions(db: AsyncSession, start: date, end: date) -> int:
+    """Cuántas marcas pidieron los hábitos activos entre `start` y `end`.
+
+    Es el denominador honesto de «hábitos cumplidos». Estadísticas y la revisión
+    semanal lo calculaban como `hábitos activos × días del periodo`, que cuenta
+    ocasiones que el hábito nunca pidió: a un L–V le apunta dos fallos cada fin
+    de semana y a un 2×/semana, cinco. Y el numerador sí cuenta todas las marcas,
+    incluidas las de los semanales, así que la revisión llegaba a comparar peras
+    con manzanas.
+
+    `_enrich` en habits.py ya hacía esta cuenta para la constancia de UN hábito
+    —CLAUDE.md lo cita como arreglado— pero el conjunto se quedó con la vieja.
+    Un hábito tampoco cuenta antes de existir.
+    """
+    habits = (await db.execute(select(Habit).where(Habit.active == True))).scalars().all()  # noqa: E712
+    total = 0
+    for h in habits:
+        first = max(start, h.created_at.date())
+        if first > end:
+            continue
+        if h.frequency == "weekly":
+            weeks = (_week_monday(end) - _week_monday(first)).days // 7 + 1
+            total += weeks * max(1, h.target_per_week or 1)
+        else:
+            days = parse_days(h.days)
+            total += sum(
+                1 for i in range((end - first).days + 1)
+                if scheduled_on(days, first + timedelta(days=i))
+            )
+    return total
+
+
 async def habit_cadence(db: AsyncSession, habit_id: int) -> tuple[str, set[int] | None, int]:
     """(frecuencia, días programados, marcas por semana) de un hábito."""
     row = (await db.execute(

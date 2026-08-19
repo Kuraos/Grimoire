@@ -82,13 +82,22 @@ async def seed():
         if user is None:
             db.add(User())
 
-        # predefined achievements (locked); also backfill tier on existing rows
+        # Logros predefinidos. El catálogo de `constants.py` manda sobre la fila:
+        # nombre, descripción, icono y rareza son datos de autor, no del usuario,
+        # y sólo `unlocked`/`unlocked_at` son suyos — esos no se tocan nunca.
+        #
+        # Antes el tier sólo se rellenaba «si estaba vacío», y nunca lo estaba:
+        # `_ensure_columns` crea la columna con DEFAULT 'common', así que en toda
+        # base anterior a ella los seis logros raros se quedaron marcados como
+        # comunes para siempre, con el color y el grupo equivocados. Un backfill
+        # que se salta justo las filas para las que se escribió.
         existing = {a.key: a for a in (await db.execute(select(Achievement))).scalars().all()}
         for key, name, desc, icon, tier in PREDEFINED_ACHIEVEMENTS:
-            if key not in existing:
+            row = existing.get(key)
+            if row is None:
                 db.add(Achievement(key=key, name=name, description=desc, icon=icon, tier=tier))
-            elif not existing[key].tier:
-                existing[key].tier = tier
+                continue
+            row.name, row.description, row.icon, row.tier = name, desc, icon, tier
 
         # default habit categories (idempotent by name); users can add/remove their own
         known_cats = set((await db.execute(select(HabitCategory.name))).scalars().all())

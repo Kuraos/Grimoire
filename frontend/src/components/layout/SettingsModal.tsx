@@ -14,6 +14,15 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user, refreshUser, pushToast } = useApp();
   const [vaultPath, setVaultPath] = useState(user?.obsidian_vault_path ?? "");
   const [saving, setSaving] = useState(false);
+  /* El campo se fijaba una sola vez, en el primer render. Abierto antes de que
+     `user` hubiera llegado —arranque en frío, con el sidecar todavía
+     levantándose— salía vacío, y «Guardar ruta» persistía ese vacío: la ruta del
+     vault se borraba por haber abierto Ajustes demasiado pronto. Lo tecleado
+     manda en cuanto se toca. */
+  const [touched, setTouched] = useState(false);
+  useEffect(() => {
+    if (!touched) setVaultPath(user?.obsidian_vault_path ?? "");
+  }, [user, touched]);
   const [backups, setBackups] = useState<BackupEntry[]>([]);
   const [backupDir, setBackupDir] = useState("");
   const [busy, setBusy] = useState(false);
@@ -123,7 +132,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <input
           className="input"
           value={vaultPath}
-          onChange={(e) => setVaultPath(e.target.value)}
+          onChange={(e) => { setTouched(true); setVaultPath(e.target.value); }}
           placeholder="C:\Users\tu\Documentos\MiVault"
         />
       </Field>

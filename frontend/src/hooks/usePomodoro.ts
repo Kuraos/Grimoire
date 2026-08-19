@@ -109,6 +109,28 @@ function remainingOf(t: PomodoroSnapshot): number {
   return t.running && t.endsAt != null ? Math.max(0, t.endsAt - Date.now()) : t.remainingMs;
 }
 
+/**
+ * Lo que hay que registrar de un bloque de foco que se corta a medias, o `null`
+ * si no hay nada que registrar.
+ *
+ * Pura y exportada a propósito: es la regla más delicada del módulo —«no
+ * registrar tiempo que nadie vio correr»— y así se puede probar sin montar el
+ * hook entero.
+ *
+ * Se calla en tres casos, y el tercero es el que faltaba. Una fase que venció
+ * con la app cerrada vuelve agotada y sin arranque (`remainingMs: 0`,
+ * `workStartedAt: null`), así que «lo consumido» salía igual a la fase entera y
+ * pulsar Reiniciar o Saltar registraba una sesión abandonada de 25 minutos que
+ * nadie vio correr. Es exactamente el pecado que el módulo existe para no
+ * cometer, y es el mismo que ya se había arreglado en «Saltar».
+ */
+export function partialResult(t: PomodoroSnapshot, config: PomodoroConfig): WorkResult | null {
+  if (t.phase !== "work" || t.workStartedAt == null) return null;
+  const minutes = Math.floor((phaseMs("work", config) - remainingOf(t)) / 60_000);
+  if (minutes < MIN_PARTIAL_MINUTES) return null;
+  return { minutes, startedAt: t.workStartedAt, completed: false };
+}
+
 export function usePomodoro(
   config: PomodoroConfig,
   handlers: PomodoroHandlers,
@@ -145,15 +167,8 @@ export function usePomodoro(
   /** Cierra el bloque de foco vivo como abandonado. Nunca puntúa. */
   const reportPartial = useCallback(
     (t: PomodoroSnapshot) => {
-      if (t.phase !== "work") return;
-      const consumedMs = phaseMs("work", config) - remainingOf(t);
-      const minutes = Math.floor(consumedMs / 60_000);
-      if (minutes < MIN_PARTIAL_MINUTES) return;
-      hRef.current.onWorkEnd({
-        minutes,
-        startedAt: t.workStartedAt ?? Date.now() - consumedMs,
-        completed: false,
-      });
+      const result = partialResult(t, config);
+      if (result) hRef.current.onWorkEnd(result);
     },
     [config]
   );

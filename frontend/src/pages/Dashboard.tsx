@@ -84,8 +84,15 @@ export default function Dashboard() {
 
   const undoHabit = async (h: Habit) => {
     try {
-      await Api.uncompleteHabit(h.id);
-      pushToast({ title: "Deshecho", body: `${h.name} · ${h.xp_reward} XP revertidos`, icon: "arrow-back-up" });
+      // La cifra sale de la respuesta, no de `xp_reward`: lo concedido llevaba
+      // el multiplicador de racha, así que con una racha de 30 días el backend
+      // revertía 27 y el aviso decía 20.
+      const res = await Api.uncompleteHabit(h.id);
+      pushToast({
+        title: "Deshecho",
+        body: `${h.name} · ${Math.abs(res.xp_earned)} XP revertidos`,
+        icon: "arrow-back-up",
+      });
       load();
     } catch {
       /* ignore */

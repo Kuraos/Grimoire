@@ -83,12 +83,19 @@ siguen existiendo con los valores por defecto y se cuelan sin querer. Fuera,
 
 ### Rangos de superficie
 
-Una card no puede significar tres cosas. `<Card rank>` acepta:
+Una card no puede significar cuatro cosas. `<Card rank>` acepta:
 
 - `rubric` — lo que el día exige. Una por vista. Degradado, filo de oro arriba,
   título en Cinzel.
 - `leaf` — la card estándar (por defecto).
 - `marginalia` — cifras de contexto; pierde la caja y deja sólo un filete.
+- `pozo` — panel hundido para gráficos y piezas dibujadas. Pierde el borde y el
+  radio, se hunde al fondo estrellado y **no lleva título propio**: lo abre una
+  `<SectionBand>`, que ya trae sigilo, relleno y remate.
+
+El nudo de esquina sale del rango, no de una prop: oro en la rúbrica, tinta en
+la hoja, ninguno en marginalia ni en el pozo —no tienen caja donde anclarlo—.
+Pedirlo a mano sería una segunda fuente de verdad de la misma jerarquía.
 
 ### El techo de la escalera de elevación
 

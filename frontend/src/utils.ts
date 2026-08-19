@@ -83,8 +83,10 @@ export function cadenceLabel(habit: Cadence): string {
   return days.map((d) => WEEKDAYS_ES[d]).join("·");
 }
 
-/** La racha de un hábito semanal se cuenta en semanas, no en días. */
-export function streakUnit(habit: Cadence, n: number): string {
+/** La racha de un hábito semanal se cuenta en semanas, no en días.
+ *  Pide sólo la frecuencia: así lo puede usar cualquiera que la tenga, sin
+ *  fabricar un `Cadence` entero para leer una palabra. */
+export function streakUnit(habit: Pick<Cadence, "frequency">, n: number): string {
   if (habit.frequency === "weekly") return n === 1 ? "semana" : "semanas";
   return n === 1 ? "día" : "días";
 }

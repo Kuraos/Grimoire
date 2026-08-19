@@ -10,6 +10,7 @@ import { SpendDaily } from "../components/charts/SpendDaily";
 import { CategoryTrend } from "../components/charts/CategoryTrend";
 import { Api } from "../api/endpoints";
 import { Card } from "../components/ui/Card";
+import { Figure } from "../components/ui/Figure";
 import { SectionBand } from "../components/ui/SectionBand";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Modal, Field } from "../components/ui/Modal";
@@ -125,6 +126,7 @@ export default function Erario() {
   const [filter, setFilter] = useState<Filter>("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [editing, setEditing] = useState<LedgerEntry | "new" | null>(null);
   const [budgets, setBudgets] = useState(false);
   const [closing, setClosing] = useState(false);
@@ -159,6 +161,13 @@ export default function Erario() {
       setReview(rev);
       setGoals(gls);
       setStats(st);
+      setFailed(false);
+    } catch {
+      /* Un mes sin asentar y un servidor caído se veían idénticos: sin `catch`,
+         el fallo dejaba una promesa rechazada sin manejar y la vista pintaba
+         «Todavía no has asentado nada este mes» sobre datos que nunca llegaron.
+         Un libro que no se pudo leer no es un libro vacío. */
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -226,7 +235,16 @@ export default function Erario() {
           <div className="min-w-[280px] flex-1">
           {/* Un mes vacío no se anuncia con cuatro ceros de 34px: leen como una
               vista rota, no como un mes sin empezar. */}
-          {(summary?.entry_count ?? 0) === 0 ? (
+          {failed ? (
+            <div>
+              <p className="font-prose text-[var(--danger)]">
+                No se pudo leer el erario. Puede que el servidor no esté en pie.
+              </p>
+              <button className="btn mt-3" onClick={() => { setLoading(true); load(); }}>
+                Reintentar
+              </button>
+            </div>
+          ) : (summary?.entry_count ?? 0) === 0 ? (
             /* Un estado vacío que sólo describe el vacío es un callejón sin
                salida: la rúbrica es «lo que el día exige», y lo que exige aquí
                es empezar. Las dos acciones viven lejos —una arriba del todo,
@@ -260,7 +278,7 @@ export default function Erario() {
                 <Figure
                   label={summary!.available_minor < 0 ? "pasado del cerco" : "disponible"}
                   value={formatMoney(summary!.available_minor, currency)}
-                  tone={summary!.available_minor < 0 ? "danger" : "ok"}
+                  tone={summary!.available_minor < 0 ? "danger" : undefined}
                 />
                 {summary!.days_left > 0 && summary!.available_minor > 0 && (
                   <Figure
@@ -311,7 +329,7 @@ export default function Erario() {
               <Figure
                 label={summary!.net_minor < 0 ? "en rojo" : "diferencia"}
                 value={formatMoney(summary!.net_minor, currency)}
-                tone={summary!.net_minor < 0 ? "danger" : "ok"}
+                tone={summary!.net_minor < 0 ? "danger" : undefined}
               />
               {/* La cifra es lo anotado y el rótulo dice en cuántos días. Al
                   revés —cifra de días, rótulo «N asientos»— se leía como
@@ -402,6 +420,10 @@ export default function Erario() {
 
           {loading ? (
             <p className="py-6 text-center text-xs text-[var(--text-muted)]">Cargando…</p>
+          ) : failed ? (
+            <p className="py-8 text-center text-xs text-[var(--danger)]">
+              El libro no se pudo leer.
+            </p>
           ) : entries.length === 0 ? (
             <p className="py-8 text-center text-xs text-[var(--text-muted)]">
               {filter === "all" && !search
@@ -861,6 +883,29 @@ function ContributeModal({ goal, accounts, currency, onClose, onSaved, onXp }: {
     }
   };
 
+  /* Un aporte es un traspaso de verdad, así que necesita un arca de la que
+     salir. Con una sola arca en el erario no queda ninguna, y el desplegable
+     salía vacío con el botón apagado para siempre: un callejón sin salida que
+     no decía por dónde se sale. */
+  if (origins.length === 0) {
+    return (
+      <Modal title={`Aportar a ${goal.name}`} onClose={onClose}>
+        <p className="font-prose text-sm text-[var(--text-body)]">
+          Un aporte es un traspaso: el dinero tiene que salir de otra arca y entrar en{" "}
+          <span className="text-[var(--text-primary)]">
+            {accounts.find((a) => a.id === goal.account_id)?.name ?? "la de la reliquia"}
+          </span>. Ahora mismo no hay ninguna otra.
+        </p>
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          Crea una segunda arca —la cuenta de donde sale el dinero— y vuelve aquí.
+        </p>
+        <div className="mt-4 flex justify-end">
+          <button className="btn" onClick={onClose}>Entendido</button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal title={`Aportar a ${goal.name}`} onClose={onClose}>
       <p className="mb-3 text-xs text-[var(--text-muted)]">
@@ -1118,24 +1163,6 @@ function BudgetModal({ month, currency, onClose, onSaved }: {
   );
 }
 
-function Figure({ label, value, muted, tone }: {
-  label: string;
-  value: string;
-  muted?: boolean;
-  tone?: "ok" | "danger";
-}) {
-  const color =
-    tone === "danger" ? "var(--danger)"
-    : muted ? "var(--text-body)"
-    : "var(--gr-ink-bright)";
-  return (
-    <div>
-      <div className="gr-figure" style={{ color }}>{value}</div>
-      <div className="mt-0.5 text-xs text-[var(--text-muted)]">{label}</div>
-    </div>
-  );
-}
-
 function EntryModal({ entry, accounts, categories, currency, onClose, onSaved, onXp }: {
   entry: LedgerEntry | null;
   accounts: Account[];
@@ -1232,6 +1259,14 @@ function EntryModal({ entry, accounts, categories, currency, onClose, onSaved, o
         {amount.trim() !== "" && minor === null && (
           <span className="mt-1 block text-xs text-[var(--danger)]">
             No se entiende ese monto.
+          </span>
+        )}
+        {/* El signo lo pone el tipo del asiento, nunca el monto guardado. Sin
+            este aviso, teclear «−500» dejaba el botón apagado y mudo: la única
+            regla del campo era la que no se contaba. */}
+        {minor !== null && minor <= 0 && (
+          <span className="mt-1 block text-xs text-[var(--danger)]">
+            El monto va sin signo: el tipo de asiento decide si suma o resta.
           </span>
         )}
       </Field>
