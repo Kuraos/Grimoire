@@ -27,9 +27,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # Node 24 = npm 11, el mismo que genera el lockfile en desarrollo. Con
-      # Node 20 (npm 10) `npm ci` aborta con "Missing: @esbuild/... from lock
-      # file": npm 10 y 11 no anotan igual las dependencias opcionales anidadas.
+      # Node 24 = npm 11, el mismo que genera el lockfile en desarrollo.
+      #
+      # No es una preferencia: `vitest@4` no acepta `vite@^5` y se instala su
+      # propia copia de vite 8, anidada. Esa copia trae `esbuild@0.28.2`, y npm
+      # 10 no resuelve igual las dependencias opcionales anidadas, así que con
+      # Node 20 o 22 `npm ci` aborta con "Missing: esbuild@0.28.2 from lock
+      # file". El lockfile no tiene nada roto —npm 11 lo instala entero— pero el
+      # error apunta a él y manda a regenerarlo, que no arregla nada.
+      #
+      # `frontend/.npmrc` + `engines` convierten ese fallo en uno que dice la
+      # verdad («Required: npm >=11»). Si algún día se sube vite a 6+, vitest
+      # dejará de duplicarlo y esto se puede quitar.
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
