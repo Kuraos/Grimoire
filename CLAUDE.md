@@ -19,13 +19,8 @@ npm run check        # tsc + vitest + pytest + build. Correr esto, no las piezas
 `npm run check` cubre las cuatro comprobaciones de CI de una vez, incluidos los
 tests de backend. No hay motivo para lanzarlas por separado.
 
-- **El frontend necesita npm 11** (Node 24). No es capricho: `vitest@4` no acepta
-  `vite@^5`, se instala su propia copia de vite 8 anidada, y npm 10 no resuelve
-  igual esas dependencias opcionales. Con Node 20 o 22, `npm ci` aborta diciendo
-  «Missing: esbuild@0.28.2 from lock file» —un error que apunta al lockfile, que
-  está perfecto, y que invita a regenerarlo, que no arregla nada—. `frontend/.npmrc`
-  con `engine-strict` convierte ese fallo en «Required: npm >=11», que sí se
-  entiende. Ya costó una tarde una vez.
+- **Node ^20.19 o >=22.12**, que es lo que pide vite 7. Está declarado en
+  `frontend/package.json`.
 - El backend escucha en `127.0.0.1:8000` y Vite en `5173`, que hace de proxy a
   `/api`. En desarrollo el sidecar **no** se lanza desde Tauri: corre aparte,
   para no reconstruirlo con PyInstaller cada vez que se toca Python.
@@ -286,6 +281,23 @@ sesión de cinta se anota con duración y sin kilómetros, y sin ese guardia eso
 divide entre cero.
 
 ## Trampas que ya han mordido
+
+**Vite y vitest tienen que ir en pareja.** Durante mucho tiempo el
+`package.json` pedía `vite@^5` y `vitest@^4`, y vitest 4 no acepta vite 5: npm lo
+resolvía instalándose una copia de vite 8 anidada bajo `node_modules/vitest/`.
+Funcionaba, y por eso nadie lo miró — pero significaba que **el proyecto se
+compilaba con vite 5 y se probaba con vite 8**: dos transformadores distintos,
+así que lo que aprobaban los tests no era exactamente lo que se empaquetaba.
+
+De rebote, ese anidado traía sus propios binarios opcionales de esbuild, que npm
+10 no sabe leer, y `npm ci` abortaba con «Missing: esbuild@0.28.2 from lock
+file». El error señalaba al lockfile, que estaba intacto, e invitaba a
+regenerarlo, que no arreglaba nada. Se llegó a fijar Node 24 en CI para
+esquivarlo.
+
+Con vite 7 hay un solo vite en el árbol y las dos cosas desaparecen a la vez.
+Antes de subir cualquiera de los dos, comprobar que el otro lo acepta y que
+`find node_modules -type d -name vite` devuelve **una** línea.
 
 **Cascada.** `.card`, sus rangos, `.input` y `.btn` viven dentro de
 `@layer components` para que las utilidades de Tailwind puedan sobrescribirlas.
