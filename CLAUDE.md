@@ -19,6 +19,13 @@ npm run check        # tsc + vitest + pytest + build. Correr esto, no las piezas
 `npm run check` cubre las cuatro comprobaciones de CI de una vez, incluidos los
 tests de backend. No hay motivo para lanzarlas por separado.
 
+- **El frontend necesita npm 11** (Node 24). No es capricho: `vitest@4` no acepta
+  `vite@^5`, se instala su propia copia de vite 8 anidada, y npm 10 no resuelve
+  igual esas dependencias opcionales. Con Node 20 o 22, `npm ci` aborta diciendo
+  «Missing: esbuild@0.28.2 from lock file» —un error que apunta al lockfile, que
+  está perfecto, y que invita a regenerarlo, que no arregla nada—. `frontend/.npmrc`
+  con `engine-strict` convierte ese fallo en «Required: npm >=11», que sí se
+  entiende. Ya costó una tarde una vez.
 - El backend escucha en `127.0.0.1:8000` y Vite en `5173`, que hace de proxy a
   `/api`. En desarrollo el sidecar **no** se lanza desde Tauri: corre aparte,
   para no reconstruirlo con PyInstaller cada vez que se toca Python.
