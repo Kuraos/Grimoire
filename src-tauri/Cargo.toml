@@ -1,6 +1,6 @@
 [package]
 name = "grimoire"
-version = "0.6.1"
+version = "0.7.0"
 description = "Grimoire — Personal Life CRM"
 authors = ["Grimoirista"]
 edition = "2021"
