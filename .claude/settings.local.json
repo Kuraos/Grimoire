@@ -4,7 +4,8 @@
       "PowerShell(node --version)",
       "PowerShell(npm --version)",
       "PowerShell(python --version)",
-      "mcp__Claude_Code_Remote__subscribe_pr_activity"
+      "mcp__Claude_Code_Remote__subscribe_pr_activity",
+      "mcp__Claude_Code_Remote__unsubscribe_pr_activity"
     ]
   }
 }
