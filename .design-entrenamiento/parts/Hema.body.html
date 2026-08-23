@@ -1,0 +1,81 @@
+<div style="min-height:100%;background:rgba(10,8,16,.72);padding:16px;display:flex;justify-content:center;align-items:flex-start;">
+  <div style="width:100%;border-radius:var(--gr-radius-lg);padding:20px;background:var(--gr-surface-sunken);border:1px solid var(--gr-edge-strong);">
+
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <h2 style="margin:0;font-family:var(--gr-font-display);font-size:16px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gr-arcane);">Asentar sesión de HEMA</h2>
+      <span style="margin-left:auto;color:var(--gr-ink-dim);display:inline-flex;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:200px 1fr 140px;gap:12px;margin-bottom:10px;">
+      <label style="display:block;">
+        <span class="campo-label">Fecha</span>
+        <input class="input tabular" value="23/08/2026" readonly>
+      </label>
+      <label style="display:block;">
+        <span class="campo-label">Arma o disciplina <span class="opcional">— opcional</span></span>
+        <input class="input" style="border-style:dashed;" value="Montante" readonly>
+      </label>
+      <label style="display:block;">
+        <span class="campo-label">Duración</span>
+        <input class="input tabular input-focus" style="text-align:right;" value="90" readonly>
+      </label>
+    </div>
+
+    <!-- La meta semanal del rito ya está cumplida (2×/semana). No es un error y
+         no puede tumbar el guardado: la sesión se anota igual, el rito no se
+         marca dos veces. Por eso va en tinta, no en rojo. -->
+    <div style="display:flex;align-items:flex-start;gap:9px;border-left:2px solid var(--gr-edge-strong);background:rgba(210,203,219,.04);border-radius:var(--gr-radius-sm);padding:9px 12px;margin-bottom:14px;">
+      <span style="color:var(--gr-ink-dim);display:inline-flex;margin-top:1px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      </span>
+      <span style="font-size:13px;line-height:1.45;color:var(--gr-ink-dim);">
+        <strong style="font-weight:600;color:var(--gr-ink);">Esgrima HEMA</strong> ya alcanzó su meta de 2× esta semana. La sesión se anota igual; el rito no se marca dos veces.
+      </span>
+    </div>
+
+    <!-- Intensidad: selección del sistema → ARCANO. No es una nota ni un mérito. -->
+    <div style="margin-bottom:14px;">
+      <span class="campo-label">Intensidad percibida <span class="opcional">— opcional</span></span>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:34px;border-radius:var(--gr-radius-md);border:1px solid var(--gr-edge);color:var(--gr-ink-dim);font-size:15px;" class="tabular">1</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:34px;border-radius:var(--gr-radius-md);border:1px solid var(--gr-edge);color:var(--gr-ink-dim);font-size:15px;" class="tabular">2</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:34px;border-radius:var(--gr-radius-md);border:1px solid var(--gr-edge);color:var(--gr-ink-dim);font-size:15px;" class="tabular">3</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:34px;border-radius:var(--gr-radius-md);border:1px solid var(--gr-arcane);background:var(--gr-arcane-deep);color:var(--gr-arcane-bright);font-size:15px;" class="tabular">4</span>
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:38px;height:34px;border-radius:var(--gr-radius-md);border:1px solid var(--gr-edge);color:var(--gr-ink-dim);font-size:15px;" class="tabular">5</span>
+        <span style="margin-left:6px;font-size:13px;color:var(--gr-ink-dim);">Exigente</span>
+      </div>
+    </div>
+
+    <div style="margin-bottom:14px;">
+      <span class="campo-label">Técnicas trabajadas <span class="opcional">— opcional</span></span>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:1px dashed var(--gr-edge);border-radius:var(--gr-radius-md);background:var(--gr-surface-raised);padding:7px 9px;min-height:38px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--gr-edge-strong);border-radius:var(--gr-radius-sm);padding:2px 8px;font-size:13px;color:var(--gr-ink);">Zwerchhau
+          <span style="color:var(--gr-ink-faint);display:inline-flex;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </span>
+        <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--gr-edge-strong);border-radius:var(--gr-radius-sm);padding:2px 8px;font-size:13px;color:var(--gr-ink);">Krumphau
+          <span style="color:var(--gr-ink-faint);display:inline-flex;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+        </span>
+        <span style="font-size:13px;color:var(--gr-ink-faint);">Escribe y pulsa Intro…</span>
+      </div>
+    </div>
+
+    <label style="display:block;margin-bottom:16px;">
+      <span class="campo-label">Notas <span class="opcional">— opcional</span></span>
+      <textarea class="input" style="border-style:dashed;min-height:64px;resize:none;" placeholder="Sparring largo con Diego. La guardia alta se me cae al tercer asalto." readonly></textarea>
+    </label>
+
+    <div style="display:flex;align-items:center;gap:16px;border-top:1px solid var(--gr-edge);padding-top:14px;">
+      <div>
+        <span class="tabular" style="font-size:15px;color:var(--gr-ink);">90 min</span>
+        <span class="label" style="margin-left:7px;font-size:11px;color:var(--gr-ink-dim);">3ª sesión de la semana</span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn">Cancelar</button>
+        <button class="btn btn-primary">Asentar</button>
+      </div>
+    </div>
+
+  </div>
+</div>

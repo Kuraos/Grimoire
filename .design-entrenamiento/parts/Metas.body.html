@@ -1,0 +1,98 @@
+<div class="cielo" style="min-height:100%;padding:16px;">
+  <section class="card">
+    <span class="nudo nudo-tinta"></span>
+    <div class="section-title sangrado" style="margin-bottom:12px;">
+      <span class="rubrica">Metas de fuerza</span>
+      <span class="tabular" style="margin-left:2px;text-transform:none;letter-spacing:normal;color:var(--gr-ink-faint);">3</span>
+      <span class="filete"></span>
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;text-transform:uppercase;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Declarar
+      </button>
+      <span class="rombo"></span>
+    </div>
+
+    <!-- EN CAMINO: el arco es ARCANO. Estado del sistema, no recompensa.
+         Es literalmente el anillo de una reliquia del erario, con kilos. -->
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:11px 0;">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style="flex-shrink:0;">
+        <circle cx="26" cy="26" r="20" stroke="#3d3358" stroke-width="3"/>
+        <circle cx="26" cy="26" r="20" stroke="#a98bf0" stroke-width="3" stroke-linecap="round"
+                stroke-dasharray="103.7 125.66" transform="rotate(-90 26 26)"/>
+        <text x="26" y="30" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#5aa885">83</text>
+      </svg>
+      <div style="min-width:0;flex:1;">
+        <div style="display:flex;align-items:baseline;gap:8px;">
+          <span style="font-size:15px;color:var(--gr-ink-bright);">Press banca · 100 kg</span>
+        </div>
+        <div class="tabular" style="margin-top:2px;font-size:13px;color:var(--gr-ink-dim);">
+          <span style="color:var(--gr-ink);">82,5 kg</span> de 100 kg
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:var(--gr-ink-faint);" class="tabular">
+          Faltan 17,5 kg · declarada el 3 de mayo
+        </div>
+      </div>
+    </div>
+
+    <!-- ALCANZADA: el arco pasa a ORO y se sella. Es el único dorado que este
+         módulo se inventa — y sólo porque es una meta que se fijó ANTES y se
+         cumplió, igual que una reliquia o una misión. -->
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:11px 0;border-top:1px solid var(--gr-edge);">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style="flex-shrink:0;">
+        <circle cx="26" cy="26" r="20" stroke="#3d3358" stroke-width="3"/>
+        <circle cx="26" cy="26" r="20" stroke="#dcae5c" stroke-width="3" stroke-linecap="round"
+                stroke-dasharray="125.66 125.66" transform="rotate(-90 26 26)"/>
+        <path d="M20 26.5l4 4l8 -8" stroke="#f0cd8a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <div style="min-width:0;flex:1;">
+        <div style="display:flex;align-items:baseline;gap:9px;">
+          <span style="font-size:15px;color:var(--gr-ink-bright);">Sentadilla · 120 kg</span>
+          <span class="label" style="flex-shrink:0;font-size:11px;color:var(--gr-gilded);">Meta alcanzada</span>
+        </div>
+        <div class="tabular" style="margin-top:2px;font-size:13px;color:var(--gr-ink-dim);">
+          <span style="color:var(--gr-gilded-bright);">122,5 kg</span> de 120 kg
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:var(--gr-ink-faint);" class="tabular">
+          Sellada el 9 de agosto · +50 XP
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:14px;padding:11px 0;border-top:1px solid var(--gr-edge);">
+      <svg width="52" height="52" viewBox="0 0 52 52" fill="none" style="flex-shrink:0;">
+        <circle cx="26" cy="26" r="20" stroke="#3d3358" stroke-width="3"/>
+        <circle cx="26" cy="26" r="20" stroke="#a98bf0" stroke-width="3" stroke-linecap="round"
+                stroke-dasharray="70.4 125.66" transform="rotate(-90 26 26)"/>
+        <text x="26" y="30" text-anchor="middle" font-family="Inter, sans-serif" font-size="11" font-weight="600" fill="#6f93e0">56</text>
+      </svg>
+      <div style="min-width:0;flex:1;">
+        <div style="font-size:15px;color:var(--gr-ink-bright);">Peso muerto · 180 kg</div>
+        <div class="tabular" style="margin-top:2px;font-size:13px;color:var(--gr-ink-dim);">
+          <span style="color:var(--gr-ink);">100 kg</span> de 180 kg
+        </div>
+        <div style="margin-top:4px;font-size:11px;color:var(--gr-ink-faint);" class="tabular">
+          Faltan 80 kg · antes del 31 de diciembre
+        </div>
+      </div>
+    </div>
+
+    <!-- La regla, escrita donde se declara. Es la prohibición nº5 del erario
+         («sin re-otorgar») dicha en kilos. -->
+    <div style="margin-top:12px;border-top:1px solid var(--gr-edge);padding-top:12px;">
+      <div style="display:grid;grid-template-columns:1fr 150px auto;gap:10px;align-items:flex-end;">
+        <label style="display:block;">
+          <span class="campo-label">Ejercicio</span>
+          <input class="input" value="" placeholder="Dominadas con lastre" readonly>
+        </label>
+        <label style="display:block;">
+          <span class="campo-label">Objetivo</span>
+          <input class="input tabular" style="text-align:right;" value="" placeholder="kg" readonly>
+        </label>
+        <button class="btn btn-primary" style="padding:9px 16px;">Declarar meta</button>
+      </div>
+      <p style="margin:10px 0 0;font-size:11px;line-height:1.5;color:var(--gr-ink-faint);">
+        Una meta se declara <em style="font-style:italic;color:var(--gr-ink-dim);">antes</em>. Bajar la cifra por debajo de lo que ya levantas no la sella sola: hace falta una sesión posterior que la alcance. Un récord sin meta declarada es dato, no medalla — se dibuja en la curva, en tinta, y no paga XP.
+      </p>
+    </div>
+  </section>
+</div>

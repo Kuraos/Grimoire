@@ -1,0 +1,108 @@
+<div class="cielo" style="min-height:100%;padding:16px;display:flex;flex-direction:column;gap:16px;">
+
+  <section class="card">
+    <span class="nudo nudo-tinta"></span>
+    <div class="section-title sangrado" style="margin-bottom:10px;">
+      <span class="rubrica">Métricas corporales</span>
+      <span class="filete"></span>
+      <span style="text-transform:none;letter-spacing:normal;font-size:11px;font-style:italic;color:var(--gr-ink-faint);">Dato neutro: no da XP, no hace racha, no se premia.</span>
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Anotar medida
+      </button>
+      <span class="rombo"></span>
+    </div>
+
+    <!-- Las cifras van en TINTA y las variaciones también. Ni verdigrís ni
+         oxblood: un peso que baja no es «bien» y uno que sube no es «mal»,
+         y pintarlos de éxito o peligro convertiría el cuerpo en un marcador. -->
+    <div style="display:flex;gap:56px;border-top:1px solid var(--gr-edge);padding-top:14px;">
+      <div>
+        <div class="figure">76,9<span style="font-size:24px;color:var(--gr-ink-faint);"> kg</span></div>
+        <div class="label" style="margin-top:6px;font-size:11px;color:var(--gr-ink-dim);">Peso · hoy</div>
+        <div class="tabular" style="margin-top:3px;font-size:11px;color:var(--gr-ink-faint);">−1,5 kg en 90 días</div>
+      </div>
+      <div>
+        <div class="figure" style="color:var(--gr-ink);">82,0<span style="font-size:24px;color:var(--gr-ink-faint);"> cm</span></div>
+        <div class="label" style="margin-top:6px;font-size:11px;color:var(--gr-ink-dim);">Cintura</div>
+        <div class="tabular" style="margin-top:3px;font-size:11px;color:var(--gr-ink-faint);">−2,0 cm · 12 ago</div>
+      </div>
+      <div>
+        <div class="figure" style="color:var(--gr-ink);">36,5<span style="font-size:24px;color:var(--gr-ink-faint);"> cm</span></div>
+        <div class="label" style="margin-top:6px;font-size:11px;color:var(--gr-ink-dim);">Brazo</div>
+        <div class="tabular" style="margin-top:3px;font-size:11px;color:var(--gr-ink-faint);">+0,8 cm · 12 ago</div>
+      </div>
+      <div>
+        <div class="figure" style="color:var(--gr-ink);">14</div>
+        <div class="label" style="margin-top:6px;font-size:11px;color:var(--gr-ink-dim);">Medidas anotadas</div>
+        <div class="tabular" style="margin-top:3px;font-size:11px;color:var(--gr-ink-faint);">desde el 24 de mayo</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card card-pozo">
+    <div style="display:grid;grid-template-columns:28px 1fr;column-gap:8px;">
+      <div style="grid-row:span 2;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--gr-ink-dim);">
+        <svg width="22" height="22" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"><path d="M6 1a5 5 0 1 0 0 10a5 5 0 1 0 0 -10"/></svg>
+        <span style="height:5px;width:5px;transform:rotate(45deg);background:var(--gr-edge-strong);"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:4px;font-family:var(--gr-font-ui);font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;">
+        <span style="color:var(--gr-ink-dim);">Tendencia</span>
+        <span class="filete"></span>
+        <span style="display:flex;gap:5px;letter-spacing:.04em;">
+          <span style="border:1px solid var(--gr-arcane);background:var(--gr-arcane-deep);color:var(--gr-arcane-bright);border-radius:var(--gr-radius-sm);padding:2px 8px;font-size:11px;">Peso</span>
+          <span style="border:1px solid var(--gr-edge);color:var(--gr-ink-dim);border-radius:var(--gr-radius-sm);padding:2px 8px;font-size:11px;">Cintura</span>
+          <span style="border:1px solid var(--gr-edge);color:var(--gr-ink-dim);border-radius:var(--gr-radius-sm);padding:2px 8px;font-size:11px;">Brazo</span>
+        </span>
+        <span class="rombo"></span>
+      </div>
+
+      <div style="margin-top:10px;">
+        <svg width="100%" height="212" viewBox="0 0 1136 212" fill="none" style="display:block;">
+          <g stroke="#3d3358" stroke-width="1">
+            <path d="M48 124H1130" stroke-dasharray="2 5"/>
+            <path d="M48 68H1130" stroke-dasharray="2 5"/>
+            <path d="M48 12H1130" stroke-dasharray="2 5"/>
+            <path d="M48 180H1130"/>
+          </g>
+          <g font-family="Inter, sans-serif" font-size="11" fill="#a29ab3" text-anchor="end">
+            <text x="40" y="128">77</text>
+            <text x="40" y="72">78</text>
+            <text x="40" y="16">79</text>
+          </g>
+
+          <!-- El dato crudo, en tinta tenue: el ruido del día a día es real y se
+               ve, pero no manda la lectura. -->
+          <path d="M48 45.6L131 62.4L214 34.4L298 73.6L381 56.8L464 90.4L547 79.2L630 107.2L714 96L797 124L880 112.8L963 135.2L1046 124L1130 129.6"
+                stroke="#a29ab3" stroke-width="1" stroke-opacity=".55" stroke-linejoin="round"/>
+          <g fill="#a29ab3" fill-opacity=".55">
+            <circle cx="48" cy="45.6" r="1.8"/><circle cx="131" cy="62.4" r="1.8"/><circle cx="214" cy="34.4" r="1.8"/>
+            <circle cx="298" cy="73.6" r="1.8"/><circle cx="381" cy="56.8" r="1.8"/><circle cx="464" cy="90.4" r="1.8"/>
+            <circle cx="547" cy="79.2" r="1.8"/><circle cx="630" cy="107.2" r="1.8"/><circle cx="714" cy="96" r="1.8"/>
+            <circle cx="797" cy="124" r="1.8"/><circle cx="880" cy="112.8" r="1.8"/><circle cx="963" cy="135.2" r="1.8"/>
+            <circle cx="1046" cy="124" r="1.8"/><circle cx="1130" cy="129.6" r="1.8"/>
+          </g>
+
+          <!-- La tendencia, en tinta brillante. Es la respuesta a «¿esto baja o
+               es ruido?», que es la pregunta que el módulo existe para contestar.
+               Sin degradado: una rampa hacia el oro premiaría un peso concreto. -->
+          <path d="M48 45.6L131 51.2L214 54L298 59.6L381 62.4L464 70.8L547 76.4L630 84.8L714 90.4L797 98.8L880 104.4L963 112.8L1046 118.4L1130 124"
+                stroke="#f2ede6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+
+          <g font-family="Inter, sans-serif" font-size="11" fill="#a49db5" text-anchor="middle">
+            <text x="48" y="198">24 may</text>
+            <text x="381" y="198">21 jun</text>
+            <text x="714" y="198">19 jul</text>
+            <text x="1046" y="198">16 ago</text>
+          </g>
+        </svg>
+
+        <div style="display:flex;align-items:center;gap:22px;margin-top:8px;padding-left:48px;font-size:11px;color:var(--gr-ink-dim);">
+          <span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:18px;height:2px;background:var(--gr-ink-bright);"></span>Tendencia (media de 4 medidas)</span>
+          <span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:18px;height:1px;background:var(--gr-ink-faint);opacity:.55;"></span>Medida anotada</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>

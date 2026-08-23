@@ -1,0 +1,157 @@
+<div style="min-height:100%;background:rgba(10,8,16,.72);padding:16px;display:flex;justify-content:center;align-items:flex-start;">
+  <div style="width:100%;border-radius:var(--gr-radius-lg);padding:20px;background:var(--gr-surface-sunken);border:1px solid var(--gr-edge-strong);">
+
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <h2 style="margin:0;font-family:var(--gr-font-display);font-size:16px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gr-arcane);">Asentar sesión de fuerza</h2>
+      <span style="margin-left:auto;color:var(--gr-ink-dim);display:inline-flex;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </span>
+    </div>
+
+    <!-- Fecha y nombre -->
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:10px;">
+      <label style="display:block;">
+        <span class="campo-label">Fecha</span>
+        <input class="input tabular" value="{{fecha}}" readonly>
+      </label>
+      <label style="display:block;">
+        <span class="campo-label">Nombre de la sesión <span class="opcional">— opcional</span></span>
+        <input class="input" value="Empuje" readonly>
+      </label>
+    </div>
+
+    <!-- El vínculo con el rito. No es una alerta: es una consecuencia declarada
+         antes de que ocurra. Con fecha de hoy, la regla teñida de arcano —el
+         sistema va a hacer algo—. Con fecha pasada, tinta: no es un error. -->
+    <sc-if value="{{esHoy}}" hint-placeholder-val="{{true}}">
+      <div style="display:flex;align-items:flex-start;gap:9px;border-left:2px solid var(--gr-edge-arcane);background:rgba(169,139,240,.06);border-radius:var(--gr-radius-sm);padding:9px 12px;margin-bottom:14px;">
+        <span style="color:var(--gr-arcane);display:inline-flex;margin-top:1px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5l9 -9"/></svg>
+        </span>
+        <span style="font-size:13px;line-height:1.45;color:var(--gr-ink);">
+          Al asentar se marcará <strong style="font-weight:600;color:var(--gr-ink-bright);">Entrenamiento físico (gym)</strong> y con él su XP y su racha. No hace falta marcarlo aparte.
+        </span>
+      </div>
+    </sc-if>
+    <sc-if value="{{esPasada}}" hint-placeholder-val="{{false}}">
+      <div style="display:flex;align-items:flex-start;gap:9px;border-left:2px solid var(--gr-edge-strong);background:rgba(210,203,219,.04);border-radius:var(--gr-radius-sm);padding:9px 12px;margin-bottom:14px;">
+        <span style="color:var(--gr-ink-dim);display:inline-flex;margin-top:1px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+        </span>
+        <span style="font-size:13px;line-height:1.45;color:var(--gr-ink-dim);">
+          Fecha pasada: la sesión queda anotada, pero <strong style="font-weight:600;color:var(--gr-ink);">no marca el rito ni paga XP</strong>. El XP se sella el día en que se anota, nunca el día que dice la fecha.
+        </span>
+      </div>
+    </sc-if>
+
+    <!-- Series -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
+      <span class="campo-label" style="margin-bottom:0;">Series</span>
+      <span class="filete"></span>
+      <span class="rombo"></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 74px 92px 74px 92px 26px;gap:6px;align-items:center;margin-bottom:5px;padding:0 2px;">
+      <span class="label" style="font-size:11px;color:var(--gr-ink-dim);">Ejercicio</span>
+      <span class="label" style="font-size:11px;color:var(--gr-ink-dim);text-align:right;">Reps</span>
+      <span class="label" style="font-size:11px;color:var(--gr-ink-dim);text-align:right;">Peso</span>
+      <span class="label" style="font-size:11px;color:var(--gr-ink-faint);text-align:right;">RPE</span>
+      <span class="label" style="font-size:11px;color:var(--gr-ink-faint);text-align:right;">1RM</span>
+      <span></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 74px 92px 74px 92px 26px;gap:6px;align-items:center;margin-bottom:6px;">
+      <input class="input" value="Press banca" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="10" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="72,5" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;border-style:dashed;color:var(--gr-ink-dim);" value="7" readonly>
+      <span style="text-align:right;"><span class="tabular" style="font-size:13px;color:var(--gr-ink-faint);border-bottom:1px dotted var(--gr-ink-faint);padding-bottom:2px;">96,7</span></span>
+      <span style="color:var(--gr-ink-faint);display:inline-flex;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 74px 92px 74px 92px 26px;gap:6px;align-items:center;margin-bottom:6px;">
+      <input class="input" value="Press banca" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="8" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="77,5" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;border-style:dashed;color:var(--gr-ink-dim);" value="8" readonly>
+      <span style="text-align:right;"><span class="tabular" style="font-size:13px;color:var(--gr-ink-faint);border-bottom:1px dotted var(--gr-ink-faint);padding-bottom:2px;">98,2</span></span>
+      <span style="color:var(--gr-ink-faint);display:inline-flex;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 74px 92px 74px 92px 26px;gap:6px;align-items:center;margin-bottom:6px;">
+      <input class="input" value="Press banca" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="6" readonly>
+      <input class="input tabular input-focus" style="text-align:right;padding:8px 9px;" value="82,5" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;border-style:dashed;color:var(--gr-ink-dim);" value="9" readonly>
+      <span style="text-align:right;"><span class="tabular" style="font-size:13px;color:var(--gr-ink-faint);border-bottom:1px dotted var(--gr-ink-faint);padding-bottom:2px;">99,0</span></span>
+      <span style="color:var(--gr-ink-faint);display:inline-flex;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+    </div>
+
+    <!-- El PR se avisa mientras se escribe, y se avisa en TINTA. Es un dato que
+         acaba de cambiar, no un premio: sin meta declarada antes, no hay oro. -->
+    <div style="display:flex;align-items:center;gap:7px;margin:-1px 0 8px 2px;font-size:11px;color:var(--gr-ink-bright);">
+      <span style="width:6px;height:6px;transform:rotate(45deg);background:var(--gr-ink-bright);"></span>
+      Récord personal en press banca — el anterior era 80,0 kg.
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 74px 92px 74px 92px 26px;gap:6px;align-items:center;margin-bottom:6px;">
+      <input class="input" value="Press militar" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="12" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;" value="40" readonly>
+      <input class="input tabular" style="text-align:right;padding:8px 9px;border-style:dashed;color:var(--gr-ink-faint);" value="" placeholder="—" readonly>
+      <span style="text-align:right;"><span class="tabular" style="font-size:13px;color:var(--gr-amber);border-bottom:1px dotted var(--gr-amber);padding-bottom:2px;">56,0 ~</span></span>
+      <span style="color:var(--gr-ink-faint);display:inline-flex;justify-content:center;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:7px;margin:-1px 0 10px 2px;font-size:11px;color:var(--gr-amber);">
+      <span style="width:8px;height:8px;border-radius:50%;border:1.5px solid var(--gr-amber);"></span>
+      Por encima de 10 repeticiones, Epley pierde precisión: úsalo como referencia, no como cifra.
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Añadir serie
+      </button>
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 12px;">Repetir la última</button>
+    </div>
+
+    <!-- Opcionales, y se ven opcionales: etiqueta con la coletilla y borde
+         discontinuo, el mismo tratamiento que el RPE de la tabla. -->
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:16px;">
+      <label style="display:block;">
+        <span class="campo-label">Duración <span class="opcional">— opcional</span></span>
+        <input class="input tabular" style="border-style:dashed;" value="62" placeholder="min" readonly>
+      </label>
+      <label style="display:block;">
+        <span class="campo-label">Notas <span class="opcional">— opcional</span></span>
+        <input class="input" style="border-style:dashed;" value="" placeholder="Hombro derecho algo cargado en la tercera." readonly>
+      </label>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;border-top:1px solid var(--gr-edge);padding-top:14px;">
+      <div>
+        <span class="tabular" style="font-size:15px;color:var(--gr-ink);">2.320 kg</span>
+        <span class="label" style="margin-left:7px;font-size:11px;color:var(--gr-ink-dim);">Volumen · 4 series</span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn">Cancelar</button>
+        <button class="btn btn-primary">Asentar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!--SCRIPT-->
+<script data-dc-script data-props='{"esHoy":{"editor":"boolean","default":true,"section":"Fecha"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const hoy = this.props.esHoy ?? true;
+    return {
+      esHoy: hoy,
+      esPasada: !hoy,
+      fecha: hoy ? "21/08/2026" : "18/08/2026",
+    };
+  }
+}
+</script>
