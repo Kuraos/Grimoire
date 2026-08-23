@@ -1,4 +1,5 @@
 """Achievement evaluator. check_achievements is called after XP-earning events."""
+from collections import defaultdict
 from datetime import datetime, date, timedelta
 from tz import now as _now, today as _today
 from sqlalchemy import select, func, distinct
@@ -8,6 +9,7 @@ from models import (
     Achievement, Habit, HabitLog, Task, PomodoroSession, DiaryEntry,
     DailyCheckin, WeeklyReview, Project, User, Quest,
     LedgerEntry, LedgerMonthReview, SavingsGoal,
+    TrainingSession, StrengthGoal,
 )
 from services import habit_streak, parse_days, scheduled_on
 
@@ -189,6 +191,48 @@ async def check_achievements(db: AsyncSession, user: User, event: str, **kwargs)
         )).scalar_one()
         if clean >= 1:
             if (a := await _unlock(db, "full_ledger")):
+                unlocked.append(a)
+
+    if event == "training_session":
+        total = (await db.execute(select(func.count(TrainingSession.id)))).scalar_one()
+        for threshold, key in ((1, "first_session"), (50, "training_50"), (200, "training_200")):
+            if total >= threshold:
+                if (a := await _unlock(db, key)):
+                    unlocked.append(a)
+        # Doce días DISTINTOS dentro de un mismo mes, y por `occurred_on`: aquí
+        # el logro premia haber entrenado, no haberlo anotado, y una sesión vieja
+        # que se rellena después ocurrió de verdad. Es lo contrario del XP, que
+        # se sella por el día del acto — y la diferencia es deliberada.
+        month_days = (await db.execute(
+            select(func.count(distinct(TrainingSession.occurred_on)))
+            .group_by(func.strftime("%Y-%m", TrainingSession.occurred_on))
+            .order_by(func.count(distinct(TrainingSession.occurred_on)).desc())
+            .limit(1)
+        )).scalar_one_or_none() or 0
+        if month_days >= 12:
+            if (a := await _unlock(db, "training_month")):
+                unlocked.append(a)
+        # Las tres armas en una misma semana ISO
+        weeks = defaultdict(set)
+        for kind, day in (await db.execute(
+            select(TrainingSession.kind, TrainingSession.occurred_on)
+        )).all():
+            weeks[day - timedelta(days=day.weekday())].add(kind)
+        if any(k >= {"strength", "hema", "cardio"} for k in weeks.values()):
+            if (a := await _unlock(db, "triathlete")):
+                unlocked.append(a)
+
+    if event == "strength_goal":
+        # se cuentan las selladas, no las que hoy dan la cifra: una marca
+        # alcanzada no se pierde por dejar de levantar ese peso después
+        n = (await db.execute(
+            select(func.count(StrengthGoal.id)).where(StrengthGoal.achieved_at.is_not(None))
+        )).scalar_one()
+        if n >= 1:
+            if (a := await _unlock(db, "first_strength_goal")):
+                unlocked.append(a)
+        if n >= 3:
+            if (a := await _unlock(db, "strength_goal_hoard")):
                 unlocked.append(a)
 
     if event == "relic_achieved":

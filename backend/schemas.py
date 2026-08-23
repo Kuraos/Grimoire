@@ -3,7 +3,9 @@ from datetime import datetime, date
 from typing import Literal
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 
-from constants import MAX_MINOR
+from constants import (
+    MAX_MINOR, MAX_WEIGHT_G, MAX_REPS, MAX_DISTANCE_M, MAX_DURATION_S,
+)
 
 Priority = Literal["high", "medium", "low"]
 TaskStatus = Literal["todo", "doing", "done"]
@@ -15,6 +17,10 @@ AccountKind = Literal["cash", "bank", "savings", "debt"]
 # que no es ninguno de los dos y por eso no se clasifica.
 EntryFlow = Literal["expense", "income"]
 EntryKind = Literal["expense", "income", "transfer"]
+WeightUnit = Literal["kg", "lb"]
+TrainingKind = Literal["strength", "hema", "cardio"]
+CardioKind = Literal["run", "bike", "other"]
+BodyMetricKind = Literal["weight", "waist", "chest", "arm", "thigh", "hip"]
 
 
 class ORMModel(BaseModel):
@@ -30,6 +36,7 @@ class UserOut(ORMModel):
     title: str
     lives: int = 3
     obsidian_vault_path: str | None = None
+    weight_unit: WeightUnit = "kg"
     xp_for_current_level: int = 0
     xp_for_next_level: int = 0
     xp_into_level: int = 0
@@ -39,6 +46,7 @@ class UserOut(ORMModel):
 class UserUpdate(BaseModel):
     name: str | None = None
     obsidian_vault_path: str | None = None
+    weight_unit: WeightUnit | None = None
 
 
 # ---------- Habits ----------
@@ -690,6 +698,260 @@ class LedgerEntryCreated(BaseModel):
     """
     entry: LedgerEntryOut
     xp: "XPEventResponse | None" = None
+
+
+# ---------- Entrenamiento ----------
+class MuscleGroupCreate(BaseModel):
+    name: str = Field(min_length=1)
+    color: str = "#9a90b5"
+    icon: str = "circle"
+
+
+class MuscleGroupUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1)
+    color: str | None = None
+    icon: str | None = None
+
+
+class MuscleGroupOut(ORMModel):
+    id: int
+    name: str
+    color: str
+    icon: str
+
+
+class ExerciseCreate(BaseModel):
+    name: str = Field(min_length=1)
+    muscle_group_id: int | None = None
+
+
+class ExerciseUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1)
+    muscle_group_id: int | None = None
+    archived: bool | None = None
+    # No hay `unit`: la unidad de peso es preferencia de presentación y vive en
+    # `users.weight_unit`. Ver el docstring de `Exercise`.
+
+
+class ExerciseOut(ORMModel):
+    id: int
+    name: str
+    muscle_group_id: int | None
+    archived: bool
+    created_at: datetime
+
+
+class TrainingSetIn(BaseModel):
+    exercise_id: int
+    reps: int = Field(gt=0, le=MAX_REPS)
+    # cero es legítimo: una dominada sin lastre añade 0 g
+    weight_g: int = Field(ge=0, le=MAX_WEIGHT_G)
+    rpe: int | None = Field(default=None, ge=1, le=10)
+
+
+class TrainingSetOut(ORMModel):
+    id: int
+    exercise_id: int
+    position: int
+    reps: int
+    weight_g: int
+    rpe: int | None
+    # Derivados, nunca persistidos. `low_confidence` marca las series de más de
+    # diez repeticiones, donde Epley deja de ser una estimación fiable: se avisa
+    # en vez de ocultarse, para que nadie lea la cifra como si fuera medida.
+    est_1rm_g: int = 0
+    low_confidence: bool = False
+
+
+class TrainingSessionBase(BaseModel):
+    kind: TrainingKind = "strength"
+    occurred_on: date
+    name: str | None = None
+    duration_s: int | None = Field(default=None, gt=0, le=MAX_DURATION_S)
+    notes: str | None = None
+    intensity: int | None = Field(default=None, ge=1, le=5)
+    techniques: str | None = None
+    cardio_kind: CardioKind | None = None
+    distance_m: int | None = Field(default=None, ge=0, le=MAX_DISTANCE_M)
+    # el rito que esta sesión debe marcar, si toca. Ver `TrainingSession`.
+    habit_id: int | None = None
+
+
+class TrainingSessionCreate(TrainingSessionBase):
+    sets: list[TrainingSetIn] = []
+
+
+class TrainingSessionUpdate(BaseModel):
+    occurred_on: date | None = None
+    name: str | None = None
+    duration_s: int | None = Field(default=None, gt=0, le=MAX_DURATION_S)
+    notes: str | None = None
+    intensity: int | None = Field(default=None, ge=1, le=5)
+    techniques: str | None = None
+    cardio_kind: CardioKind | None = None
+    distance_m: int | None = Field(default=None, ge=0, le=MAX_DISTANCE_M)
+    # Reemplaza la lista entera cuando se manda. `kind` no se edita: cambiar de
+    # modalidad dejaría series huérfanas en una sesión de cardio.
+    sets: list[TrainingSetIn] | None = None
+
+
+class TrainingSessionOut(ORMModel):
+    id: int
+    kind: TrainingKind
+    occurred_on: date
+    name: str | None
+    duration_s: int | None
+    notes: str | None
+    intensity: int | None
+    techniques: str | None
+    cardio_kind: CardioKind | None
+    distance_m: int | None
+    habit_id: int | None
+    habit_log_id: int | None
+    created_at: datetime
+    sets: list[TrainingSetOut] = []
+    # Derivados. El volumen sale de las series y el ritmo de distancia y
+    # duración; ninguno se guarda, igual que el saldo de un arca.
+    volume_g: int = 0
+    set_count: int = 0
+    # segundos por kilómetro. None cuando no hay distancia o es cero — una cinta
+    # sin distancia no tiene ritmo, y dividir entre cero es la clase de bug que
+    # ya mordió al erario el día 1 de cada mes.
+    pace_s_per_km: int | None = None
+
+
+class TrainingSessionCreated(BaseModel):
+    """La sesión recién asentada, el XP que pagó y qué pasó con el rito.
+
+    `habit_note` es la frase que explica por qué el rito se marcó o no. Va aquí y
+    no en el frontend porque la razón la conoce el backend: fecha pasada, meta
+    semanal ya cumplida, ya estaba marcado, o no había rito elegido. Sin ella la
+    interfaz tendría que adivinar, y adivinaría mal.
+    """
+    session: TrainingSessionOut
+    xp: "XPEventResponse | None" = None
+    habit_marked: bool = False
+    habit_note: str | None = None
+
+
+class StrengthGoalCreate(BaseModel):
+    exercise_id: int
+    target_weight_g: int = Field(ge=0, le=MAX_WEIGHT_G)
+    target_reps: int = Field(default=1, gt=0, le=MAX_REPS)
+    deadline: date | None = None
+    color: str = "#a98bf0"
+    icon: str = "target-arrow"
+
+
+class StrengthGoalUpdate(BaseModel):
+    target_weight_g: int | None = Field(default=None, ge=0, le=MAX_WEIGHT_G)
+    target_reps: int | None = Field(default=None, gt=0, le=MAX_REPS)
+    deadline: date | None = None
+    color: str | None = None
+    icon: str | None = None
+    archived: bool | None = None
+    # `exercise_id` y `achieved_at` no se editan: mover el ejercicio
+    # reinterpretaría las series ya hechas, y reabrir el sello dejaría cobrar el
+    # XP otra vez. Es palabra por palabra la regla de la reliquia.
+
+
+class StrengthGoalOut(ORMModel):
+    id: int
+    exercise_id: int
+    target_weight_g: int
+    target_reps: int
+    deadline: date | None
+    achieved_at: datetime | None
+    color: str
+    icon: str
+    archived: bool
+    created_at: datetime
+    # Deducidos de las series, nunca persistidos: el mejor peso levantado en este
+    # ejercicio con al menos `target_reps` repeticiones, y cuántas series lo
+    # consiguieron. El contador importa porque una meta de 0 kg —dominadas sin
+    # lastre— se cumpliría sola con cero series si sólo se mirara el peso.
+    best_weight_g: int = 0
+    qualifying_sets: int = 0
+
+
+class BodyMetricCreate(BaseModel):
+    kind: BodyMetricKind
+    measured_on: date
+    value_milli: int = Field(gt=0)
+    note: str | None = None
+
+
+class BodyMetricUpdate(BaseModel):
+    value_milli: int | None = Field(default=None, gt=0)
+    note: str | None = None
+
+
+class BodyMetricOut(ORMModel):
+    id: int
+    kind: BodyMetricKind
+    measured_on: date
+    value_milli: int
+    note: str | None
+    created_at: datetime
+    unit: str = "kg"  # de BODY_METRIC_UNITS; viaja para no duplicar la tabla
+
+
+class TrainingSummaryOut(BaseModel):
+    """Lo que la vista necesita para la rúbrica del día y la cabecera."""
+    today: TrainingSessionOut | None = None
+    sessions_this_week: int = 0
+    volume_this_week_g: int = 0
+    days_this_week: int = 0
+    # el rito que sugerir para cada modalidad, deducido de la última sesión de
+    # esa modalidad que marcó uno. Sin columna nueva en `habits`: la sesión ya
+    # guarda a cuál apuntó, y deducirlo evita una segunda fuente de verdad.
+    suggested_habit: dict[str, int] = {}
+    weight_unit: WeightUnit = "kg"
+
+
+class ExercisePointOut(BaseModel):
+    occurred_on: date
+    top_weight_g: int
+    est_1rm_g: int
+    reps_at_top: int
+    low_confidence: bool = False
+    is_record: bool = False
+
+
+class ExerciseProgressOut(BaseModel):
+    exercise_id: int
+    points: list[ExercisePointOut] = []
+
+
+class VolumeGroupOut(BaseModel):
+    muscle_group_id: int | None
+    volume_g: int
+
+
+class VolumeWeekOut(BaseModel):
+    week_start: date
+    groups: list[VolumeGroupOut] = []
+
+
+class BodyMetricPointOut(BaseModel):
+    measured_on: date
+    value_milli: int
+    # media móvil de cuatro medidas. Es la respuesta a «¿esto baja o es ruido?»,
+    # que es la pregunta que las métricas corporales existen para contestar.
+    trend_milli: int
+
+
+class BodyMetricSeriesOut(BaseModel):
+    kind: BodyMetricKind
+    unit: str
+    points: list[BodyMetricPointOut] = []
+
+
+class TrainingStatsOut(BaseModel):
+    volume_weeks: list[VolumeWeekOut] = []
+    sessions_by_kind: dict[str, int] = {}
+    total_sessions: int = 0
+    total_volume_g: int = 0
 
 
 # ---------- Generic XP-event response wrapper ----------

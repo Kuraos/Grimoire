@@ -1,3 +1,6 @@
+from collections import defaultdict
+from datetime import date, timedelta
+
 from sqlalchemy import select, func, distinct
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,12 +9,21 @@ from database import get_db
 from models import (
     Achievement, Habit, HabitLog, PomodoroSession, DiaryEntry, WeeklyReview, Task,
     DailyCheckin, Quest, LedgerEntry, LedgerMonthReview, SavingsGoal, User,
+    TrainingSession, StrengthGoal,
 )
 from schemas import AchievementOut
 from services import get_user
 from achievements import _max_current_streak, _consecutive_days_count
 
 router = APIRouter(prefix="/achievements", tags=["achievements"])
+
+
+def _best_week_kinds(rows: list[tuple[str, date]]) -> int:
+    """Cuántas modalidades distintas juntó la mejor semana ISO."""
+    weeks: dict[date, set[str]] = defaultdict(set)
+    for kind, day in rows:
+        weeks[day - timedelta(days=day.weekday())].add(kind)
+    return max((len(k) for k in weeks.values()), default=0)
 
 
 # Clave del logro -> (métrica, meta). Lo que la barra de un logro bloqueado
@@ -57,6 +69,17 @@ PROGRESS_METRICS: dict[str, tuple[str, int]] = {
     "closed_books": ("months_closed", 3),
     "first_relic": ("relics", 1),
     "relic_hoard": ("relics", 3),
+    # palestra
+    "first_session": ("training_sessions", 1),
+    "training_50": ("training_sessions", 50),
+    "training_200": ("training_sessions", 200),
+    "training_month": ("training_month_days", 12),
+    # «las tres armas» parece un sí o un no, pero sí es «lo que llevas de N»:
+    # cuántas modalidades distintas juntó la mejor semana. Dos de tres es un
+    # progreso real y merece verse.
+    "triathlete": ("training_kinds_best_week", 3),
+    "first_strength_goal": ("strength_goals", 1),
+    "strength_goal_hoard": ("strength_goals", 3),
 }
 
 
@@ -103,6 +126,25 @@ async def _metrics(db: AsyncSession, user: User) -> dict[str, int]:
         "months_closed": await count(select(func.count(LedgerMonthReview.id))),
         "relics": await count(
             select(func.count(SavingsGoal.id)).where(SavingsGoal.achieved_at.is_not(None))
+        ),
+        "training_sessions": await count(select(func.count(TrainingSession.id))),
+        # Los dos del entrenamiento van por `occurred_on` y no por `created_at`,
+        # al revés que los del erario: aquí el logro premia haber entrenado, y
+        # una sesión del martes anotada el jueves ocurrió el martes. En el erario
+        # el acto ES anotar, y por eso allí manda el día del acto.
+        "training_month_days": (await db.execute(
+            select(func.count(distinct(TrainingSession.occurred_on)))
+            .group_by(func.strftime("%Y-%m", TrainingSession.occurred_on))
+            .order_by(func.count(distinct(TrainingSession.occurred_on)).desc())
+            .limit(1)
+        )).scalar_one_or_none() or 0,
+        "training_kinds_best_week": _best_week_kinds(
+            (await db.execute(
+                select(TrainingSession.kind, TrainingSession.occurred_on)
+            )).all()
+        ),
+        "strength_goals": await count(
+            select(func.count(StrengthGoal.id)).where(StrengthGoal.achieved_at.is_not(None))
         ),
     }
 

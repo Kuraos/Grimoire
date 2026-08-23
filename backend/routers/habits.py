@@ -9,10 +9,10 @@ from database import get_db
 from models import Habit, HabitLog, XPLog, HabitCategory
 from schemas import HabitCreate, HabitUpdate, HabitOut, HabitLogOut, XPEventResponse, AchievementOut
 from services import (
-    get_user, award_xp, remove_xp, habit_streak, best_streak, like_escape,
-    habit_cadence, parse_days, scheduled_on, _week_monday,
+    get_user, remove_xp, habit_streak, best_streak, like_escape,
+    parse_days, scheduled_on, _week_monday,
+    mark_habit_done, HABIT_DONE_TODAY, HABIT_WEEK_TARGET_MET,
 )
-from constants import streak_multiplier
 from achievements import check_achievements
 
 
@@ -156,50 +156,21 @@ async def complete_habit(habit_id: int, db: AsyncSession = Depends(get_db)):
     if not habit:
         raise HTTPException(404, "Hábito no encontrado")
 
-    # 1. límites de cadencia: nunca dos veces el mismo día — y si es semanal,
-    #    nunca más marcas que la meta, para que "2×/semana" no se cumpla de un tirón.
-    today = _today()
-    if (await db.execute(
-        select(func.count(HabitLog.id)).where(
-            HabitLog.habit_id == habit_id,
-            func.date(HabitLog.completed_at) == today.isoformat(),
-        )
-    )).scalar_one():
+    # Los límites de cadencia —nunca dos veces el mismo día, nunca más marcas que
+    # la meta semanal— viven en `mark_habit_done`, que es el mismo camino que usa
+    # el entrenamiento al asentar una sesión. Aquí sólo cambia qué se hace cuando
+    # no se puede: pulsar el botón responde 400, asentar una sesión lo anota.
+    result, _log, new_streak, reason = await mark_habit_done(db, habit)
+    if reason == HABIT_DONE_TODAY:
         raise HTTPException(400, "Este hábito ya fue completado hoy")
+    if reason == HABIT_WEEK_TARGET_MET:
+        target = max(1, habit.target_per_week or 1)
+        raise HTTPException(400, (
+            f"Este hábito ya alcanzó su meta de {target}× esta semana" if target > 1
+            else "Este hábito ya fue completado esta semana"
+        ))
 
-    target = max(1, habit.target_per_week or 1)
-    if habit.frequency == "weekly":
-        wstart = _week_monday(today)
-        week_count = (await db.execute(
-            select(func.count(HabitLog.id)).where(
-                HabitLog.habit_id == habit_id,
-                func.date(HabitLog.completed_at) >= wstart.isoformat(),
-                func.date(HabitLog.completed_at) <= (wstart + timedelta(days=6)).isoformat(),
-            )
-        )).scalar_one()
-        if week_count >= target:
-            raise HTTPException(400, (
-                f"Este hábito ya alcanzó su meta de {target}× esta semana" if target > 1
-                else "Este hábito ya fue completado esta semana"
-            ))
-
-    # 2. current streak BEFORE inserting (will become streak+1)
-    prior = await habit_streak(db, habit_id)
-    new_streak = prior + 1
-
-    # 3. streak multiplier
-    mult = streak_multiplier(new_streak)
-    amount = round(habit.xp_reward * mult)
-
-    # 4. insert log
-    db.add(HabitLog(habit_id=habit_id))
-    await db.flush()
-
-    # 5-6. award xp + level recalc
     user = await get_user(db)
-    result = await award_xp(db, user, amount, "habit", habit_id)
-
-    # 7. achievements
     ach = await check_achievements(db, user, "habit_complete", habit_id=habit_id)
 
     await db.commit()

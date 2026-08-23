@@ -72,6 +72,19 @@ BASE_XP = {
     # PLANO, no proporcional al monto. Proporcional significaría que tener más
     # dinero da más XP, y el nivel dejaría de medir constancia para medir renta.
     "relic_achieved": 50,
+    # El entrenamiento paga como el erario, y por el mismo motivo: premia el acto
+    # de ASENTAR, jamás la carga. Pagar por kilos levantados premiaría la
+    # genética, el descanso y el material —y, sobre todo, un número que teclea el
+    # usuario sin validación posible—. Una vez al día, plano, como el diario.
+    #
+    # Ojo: el rito que la sesión marca paga aparte y CON multiplicador de racha,
+    # porque eso es XP de hábitos y allí el multiplicador es legítimo. Estos 5
+    # son sólo por escribir el detalle.
+    "training_day": 5,
+    # PLANO, como la reliquia. Es el único XP del módulo atado a un resultado, y
+    # sólo porque es una meta que el usuario fijó ANTES y cumplió, igual que una
+    # misión. Un récord sin meta declarada no paga nada.
+    "strength_goal_achieved": 50,
 }
 
 
@@ -119,6 +132,16 @@ PREDEFINED_ACHIEVEMENTS = [
     ("full_ledger", "Nada sin partida", "Cierra un mes sin asientos sin clasificar.", "tags", "epic"),
     ("first_relic", "Primera reliquia", "Alcanza una meta de ahorro.", "diamond", "rare"),
     ("relic_hoard", "Tesoro", "Alcanza tres metas de ahorro.", "diamond", "legendary"),
+    # Entrenamiento. Todos sobre la práctica de presentarse y anotar; ninguno
+    # sobre cuánto se levanta. Un logro por récord premiaría una cifra
+    # autorreportada, que es la versión en kilos de premiar el saldo.
+    ("first_session", "Primer asalto", "Asienta tu primera sesión de entrenamiento.", "barbell", "common"),
+    ("training_50", "Veterano de la palestra", "Asienta 50 sesiones.", "swords", "rare"),
+    ("training_200", "Cuerpo forjado", "Asienta 200 sesiones.", "shield-bolt", "legendary"),
+    ("training_month", "Mes en la palestra", "Entrena en 12 días distintos dentro de un mismo mes.", "calendar-heart", "rare"),
+    ("triathlete", "Las tres armas", "Asienta fuerza, HEMA y cardio en una misma semana.", "atom", "epic"),
+    ("first_strength_goal", "Marca fijada", "Alcanza una meta de fuerza que declaraste.", "target-arrow", "rare"),
+    ("strength_goal_hoard", "Tres marcas", "Alcanza tres metas de fuerza.", "trophy", "legendary"),
 ]
 
 
@@ -138,6 +161,11 @@ QUEST_TEMPLATES = [
     # tablero de misiones de dinero sería puro ruido.
     ("daily_ledger", "daily", "ledger_entries", 1, "Asienta el día", "feather", 15),
     ("weekly_ledger_5", "weekly", "ledger_days", 5, "Cinco días de cuentas", "receipt", 50),
+    # Entrenamiento: una sola, semanal, y sobre presentarse. Vale el mismo
+    # razonamiento que frenó las del erario —los retos son el elemento más flojo
+    # de la gamificación— y aquí además hay una razón propia: una misión diaria
+    # de entrenar empujaría a entrenar todos los días, que es como uno se lesiona.
+    ("weekly_training_3", "weekly", "training_days", 3, "Tres días de palestra", "barbell", 60),
 ]
 
 MAX_LIVES = 3
@@ -186,4 +214,70 @@ LEDGER_CATEGORY_DEFAULTS = [
     ("Otros gastos", "expense", "#9a90b5", "dots"),
     ("Ingreso", "income", "#5aa885", "coins"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# ENTRENAMIENTO
+# ---------------------------------------------------------------------------
+# El peso se guarda en GRAMOS enteros, siempre. Es la misma decisión que
+# `amount_minor`: un float no representa 2,5 kg de forma exacta al sumarlo miles
+# de veces, y el volumen semanal es exactamente esa suma. 2,5 kg -> 2500.
+#
+# La unidad en que se MUESTRA vive en `users.weight_unit` y no toca lo guardado.
+GRAMS_PER_KG = 1000
+GRAMS_PER_LB = 453.59237  # exacto por definición internacional de la libra
+
+# Techos de cordura. No son el límite de `Number` como `MAX_MINOR` —a estas
+# magnitudes sobra— sino un filtro de erratas: 82.500 kg en vez de 82,5 no es un
+# peso, es un dedo resbalado, y una vez dentro deforma cada gráfica del módulo.
+MAX_WEIGHT_G = 1_000_000       # 1000 kg
+MAX_REPS = 1000
+MAX_DISTANCE_M = 1_000_000     # 1000 km
+MAX_DURATION_S = 86_400        # 24 h
+
+# Unidad canónica de cada medida corporal. Igual que MONEY_DECIMALS, es la
+# autoridad para guardar Y para mostrar, y `utils.ts` lleva el espejo que ata
+# `test_body_metric_units_mirror_matches_the_frontend`.
+# `value_milli` son milésimas de esta unidad: 76,9 kg -> 76900, 82,5 cm -> 82500.
+BODY_METRIC_MILLI = 1000
+BODY_METRIC_UNITS = {
+    "weight": "kg",
+    "waist": "cm",
+    "chest": "cm",
+    "arm": "cm",
+    "thigh": "cm",
+    "hip": "cm",
+}
+
+# Grupos musculares sembrados en el primer arranque (nombre, color, icono).
+# Los colores salen de la paleta FRÍA de datos (`--gr-cat-*`) y ninguno es
+# dorado: el volumen no es una recompensa, y una barra dorada premiaría la
+# semana de más carga. Es el mismo motivo por el que el gasto diario va en ámbar.
+MUSCLE_GROUP_DEFAULTS = [
+    ("Pierna", "#63a9c4", "walk"),
+    ("Espalda", "#6f93e0", "stretching"),
+    ("Pecho", "#5aa885", "lungs"),
+    ("Hombro", "#cf7ba6", "body-scan"),
+    ("Brazo", "#9a90b5", "hand-finger-right"),
+    ("Core", "#a98bf0", "circle-dot"),
+]
+
+# Por encima de aquí, Epley deja de ser una estimación y pasa a ser un adorno.
+# No se oculta: se marca, para que nadie lea 56,0 como si fuera medido.
+EPLEY_CONFIDENT_REPS = 10
+
+
+def estimated_1rm_g(weight_g: int, reps: int) -> int:
+    """1RM estimado por Epley, en gramos.
+
+        1RM = peso × (1 + reps/30)
+
+    El clamp de `reps <= 1` NO es cosmético. La fórmula está definida para series
+    de más de una repetición, y a una sola devuelve `peso × 1,033`: inflaría un
+    3,3 % justo el caso en que el dato es exacto —una máxima de verdad— y en la
+    curva la estimación acabaría por encima del récord real.
+    """
+    if reps <= 1:
+        return weight_g
+    return round(weight_g * (1 + reps / 30))
 

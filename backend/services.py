@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import User, XPLog, HabitLog, Habit
-from constants import xp_to_level, title_for_level
+from constants import xp_to_level, title_for_level, streak_multiplier
 from tz import today as _today
 
 
@@ -208,3 +208,64 @@ async def best_streak(db: AsyncSession, habit_id: int) -> int:
 async def remove_xp(db: AsyncSession, user: User, amount: int, source: str, source_id: int | None = None) -> dict:
     """Reverse previously granted XP (logs a negative audit entry, recomputes level/title)."""
     return await award_xp(db, user, -abs(int(amount)), source, source_id)
+
+
+# Motivos por los que un rito no se puede marcar ahora. No son errores: son
+# estados legítimos, y quien llama decide si eso merece un 400 —marcar a mano—
+# o una nota al pie —una sesión de entrenamiento que además marca el rito—.
+HABIT_DONE_TODAY = "done_today"
+HABIT_WEEK_TARGET_MET = "week_target_met"
+
+
+async def mark_habit_done(
+    db: AsyncSession, habit: Habit
+) -> tuple[dict | None, HabitLog | None, int, str | None]:
+    """Marca un hábito HOY: valida la cadencia, inserta la marca y paga el XP.
+
+    Devuelve `(resultado_xp, marca, racha, motivo)`. Con motivo != None no se ha
+    tocado nada: el hábito ya estaba hecho hoy, o el semanal ya alcanzó su meta.
+
+    Vive aquí y no en el router porque el entrenamiento también marca ritos, y
+    dos copias de «¿se puede marcar esto ahora?» acabarían discrepando. La
+    diferencia entre los dos llamantes no es la regla, es qué hacer cuando no se
+    cumple: el botón de Hábitos responde 400, y asentar una sesión sigue
+    adelante y lo cuenta en una nota. Que un rito ya marcado tumbara el guardado
+    de la sesión sería perder el dato real por intentar ser amable.
+
+    El multiplicador de racha SÍ se aplica: esto es XP de hábitos, y ahí el
+    multiplicador es suyo. Lo que no lo lleva es el XP propio del entrenamiento.
+    """
+    today = _today()
+    if (await db.execute(
+        select(func.count(HabitLog.id)).where(
+            HabitLog.habit_id == habit.id,
+            func.date(HabitLog.completed_at) == today.isoformat(),
+        )
+    )).scalar_one():
+        return None, None, await habit_streak(db, habit.id), HABIT_DONE_TODAY
+
+    target = max(1, habit.target_per_week or 1)
+    if habit.frequency == "weekly":
+        wstart = _week_monday(today)
+        week_count = (await db.execute(
+            select(func.count(HabitLog.id)).where(
+                HabitLog.habit_id == habit.id,
+                func.date(HabitLog.completed_at) >= wstart.isoformat(),
+                func.date(HabitLog.completed_at) <= (wstart + timedelta(days=6)).isoformat(),
+            )
+        )).scalar_one()
+        if week_count >= target:
+            return None, None, await habit_streak(db, habit.id), HABIT_WEEK_TARGET_MET
+
+    # la racha se lee ANTES de insertar: la marca que se está creando la sube a
+    # prior + 1, y es ese valor el que decide el multiplicador
+    new_streak = await habit_streak(db, habit.id) + 1
+    amount = round(habit.xp_reward * streak_multiplier(new_streak))
+
+    log = HabitLog(habit_id=habit.id)
+    db.add(log)
+    await db.flush()
+
+    user = await get_user(db)
+    result = await award_xp(db, user, amount, "habit", habit.id)
+    return result, log, new_streak, None

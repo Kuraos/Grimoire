@@ -21,6 +21,7 @@ const Tasks = lazy(() => import("./pages/Tasks"));
 const Pomodoro = lazy(() => import("./pages/Pomodoro"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const Diary = lazy(() => import("./pages/Diary"));
+const Training = lazy(() => import("./pages/Training"));
 const Erario = lazy(() => import("./pages/Erario"));
 const Stats = lazy(() => import("./pages/Stats"));
 const Achievements = lazy(() => import("./pages/Achievements"));
@@ -125,6 +126,7 @@ export default function App() {
               <Route path="/pomodoro" element={<Pomodoro />} />
               <Route path="/calendario" element={<Calendar />} />
               <Route path="/diario" element={<Diary />} />
+              <Route path="/entrenamiento" element={<Training />} />
               <Route path="/erario" element={<Erario />} />
               <Route path="/estadisticas" element={<Stats />} />
               <Route path="/logros" element={<Achievements />} />

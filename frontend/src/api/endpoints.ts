@@ -6,6 +6,9 @@ import type {
   BackupEntry,
   Account, LedgerCategory, LedgerEntry, LedgerSummary,
   LedgerMonthReview, LedgerEntryCreated, SavingsGoal, LedgerStats, BudgetMonth,
+  MuscleGroup, Exercise, TrainingSession, TrainingSessionCreated, TrainingSummary,
+  StrengthGoal, BodyMetric, BodyMetricSeries, ExerciseProgress, TrainingStats,
+  BodyMetricKind,
 } from "../types";
 
 export const Api = {
@@ -175,4 +178,49 @@ export const Api = {
     api.get<LedgerMonthReview | null>(`/ledger/reviews/${month}`),
   closeMonth: (data: Partial<LedgerMonthReview> & { month_key: string }) =>
     api.post<XPEventResponse>("/ledger/reviews", data),
+
+  // palestra — catálogos
+  listMuscleGroups: () => api.get<MuscleGroup[]>("/training/muscle-groups"),
+  listExercises: (includeArchived = false) =>
+    api.get<Exercise[]>(`/training/exercises?include_archived=${includeArchived}`),
+  /** Idempotente por nombre: escribir «press banca» al vuelo reutiliza la ficha
+   *  en vez de abrir una segunda que partiría la curva de progresión en dos. */
+  createExercise: (data: { name: string; muscle_group_id?: number | null }) =>
+    api.post<Exercise>("/training/exercises", data),
+  updateExercise: (id: number, data: Partial<Exercise>) =>
+    api.patch<Exercise>(`/training/exercises/${id}`, data),
+  deleteExercise: (id: number) => api.del<void>(`/training/exercises/${id}`),
+
+  // palestra — sesiones. Con prefijo: `createSession` ya es del Pomodoro, y sin
+  // él la segunda definición pisaba a la primera en silencio.
+  listTrainingSessions: (params = "") => api.get<TrainingSession[]>(`/training/sessions${params}`),
+  createTrainingSession: (data: Record<string, unknown>) =>
+    api.post<TrainingSessionCreated>("/training/sessions", data),
+  updateTrainingSession: (id: number, data: Record<string, unknown>) =>
+    api.patch<TrainingSession>(`/training/sessions/${id}`, data),
+  deleteTrainingSession: (id: number) => api.del<void>(`/training/sessions/${id}`),
+  trainingSummary: () => api.get<TrainingSummary>("/training/summary"),
+
+  // palestra — metas de fuerza (la reliquia, en kilos)
+  listStrengthGoals: (includeArchived = false) =>
+    api.get<StrengthGoal[]>(`/training/goals?include_archived=${includeArchived}`),
+  createStrengthGoal: (data: Partial<StrengthGoal>) =>
+    api.post<StrengthGoal>("/training/goals", data),
+  updateStrengthGoal: (id: number, data: Partial<StrengthGoal>) =>
+    api.patch<StrengthGoal>(`/training/goals/${id}`, data),
+  deleteStrengthGoal: (id: number) => api.del<void>(`/training/goals/${id}`),
+
+  // palestra — medidas del cuerpo. Ninguna paga XP ni hace racha.
+  listBodyMetrics: (kind?: BodyMetricKind) =>
+    api.get<BodyMetric[]>(`/training/body-metrics${kind ? `?kind=${kind}` : ""}`),
+  saveBodyMetric: (data: { kind: BodyMetricKind; measured_on: string; value_milli: number; note?: string | null }) =>
+    api.post<BodyMetric>("/training/body-metrics", data),
+  deleteBodyMetric: (id: number) => api.del<void>(`/training/body-metrics/${id}`),
+  bodyMetricSeries: (kind: BodyMetricKind = "weight") =>
+    api.get<BodyMetricSeries>(`/training/body-metrics/series?kind=${kind}`),
+
+  // palestra — la mirada larga
+  exerciseProgress: (id: number) =>
+    api.get<ExerciseProgress>(`/training/exercises/${id}/progress`),
+  trainingStats: (weeks = 10) => api.get<TrainingStats>(`/training/stats?weeks=${weeks}`),
 };
