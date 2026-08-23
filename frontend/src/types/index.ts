@@ -382,3 +382,154 @@ export interface WeekSummary {
   avg_energy: number | null;
   avg_mood: number | null;
 }
+
+/* ---------------------------------------------------------------------------
+   LA PALESTRA
+   ---------------------------------------------------------------------------
+   El peso viaja SIEMPRE en gramos y las medidas del cuerpo en milésimas de su
+   unidad. La conversión ocurre en los bordes —al pintar y al leer lo tecleado—
+   con `formatWeight` y `parseWeight` de utils.ts, nunca en medio.
+
+   Los campos marcados como derivados no existen en la base: salen de las series
+   o de distancia y duración, igual que el saldo de un arca sale de sus asientos.
+   --------------------------------------------------------------------------- */
+
+export type TrainingKind = "strength" | "hema" | "cardio";
+export type CardioKind = "run" | "bike" | "other";
+export type BodyMetricKind = "weight" | "waist" | "chest" | "arm" | "thigh" | "hip";
+
+export interface MuscleGroup {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface Exercise {
+  id: number;
+  name: string;
+  muscle_group_id: number | null;
+  archived: boolean;
+  created_at: string;
+}
+
+export interface TrainingSet {
+  id: number;
+  exercise_id: number;
+  position: number;
+  reps: number;
+  weight_g: number;
+  rpe: number | null;
+  /** derivado: Epley, con el peso tal cual a una repetición */
+  est_1rm_g: number;
+  /** por encima de 10 reps la estimación se marca, no se oculta */
+  low_confidence: boolean;
+}
+
+export interface TrainingSession {
+  id: number;
+  kind: TrainingKind;
+  occurred_on: string;
+  name: string | null;
+  duration_s: number | null;
+  notes: string | null;
+  intensity: number | null;
+  techniques: string | null;
+  cardio_kind: CardioKind | null;
+  distance_m: number | null;
+  habit_id: number | null;
+  /** la marca de rito que nació de esta sesión; null si no marcó ninguna */
+  habit_log_id: number | null;
+  created_at: string;
+  sets: TrainingSet[];
+  /** derivados */
+  volume_g: number;
+  set_count: number;
+  /** segundos por kilómetro; null sin distancia — no se divide entre cero */
+  pace_s_per_km: number | null;
+}
+
+export interface TrainingSessionCreated {
+  session: TrainingSession;
+  xp: XPEventResponse | null;
+  habit_marked: boolean;
+  /** por qué se marcó el rito o por qué no. La razón la sabe el backend. */
+  habit_note: string | null;
+}
+
+export interface StrengthGoal {
+  id: number;
+  exercise_id: number;
+  target_weight_g: number;
+  target_reps: number;
+  deadline: string | null;
+  /** sellado al alcanzarla; nunca se reabre */
+  achieved_at: string | null;
+  color: string;
+  icon: string;
+  archived: boolean;
+  created_at: string;
+  /** deducidos de las series; nunca persistidos */
+  best_weight_g: number;
+  qualifying_sets: number;
+}
+
+export interface BodyMetric {
+  id: number;
+  kind: BodyMetricKind;
+  measured_on: string;
+  value_milli: number;
+  note: string | null;
+  created_at: string;
+  unit: string;
+}
+
+export interface BodyMetricPoint {
+  measured_on: string;
+  value_milli: number;
+  /** media móvil de cuatro medidas: la respuesta a «¿baja o es ruido?» */
+  trend_milli: number;
+}
+
+export interface BodyMetricSeries {
+  kind: BodyMetricKind;
+  unit: string;
+  points: BodyMetricPoint[];
+}
+
+export interface TrainingSummary {
+  today: TrainingSession | null;
+  sessions_this_week: number;
+  volume_this_week_g: number;
+  days_this_week: number;
+  /** rito sugerido por modalidad, deducido de la última sesión que eligió uno */
+  suggested_habit: Record<string, number>;
+  weight_unit: "kg" | "lb";
+}
+
+export interface ExercisePoint {
+  occurred_on: string;
+  top_weight_g: number;
+  est_1rm_g: number;
+  reps_at_top: number;
+  low_confidence: boolean;
+  /** se dibuja en tinta, no se premia: un récord sin meta declarada es dato */
+  is_record: boolean;
+}
+
+export interface ExerciseProgress {
+  exercise_id: number;
+  points: ExercisePoint[];
+}
+
+export interface VolumeWeek {
+  week_start: string;
+  groups: { muscle_group_id: number | null; volume_g: number }[];
+}
+
+export interface TrainingStats {
+  volume_weeks: VolumeWeek[];
+  sessions_by_kind: Record<string, number>;
+  total_sessions: number;
+  total_volume_g: number;
+}

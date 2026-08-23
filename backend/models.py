@@ -22,6 +22,11 @@ class User(Base):
     lives: Mapped[int] = mapped_column(Integer, default=3)
     last_streak_eval: Mapped[date | None] = mapped_column(Date, nullable=True)
     obsidian_vault_path: Mapped[str | None] = mapped_column(String, nullable=True)  # Obsidian export target
+    # Unidad en que se MUESTRA el peso del entrenamiento. Los gramos guardados no
+    # cambian nunca; esto sólo decide cómo se pintan y cómo se leen del
+    # formulario. Vive aquí, una sola vez, y no en el ejercicio: por ejercicio, el
+    # volumen semanal sumaría kilos con libras en la misma barra.
+    weight_unit: Mapped[str] = mapped_column(String, default="kg")  # kg|lb
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
@@ -353,6 +358,176 @@ class LedgerMonthReview(Base):
     budget_total_minor: Mapped[int] = mapped_column(Integer, default=0)
     spent_minor: Mapped[int] = mapped_column(Integer, default=0)
     unclassified_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class MuscleGroup(Base):
+    """Catálogo de grupos musculares.
+
+    `exercises.muscle_group_id` apunta aquí en vez de guardar texto libre porque
+    el volumen semanal AGRUPA por esto, y una clave de agrupación en texto libre
+    se fragmenta sola: «Pecho», «pecho» y «pectoral» salen como tres barras. Es
+    el mismo motivo por el que las partidas del erario son tabla y no cadena.
+    """
+    __tablename__ = "muscle_groups"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    color: Mapped[str] = mapped_column(String, default="#9a90b5")
+    icon: Mapped[str] = mapped_column(String, default="circle")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class Exercise(Base):
+    """Un ejercicio del catálogo: se crea una vez y se reutiliza en cada serie.
+
+    NO lleva unidad de peso, y es deliberado. La unidad es preferencia de
+    presentación y vive una sola vez, en `users.weight_unit`. Colgada del
+    ejercicio, el volumen semanal sumaría kilos con libras dentro de la misma
+    barra, y cambiarla reinterpretaría todo el historial de ese ejercicio —el
+    mismo desastre que cambiarle el exponente a una moneda ya usada.
+    """
+    __tablename__ = "exercises"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    muscle_group_id: Mapped[int | None] = mapped_column(ForeignKey("muscle_groups.id"), nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class TrainingSession(Base):
+    """Una sesión de entrenamiento. UNA tabla para las tres modalidades.
+
+    `kind` discrimina, igual que `ledger_entries` mete gasto, ingreso y traspaso
+    —tres cosas semánticamente distintas— en una sola tabla con las columnas de
+    cada una anulables. Tres tablas habrían costado tres routers, tres
+    formularios y un UNION cada vez que alguien pregunta cuántas sesiones lleva
+    la semana; y una cuarta modalidad sería una migración en vez de una
+    constante.
+
+    `occurred_on` es Date y no DateTime por lo mismo que un asiento del erario:
+    una sesión pertenece a un día, no a un instante.
+
+    `habit_id` es el rito que el usuario eligió que marque esta modalidad;
+    `habit_log_id` es la marca que de verdad se creó, y es NULL si no se creó
+    ninguna —fecha pasada, meta semanal ya cumplida, o ya estaba marcado—. Se
+    guarda para poder decirlo en la lista, no para deshacerlo: borrar la sesión
+    NO retira la marca ni devuelve el XP, que es la prohibición del farmeo.
+    """
+    __tablename__ = "training_sessions"
+    __table_args__ = (
+        CheckConstraint("duration_s IS NULL OR duration_s > 0"),
+        CheckConstraint("distance_m IS NULL OR distance_m >= 0"),
+        CheckConstraint("intensity IS NULL OR intensity BETWEEN 1 AND 5"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String, default="strength")  # strength|hema|cardio
+    occurred_on: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String, nullable=True)
+    duration_s: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # sólo HEMA
+    intensity: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    techniques: Mapped[str | None] = mapped_column(String, nullable=True)  # comma-separated
+    # sólo cardio. El ritmo NO se guarda: sale de distancia y duración.
+    cardio_kind: Mapped[str | None] = mapped_column(String, nullable=True)  # run|bike|other
+    distance_m: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    habit_id: Mapped[int | None] = mapped_column(ForeignKey("habits.id"), nullable=True)
+    habit_log_id: Mapped[int | None] = mapped_column(ForeignKey("habit_logs.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    sets: Mapped[list["TrainingSet"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan", order_by="TrainingSet.position"
+    )
+
+
+class TrainingSet(Base):
+    """Una serie. Sólo la usan las sesiones de fuerza.
+
+    `weight_g` es entero en GRAMOS por la misma razón que `amount_minor` es
+    entero en unidades menores: un float pierde exactitud al sumar y el volumen
+    semanal suma peso×reps sobre miles de series. 2,5 kg se guarda como 2500.
+
+    Un cero es legítimo: una dominada sin lastre pesa 0 g de carga añadida.
+
+    El 1RM estimado no está aquí porque se deduce de `reps` y `weight_g`, igual
+    que el saldo de un arca se deduce de sus asientos.
+    """
+    __tablename__ = "training_sets"
+    __table_args__ = (
+        CheckConstraint("reps > 0"),
+        CheckConstraint("weight_g >= 0"),
+        CheckConstraint("rpe IS NULL OR rpe BETWEEN 1 AND 10"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("training_sessions.id"))
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    reps: Mapped[int] = mapped_column(Integer, nullable=False)
+    weight_g: Mapped[int] = mapped_column(Integer, nullable=False)
+    rpe: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    session: Mapped["TrainingSession"] = relationship(back_populates="sets")
+
+
+class StrengthGoal(Base):
+    """Una meta de fuerza: la reliquia del erario, en kilos.
+
+    Es el mismo objeto con otras unidades, y por las mismas razones:
+
+    - El progreso NO se guarda: sale de las series de ese ejercicio. Un máximo
+      persistido y una lista de series son dos fuentes de verdad del mismo dato.
+    - `achieved_at` se sella una vez y no se reabre.
+    - Bajar la cifra por debajo de lo que ya se levanta no la marca sola: hace
+      falta una serie POSTERIOR que la alcance. Sin eso, editar el objetivo
+      sería la forma más barata de cobrar 50 XP.
+
+    Existe para reemplazar el «logro por PR» que pedía la propuesta. Un récord
+    es la cifra, y la cifra la teclea el usuario sin validación posible:
+    premiarlo premia la genética y la sinceridad. Una meta se fija ANTES, igual
+    que una misión, y por eso sí puede llevar oro.
+    """
+    __tablename__ = "strength_goals"
+    __table_args__ = (
+        CheckConstraint("target_weight_g >= 0"),
+        CheckConstraint("target_reps > 0"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
+    target_weight_g: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_reps: Mapped[int] = mapped_column(Integer, default=1)
+    deadline: Mapped[date | None] = mapped_column(Date, nullable=True)
+    achieved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    color: Mapped[str] = mapped_column(String, default="#a98bf0")
+    icon: Mapped[str] = mapped_column(String, default="target-arrow")
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class BodyMetric(Base):
+    """Una medida del cuerpo. Serie temporal, aparte de las sesiones.
+
+    No cuelga de ninguna sesión a propósito: uno se pesa el martes sin haber
+    entrenado. Y no da XP, ni racha, ni logro. Convertir el peso corporal en un
+    objetivo con recompensa crea un incentivo perverso justo donde más daño
+    hace; aquí es dato neutro de tendencia, ni bueno ni malo.
+
+    `value_milli` son milésimas de la unidad canónica del tipo —kg para el peso,
+    cm para las medidas—, que declara `BODY_METRIC_UNITS` en constants.py. Es
+    entero por lo mismo que todo lo demás, y su espejo en `utils.ts` lo ata un
+    test: 76,9 kg se guarda como 76900.
+    """
+    __tablename__ = "body_metrics"
+    __table_args__ = (
+        # una medida por tipo y día: pesarse dos veces el martes es corregirse,
+        # no acumular dos puntos en la tendencia
+        UniqueConstraint("kind", "measured_on"),
+        CheckConstraint("value_milli > 0"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    kind: Mapped[str] = mapped_column(String, nullable=False)  # weight|waist|chest|arm|thigh|hip
+    measured_on: Mapped[date] = mapped_column(Date, nullable=False, index=True)
+    value_milli: Mapped[int] = mapped_column(Integer, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 

@@ -25,7 +25,7 @@
       "x": -620,
       "y": 1200,
       "w": 560,
-      "text": "LA FECHA MANDA SOBRE EL RITO\n\nEl artboard de fuerza lleva un interruptor arriba («esHoy»): enciéndelo y apágalo para ver los dos avisos.\n\nCon fecha de HOY el rito se marca solo, y se avisa antes de guardar.\n\nCon fecha PASADA la sesión se anota igual pero no marca nada ni paga XP — y el aviso va en tinta, no en rojo: no es un error, es la regla de que el XP se sella el día del acto.\n\nEn HEMA se dibuja el otro caso incómodo: la meta de 2×/semana ya cumplida. La sesión se guarda igual; hoy eso devolvería un 400 y perdería el registro."
+      "text": "LA FECHA MANDA SOBRE EL RITO\n\nEl artboard de fuerza lleva un interruptor arriba («esHoy»): enciéndelo y apágalo para ver los dos avisos.\n\nCon fecha de HOY el rito se marca solo, y se avisa antes de guardar.\n\nCon fecha PASADA la sesión se anota, SÍ paga los 5 XP del día —el XP premia el acto de asentar, no el de entrenar, igual que en el erario— y NO marca el rito, que sería constancia inventada. El aviso va en tinta, no en rojo: no es un error.\n\nEn HEMA se dibuja el otro caso incómodo: la meta de 2×/semana ya cumplida. La sesión se guarda igual; sin ese cuidado eso devolvería un 400 y perdería el registro."
     },
     {
       "id": "unico-oro",

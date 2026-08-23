@@ -1548,3 +1548,393 @@ def test_habits_possible_counts_only_the_occasions_a_habit_asked_for():
             assert semanal in (2, 4), semanal
     finally:
         _solo_estos_habitos(previos)
+
+
+# ---------------------------------------------------------------------------
+# LA PALESTRA
+# ---------------------------------------------------------------------------
+# Las mismas prohibiciones del erario, en kilos. Ninguna rompe nada al saltarse:
+# sólo inflan el nivel en silencio, y eso no se ve hasta revisar el xp_log meses
+# después. Por eso cada una tiene su test.
+
+def _training_day_marks() -> int:
+    return _query("SELECT COUNT(*) FROM xp_log WHERE source = 'training_day'")[0][0]
+
+
+def _reset_training_day():
+    """Igual que `_reset_ledger_day`: el archivo comparte una base y varios tests
+    asientan hoy. Estos miden el otorgamiento, no la herencia."""
+    _exec("DELETE FROM xp_log WHERE source = 'training_day'")
+
+
+def _ejercicio(c, name: str) -> int:
+    return c.post("/training/exercises", json={"name": name}).json()["id"]
+
+
+def _sesion(c, **kw):
+    payload = {"kind": "strength", "occurred_on": _today().isoformat(), **kw}
+    r = c.post("/training/sessions", json=payload)
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def _serie(ex_id: int, reps: int, kg: float, **kw) -> dict:
+    return {"exercise_id": ex_id, "reps": reps, "weight_g": round(kg * 1000), **kw}
+
+
+def test_a_past_dated_session_never_marks_the_rite():
+    """La prohibición nº1, y el bug que la propuesta traía de fábrica.
+
+    `complete_habit` sólo sabe marcar HOY: escribe la marca con la hora actual.
+    Con una sesión de fecha pasada eso apuntaría el rito al día equivocado —racha
+    inflada, mapa de consistencia mintiendo— y pagaría constancia que no ocurrió.
+    """
+    ayer = _today() - timedelta(days=1)
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={"name": "Gimnasio de ayer", "category": "Físico"}).json()
+        s = _sesion(c, occurred_on=ayer.isoformat(), habit_id=h["id"], name="Empuje")
+
+        assert s["habit_marked"] is False
+        assert "Fecha pasada" in s["habit_note"]
+        assert s["session"]["habit_log_id"] is None
+        # y, sobre todo, el rito sigue sin marcas
+        assert _query("SELECT COUNT(*) FROM habit_logs WHERE habit_id = ?", h["id"])[0][0] == 0
+        assert c.get(f"/habits/{h['id']}").json()["streak"] == 0
+
+
+def test_a_past_dated_session_still_pays_the_day():
+    """Y sin embargo SÍ paga los 5 XP, que es lo contrario de lo que parece.
+
+    El XP premia el acto de ASENTAR, no el de entrenar — la tesis del erario
+    entera. No pagarlo empujaría a no rellenar los huecos, y rellenarlos es justo
+    lo que mantiene el registro honesto. Lo que la fecha vieja no puede hacer es
+    marcar el rito, porque eso sí sería constancia inventada.
+    """
+    with TestClient(main.app) as c:
+        _reset_training_day()
+        antes = _xp(c)
+        s = _sesion(c, occurred_on=(_today() - timedelta(days=9)).isoformat(),
+                    name="Sesión olvidada")
+        assert s["xp"]["xp_earned"] == 5
+        assert _xp(c) == antes + 5
+
+
+def test_training_pays_once_a_day_no_matter_how_many_sessions():
+    with TestClient(main.app) as c:
+        _reset_training_day()
+        antes = _xp(c)
+        assert _sesion(c, name="Mañana")["xp"]["xp_earned"] == 5
+        # doblar sesión no paga dos veces: premia llevar el registro, no sudar más
+        assert _sesion(c, name="Tarde")["xp"] is None
+        assert _sesion(c, kind="cardio", cardio_kind="run", distance_m=5000,
+                       duration_s=1800)["xp"] is None
+        assert _xp(c) == antes + 5
+
+
+def test_training_xp_cannot_be_farmed_by_deleting_and_reposting():
+    """La marca vive en xp_log, no en el número de sesiones."""
+    with TestClient(main.app) as c:
+        _reset_training_day()
+        antes = _xp(c)
+        sid = _sesion(c, name="Ciclo")["session"]["id"]
+        assert _xp(c) == antes + 5
+
+        assert c.delete(f"/training/sessions/{sid}").status_code == 204
+        assert _xp(c) == antes + 5          # borrar no devuelve nada
+        assert _sesion(c, name="Ciclo otra vez")["xp"] is None
+        assert _xp(c) == antes + 5
+        assert _training_day_marks() == 1
+
+
+def test_deleting_a_session_never_unmarks_the_rite():
+    """Si borrar desmarcara, el ciclo asentar-borrar-asentar cobraría el rito una
+    y otra vez, con su multiplicador de racha. Desmarcar se hace en Hábitos."""
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={"name": "Rito persistente", "category": "Físico"}).json()
+        s = _sesion(c, habit_id=h["id"], name="Con rito")
+        assert s["habit_marked"] is True
+        marcas = _query("SELECT COUNT(*) FROM habit_logs WHERE habit_id = ?", h["id"])[0][0]
+        assert marcas == 1
+
+        xp_antes = _xp(c)
+        c.delete(f"/training/sessions/{s['session']['id']}")
+        assert _query("SELECT COUNT(*) FROM habit_logs WHERE habit_id = ?", h["id"])[0][0] == 1
+        assert _xp(c) == xp_antes
+
+
+def test_a_rite_already_marked_never_sinks_the_session():
+    """Marcar a mano responde 400. Asentar una sesión NO puede: perder el detalle
+    real por intentar ser amable sería el peor intercambio posible."""
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={"name": "Ya marcado", "category": "Físico"}).json()
+        c.post(f"/habits/{h['id']}/complete")
+
+        s = _sesion(c, habit_id=h["id"], name="Después del botón")
+        assert s["habit_marked"] is False
+        assert "ya estaba marcado" in s["habit_note"]
+        assert s["session"]["id"]  # y la sesión existe, que es lo que importa
+        assert _query("SELECT COUNT(*) FROM habit_logs WHERE habit_id = ?", h["id"])[0][0] == 1
+
+
+def test_a_met_weekly_target_never_sinks_the_session():
+    """El caso de «Esgrima HEMA» a 2×/semana: la tercera sesión de la semana."""
+    hoy = _today()
+    lunes = hoy - timedelta(days=hoy.weekday())
+    otro = lunes if lunes != hoy else lunes + timedelta(days=1)
+    with TestClient(main.app) as c:
+        h = c.post("/habits", json={
+            "name": "Esgrima de prueba", "category": "Físico",
+            "frequency": "weekly", "target_per_week": 1,
+        }).json()
+        _log_on(h["id"], otro)
+
+        s = _sesion(c, kind="hema", habit_id=h["id"], duration_s=5400, intensity=4)
+        assert s["habit_marked"] is False
+        assert "meta de 1×" in s["habit_note"] or "esta semana" in s["habit_note"]
+        assert s["session"]["intensity"] == 4
+
+
+def test_a_record_pays_nothing():
+    """Un récord es la cifra, y la cifra la teclea el usuario. Se dibuja, no se
+    paga: el oro del módulo está reservado a las metas declaradas de antemano."""
+    with TestClient(main.app) as c:
+        _reset_training_day()
+        ex = _ejercicio(c, "Press de récord")
+        antes = _xp(c)
+        # una marca absurda, sin meta declarada: no puede pagar nada extra
+        _sesion(c, name="PR", sets=[_serie(ex, 1, 300)])
+        assert _xp(c) - antes == 5          # sólo el día asentado
+        assert _query("SELECT COUNT(*) FROM xp_log WHERE source = 'strength_goal'")[0][0] == 0
+
+        prog = c.get(f"/training/exercises/{ex}/progress").json()["points"]
+        assert prog[-1]["is_record"] is True   # se ve, que es lo que toca
+
+
+def test_a_strength_goal_pays_a_flat_fifty():
+    with TestClient(main.app) as c:
+        _reset_training_day()
+        ex = _ejercicio(c, "Sentadilla de meta")
+        meta = c.post("/training/goals", json={
+            "exercise_id": ex, "target_weight_g": 100_000, "target_reps": 1,
+        }).json()
+        assert meta["achieved_at"] is None
+
+        antes = _xp(c)
+        s = _sesion(c, name="Día de meta", sets=[_serie(ex, 1, 120)])
+        # 5 del día + 50 planos de la meta. Plano: 120 kg no paga más que 100.
+        assert s["xp"]["xp_earned"] == 55
+        assert _xp(c) == antes + 55
+        assert c.get("/training/goals").json()
+        sellada = next(g for g in c.get("/training/goals").json() if g["id"] == meta["id"])
+        assert sellada["achieved_at"] is not None
+        assert sellada["best_weight_g"] == 120_000
+
+
+def test_a_strength_goal_seals_once_and_cannot_be_recharged():
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Peso muerto sellado")
+        meta = c.post("/training/goals", json={
+            "exercise_id": ex, "target_weight_g": 80_000, "target_reps": 1,
+        }).json()
+        _sesion(c, name="Primera", sets=[_serie(ex, 1, 90)])
+
+        pagos = "SELECT COUNT(*) FROM xp_log WHERE source='strength_goal' AND source_id=?"
+        assert _query(pagos, meta["id"])[0][0] == 1
+
+        antes = _xp(c)
+        _sesion(c, name="Segunda", sets=[_serie(ex, 1, 95)])
+        _sesion(c, name="Tercera", sets=[_serie(ex, 3, 100)])
+        assert _query(pagos, meta["id"])[0][0] == 1
+        assert _xp(c) == antes          # el día ya estaba pagado y la meta también
+
+
+def test_lowering_the_target_does_not_award_the_goal():
+    """Sin esto, editar la cifra sería la forma más barata de cobrar 50 XP.
+
+    Sellar sólo ocurre al escribir series, jamás al editar la meta: hace falta
+    una serie POSTERIOR que la alcance, que es lo que significa cumplirla.
+    """
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Remo rebajado")
+        _sesion(c, name="Ya levantado", sets=[_serie(ex, 5, 70)])
+        meta = c.post("/training/goals", json={
+            "exercise_id": ex, "target_weight_g": 200_000, "target_reps": 1,
+        }).json()
+
+        antes = _xp(c)
+        # se baja por debajo de lo que ya se levanta: no basta
+        bajada = c.patch(f"/training/goals/{meta['id']}",
+                         json={"target_weight_g": 50_000}).json()
+        assert bajada["achieved_at"] is None
+        assert _xp(c) == antes
+
+        # y con una serie posterior sí, que es la diferencia
+        _sesion(c, name="Serie posterior", sets=[_serie(ex, 1, 60)])
+        sellada = next(g for g in c.get("/training/goals").json() if g["id"] == meta["id"])
+        assert sellada["achieved_at"] is not None
+
+
+def test_a_bodyweight_goal_needs_a_real_set():
+    """Una meta de 0 kg —diez dominadas sin lastre— se daría por cumplida con
+    cero series si sólo se comparara el peso, porque 0 >= 0."""
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Dominadas limpias")
+        meta = c.post("/training/goals", json={
+            "exercise_id": ex, "target_weight_g": 0, "target_reps": 10,
+        }).json()
+        vivo = next(g for g in c.get("/training/goals").json() if g["id"] == meta["id"])
+        assert vivo["achieved_at"] is None and vivo["qualifying_sets"] == 0
+
+        # ocho no bastan; diez sí
+        _sesion(c, name="Ocho", sets=[_serie(ex, 8, 0)])
+        assert next(g for g in c.get("/training/goals").json()
+                    if g["id"] == meta["id"])["achieved_at"] is None
+        _sesion(c, name="Diez", sets=[_serie(ex, 10, 0)])
+        assert next(g for g in c.get("/training/goals").json()
+                    if g["id"] == meta["id"])["achieved_at"] is not None
+
+
+def test_goal_progress_is_per_exercise_and_derived():
+    """Dos metas sobre ejercicios distintos no comparten cifra, y el progreso
+    sale de las series: no hay ningún máximo persistido que pueda discrepar."""
+    with TestClient(main.app) as c:
+        banca = _ejercicio(c, "Banca separada")
+        militar = _ejercicio(c, "Militar separado")
+        m1 = c.post("/training/goals", json={"exercise_id": banca, "target_weight_g": 200_000}).json()
+        m2 = c.post("/training/goals", json={"exercise_id": militar, "target_weight_g": 200_000}).json()
+
+        _sesion(c, name="Sólo banca", sets=[_serie(banca, 1, 90)])
+        metas = {g["id"]: g for g in c.get("/training/goals").json()}
+        assert metas[m1["id"]]["best_weight_g"] == 90_000
+        assert metas[m2["id"]]["best_weight_g"] == 0
+
+
+def test_epley_returns_the_weight_itself_for_a_single():
+    """A una repetición, `peso × (1 + 1/30)` inflaría un 3,3 % justo el caso en
+    que el dato es exacto, y en la curva la estimación acabaría por encima del
+    récord real."""
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Máxima exacta")
+        s = _sesion(c, name="Single", sets=[
+            _serie(ex, 1, 100), _serie(ex, 5, 80), _serie(ex, 12, 40),
+        ])
+        series = s["session"]["sets"]
+        assert series[0]["est_1rm_g"] == 100_000
+        assert series[0]["low_confidence"] is False
+        # 80 × (1 + 5/30) = 93,33
+        assert series[1]["est_1rm_g"] == 93_333
+        # por encima de diez reps la estimación se marca, no se oculta
+        assert series[2]["low_confidence"] is True
+
+
+def test_pace_needs_a_distance():
+    """Una sesión de cinta se anota con duración y sin distancia. Sin guardia,
+    eso divide entre cero — la misma clase de bug que el disponible del erario
+    repartido entre los días que quedan de un mes ya cerrado."""
+    with TestClient(main.app) as c:
+        con = _sesion(c, kind="cardio", cardio_kind="run",
+                      distance_m=6400, duration_s=2040)["session"]
+        assert con["pace_s_per_km"] == 319          # 5:19 /km
+
+        sin = _sesion(c, kind="cardio", cardio_kind="other", duration_s=1800)["session"]
+        assert sin["pace_s_per_km"] is None
+        cero = _sesion(c, kind="cardio", cardio_kind="bike",
+                       distance_m=0, duration_s=1800)["session"]
+        assert cero["pace_s_per_km"] is None
+
+
+def test_volume_is_derived_and_never_stored():
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Volumen medible")
+        s = _sesion(c, name="Volumen", sets=[
+            _serie(ex, 10, 72.5), _serie(ex, 8, 77.5), _serie(ex, 6, 82.5),
+        ])
+        # 725 + 620 + 495 = 1840 kg
+        assert s["session"]["volume_g"] == 1_840_000
+        assert s["session"]["set_count"] == 3
+        cols = {r[1] for r in _query("PRAGMA table_info(training_sessions)")}
+        assert "volume_g" not in cols and "pace_s_per_km" not in cols
+
+
+def test_body_metrics_pay_nothing_at_all():
+    """La regla más importante del módulo y la más fácil de romper por descuido.
+
+    En cuanto el peso corporal da recompensa deja de ser un dato de tendencia y
+    pasa a ser un marcador que se persigue, justo en el terreno donde eso hace
+    más daño.
+    """
+    with TestClient(main.app) as c:
+        antes = _xp(c)
+        logros_antes = sum(1 for a in c.get("/achievements").json() if a["unlocked"])
+        for i in range(6):
+            r = c.post("/training/body-metrics", json={
+                "kind": "weight",
+                "measured_on": (_today() - timedelta(days=i)).isoformat(),
+                "value_milli": 76_900 + i * 100,
+            })
+            assert r.status_code == 201
+        assert _xp(c) == antes
+        assert sum(1 for a in c.get("/achievements").json() if a["unlocked"]) == logros_antes
+        assert _query("SELECT COUNT(*) FROM xp_log WHERE source LIKE '%body%'")[0][0] == 0
+
+
+def test_measuring_twice_the_same_day_corrects_instead_of_stacking():
+    with TestClient(main.app) as c:
+        dia = (_today() - timedelta(days=40)).isoformat()
+        base = {"kind": "waist", "measured_on": dia}
+        c.post("/training/body-metrics", json={**base, "value_milli": 84_000})
+        c.post("/training/body-metrics", json={**base, "value_milli": 82_000})
+        puntos = [p for p in c.get("/training/body-metrics/series?kind=waist").json()["points"]
+                  if p["measured_on"] == dia]
+        assert len(puntos) == 1 and puntos[0]["value_milli"] == 82_000
+
+
+def test_body_metric_units_mirror_matches_the_frontend():
+    """BODY_METRIC_UNITS vive en dos lenguajes, igual que MONEY_DECIMALS, y por
+    la misma razón nada ejerce el espejo de Python: el frontend manda
+    `value_milli` ya convertido. Sin este test los dos lados podían separarse en
+    silencio, y separarse significa reinterpretar por mil todo lo ya medido."""
+    from constants import BODY_METRIC_UNITS, BODY_METRIC_MILLI, GRAMS_PER_KG
+
+    utils_ts = (pathlib.Path(__file__).resolve().parents[2]
+                / "frontend" / "src" / "utils.ts").read_text(encoding="utf-8")
+    block = re.search(r"const BODY_METRIC_UNITS[^=]*=\s*\{(.*?)\}", utils_ts, re.S)
+    assert block, "no se encontró BODY_METRIC_UNITS en utils.ts"
+    js = {m.group(1): m.group(2) for m in re.finditer(r'(\w+)\s*:\s*"(\w+)"', block.group(1))}
+    assert js == BODY_METRIC_UNITS
+
+    for name, value in (("BODY_METRIC_MILLI", BODY_METRIC_MILLI), ("GRAMS_PER_KG", GRAMS_PER_KG)):
+        m = re.search(rf"export const {name}\s*=\s*(\d+)", utils_ts)
+        assert m and int(m.group(1)) == value, name
+
+
+def test_an_archived_exercise_keeps_its_history():
+    """Borrar un ejercicio usado se llevaría por delante la curva que dibuja.
+    Se archiva, igual que una partida usada del erario."""
+    with TestClient(main.app) as c:
+        ex = _ejercicio(c, "Ejercicio con pasado")
+        _sesion(c, name="Con historia", sets=[_serie(ex, 5, 50)])
+        assert c.delete(f"/training/exercises/{ex}").status_code == 204
+
+        vivos = {e["id"] for e in c.get("/training/exercises").json()}
+        assert ex not in vivos
+        assert ex in {e["id"] for e in c.get("/training/exercises?include_archived=true").json()}
+        assert c.get(f"/training/exercises/{ex}/progress").json()["points"]
+
+
+def test_a_session_refuses_fields_from_another_modality():
+    """Una sesión de fuerza con distancia sería una fila que no significa nada, y
+    el día que alguien sume ritmos se encontraría con una de cardio sin correr."""
+    hoy = _today().isoformat()
+    with TestClient(main.app) as c:
+        assert c.post("/training/sessions", json={
+            "kind": "strength", "occurred_on": hoy, "distance_m": 5000,
+        }).status_code == 400
+        assert c.post("/training/sessions", json={
+            "kind": "cardio", "occurred_on": hoy, "intensity": 4,
+        }).status_code == 400
+        ex = _ejercicio(c, "Serie fuera de sitio")
+        assert c.post("/training/sessions", json={
+            "kind": "cardio", "occurred_on": hoy, "cardio_kind": "run",
+            "sets": [_serie(ex, 5, 50)],
+        }).status_code == 400

@@ -5,7 +5,9 @@ from sqlalchemy import select, func, delete, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from models import Quest, HabitLog, PomodoroSession, Task, DiaryEntry, LedgerEntry
+from models import (
+    Quest, HabitLog, PomodoroSession, Task, DiaryEntry, LedgerEntry, TrainingSession
+)
 from schemas import QuestOut, XPEventResponse, AchievementOut
 from services import get_user, award_xp
 from constants import QUEST_TEMPLATES
@@ -53,6 +55,14 @@ async def _progress(db: AsyncSession, metric: str, start: date, end: date) -> in
     if metric == "ledger_days":
         return (await db.execute(select(func.count(distinct(func.date(LedgerEntry.created_at)))).where(
             func.date(LedgerEntry.created_at) >= s, func.date(LedgerEntry.created_at) <= e))).scalar_one()
+    # La del entrenamiento va por `occurred_on` y no por `created_at`, al revés
+    # que las del erario, y la diferencia importa: «tres días de palestra» premia
+    # haber entrenado tres días, y una sesión del martes que se anota el jueves
+    # ocurrió el martes. En el erario no hay nada equivalente —el acto ES anotar—,
+    # así que allí la fecha del gasto no puede contar como constancia.
+    if metric == "training_days":
+        return (await db.execute(select(func.count(distinct(TrainingSession.occurred_on))).where(
+            TrainingSession.occurred_on >= start, TrainingSession.occurred_on <= end))).scalar_one()
     return 0
 
 

@@ -232,6 +232,109 @@ export function parseMoney(input: string, currency = "COP"): number | null {
   return negative ? -minor : minor;
 }
 
+/* ============================================================================
+   PESO Y MEDIDAS
+   ----------------------------------------------------------------------------
+   La palestra hereda la decisión del erario: enteros dentro, conversión sólo en
+   los bordes. El peso se guarda en GRAMOS y las medidas del cuerpo en milésimas
+   de su unidad, porque el volumen semanal es una suma de peso×reps sobre miles
+   de series y un float pierde exactitud justo ahí.
+
+   `BODY_METRIC_UNITS`, `BODY_METRIC_MILLI` y `GRAMS_PER_KG` son espejo de
+   constants.py y los ata `test_body_metric_units_mirror_matches_the_frontend`.
+   Separarlos reinterpretaría por mil todo lo ya medido.
+
+   La unidad de PRESENTACIÓN (kg o lb) vive en `users.weight_unit` y no toca lo
+   guardado. No cuelga del ejercicio a propósito: por ejercicio, el volumen
+   semanal sumaría kilos con libras dentro de la misma barra.
+   ============================================================================ */
+
+export const GRAMS_PER_KG = 1000;
+export const GRAMS_PER_LB = 453.59237; // exacto por definición internacional
+export const BODY_METRIC_MILLI = 1000;
+
+const BODY_METRIC_UNITS: Record<string, string> = {
+  weight: "kg",
+  waist: "cm",
+  chest: "cm",
+  arm: "cm",
+  thigh: "cm",
+  hip: "cm",
+};
+
+export type WeightUnit = "kg" | "lb";
+
+export function bodyMetricUnit(kind: string): string {
+  return BODY_METRIC_UNITS[kind] ?? "kg";
+}
+
+const gramsPer = (unit: WeightUnit) => (unit === "lb" ? GRAMS_PER_LB : GRAMS_PER_KG);
+
+/** Gramos -> texto en la unidad elegida. Un decimal: los discos van de 1,25 en
+ *  1,25 y dos decimales sólo añaden ceros que descuadran la columna. */
+export function formatWeight(
+  grams: number,
+  unit: WeightUnit = "kg",
+  opts: { suffix?: boolean } = {},
+): string {
+  const value = grams / gramsPer(unit);
+  const txt = new Intl.NumberFormat("es-CO", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 1,
+  }).format(value);
+  return opts.suffix === false ? txt : `${txt} ${unit}`;
+}
+
+/** Volumen: miles de kilos se leen mal dígito a dígito, así que por encima de
+ *  una tonelada se abrevia. Es cifra de contexto, no un dato que se compare. */
+export function formatVolume(grams: number, unit: WeightUnit = "kg"): string {
+  const value = grams / gramsPer(unit);
+  if (value >= 1000) {
+    return `${new Intl.NumberFormat("es-CO", { maximumFractionDigits: 1 }).format(value / 1000)} t`;
+  }
+  return formatWeight(grams, unit);
+}
+
+/** Texto tecleado -> gramos. null si no hay número que leer.
+ *
+ *  Corta arriba igual que `parseMoney`: 82.500 kg en vez de 82,5 no es un peso,
+ *  es un dedo resbalado, y una vez dentro deforma cada gráfica del módulo. */
+export function parseWeight(input: string, unit: WeightUnit = "kg"): number | null {
+  const raw = String(input).trim().replace(",", ".");
+  if (!raw) return null;
+  const value = Number(raw.replace(/[^\d.]/g, ""));
+  if (!Number.isFinite(value) || value < 0) return null;
+  const grams = Math.round(value * gramsPer(unit));
+  return grams > 1_000_000 ? null : grams; // MAX_WEIGHT_G
+}
+
+/** Milésimas -> texto de una medida corporal, con su unidad. */
+export function formatBodyMetric(valueMilli: number, kind: string): string {
+  const txt = new Intl.NumberFormat("es-CO", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(valueMilli / BODY_METRIC_MILLI);
+  return `${txt} ${bodyMetricUnit(kind)}`;
+}
+
+/** Segundos por kilómetro -> "5:19". El ritmo se calcula, nunca se pide. */
+export function formatPace(secondsPerKm: number | null): string {
+  if (secondsPerKm == null || secondsPerKm <= 0) return "—";
+  const m = Math.floor(secondsPerKm / 60);
+  const s = Math.round(secondsPerKm % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/** Segundos -> "62 min" / "1 h 30". Duraciones de sesión, no de pomodoro. */
+export function formatDuration(seconds: number | null): string {
+  if (!seconds || seconds <= 0) return "—";
+  const total = Math.round(seconds / 60);
+  if (total < 60) return `${total} min`;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
+}
+
 /** Estado de una asignación: cardenillo hasta el 85%, ámbar hasta el 100%,
  *  sangre de buey por encima. Los umbrales son dominio, no decoración: viven
  *  aquí para poder probarlos sin montar el componente. */

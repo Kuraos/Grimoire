@@ -27,7 +27,11 @@ def _ensure_columns(sync_conn):
     tables = set(insp.get_table_names())
     wanted = {
         "users": [("lives", "INTEGER DEFAULT 3"), ("last_streak_eval", "DATE"),
-                  ("obsidian_vault_path", "VARCHAR")],
+                  ("obsidian_vault_path", "VARCHAR"),
+                  # unidad de PRESENTACIÓN del peso; lo guardado son gramos y no
+                  # cambia. Las tablas del entrenamiento nacen enteras con
+                  # `create_all`, así que ésta es la única columna que entra aquí.
+                  ("weight_unit", "VARCHAR DEFAULT 'kg'")],
         "achievements": [("tier", "VARCHAR DEFAULT 'common'")],
         "habits": [("tags", "VARCHAR"), ("days", "VARCHAR"),
                    ("target_per_week", "INTEGER DEFAULT 1")],
@@ -141,6 +145,12 @@ async def seed():
             db.add(Account(name="Efectivo", kind="cash", currency=DEFAULT_CURRENCY,
                            color="#5aa885"))
 
+        # grupos musculares de la palestra (idempotente por nombre). No se
+        # siembran ejercicios: el catálogo lo escribe quien entrena, y una lista
+        # de autor sólo estorbaría al que hace otra rutina.
+        from routers.training import seed_muscle_groups
+        await seed_muscle_groups(db)
+
         await db.commit()
 
 
@@ -176,11 +186,12 @@ app.add_middleware(
 from routers import (  # noqa: E402
     user, habits, tasks, projects, pomodoro, calendar, diary, checkins,
     stats, achievements, reviews, quests, tags, habit_categories, backup, ledger,
+    training,
 )
 
 for r in (user, habits, tasks, projects, pomodoro, calendar, diary, checkins,
           stats, achievements, reviews, quests, tags, habit_categories, backup,
-          ledger):
+          ledger, training):
     app.include_router(r.router)
 
 

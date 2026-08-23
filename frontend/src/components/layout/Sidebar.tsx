@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   IconLayoutDashboard, IconRepeat, IconListCheck, IconClock, IconCalendar,
   IconBook2, IconChartHistogram, IconTrophy, IconNotebook, IconHexagon, IconCoins,
+  IconBarbell,
 } from "@tabler/icons-react";
 
 const NAV = [
@@ -11,6 +12,7 @@ const NAV = [
   { to: "/pomodoro", icon: IconClock, label: "Pomodoro" },
   { to: "/calendario", icon: IconCalendar, label: "Calendario" },
   { to: "/diario", icon: IconBook2, label: "Diario" },
+  { to: "/entrenamiento", icon: IconBarbell, label: "Entrenamiento" },
   { to: "/erario", icon: IconCoins, label: "Erario" },
   { to: "/estadisticas", icon: IconChartHistogram, label: "Estadísticas" },
   { to: "/logros", icon: IconTrophy, label: "Logros" },

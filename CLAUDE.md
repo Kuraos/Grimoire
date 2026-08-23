@@ -184,6 +184,100 @@ hasta revisar el `xp_log` meses después. Cada una tiene su test.
    barata de cobrar 50 XP. El XP de reliquia es plano por la misma razón —
    proporcional al monto premiaría la renta, no la constancia.
 
+## La palestra
+
+El módulo de entrenamiento. Su tesis está en la cabecera de
+`backend/routers/training.py` y es la del erario con otras unidades: **el XP
+premia el acto de asentar, jamás la carga.** Pagar por kilos levantados premia la
+genética, el descanso y el material —y sobre todo un número que teclea el usuario
+sin validación posible—.
+
+De ahí sale la regla estética: **levantar mucho no es oro.** El peso, el volumen,
+el 1RM, el ritmo y el peso corporal van en tinta tabular. En todo el módulo hay
+un solo dorado propio —una meta de fuerza declarada y cumplida—, y el otro oro
+que se ve en la vista no es suyo: es el rito marcado, que es XP de Hábitos
+asomándose.
+
+### Un récord no es una medalla
+
+La propuesta pedía un logro por PR. Un récord **es** la cifra, y premiar la cifra
+es premiar la renta con otro nombre. Además es autorreportado: escribir 300 kg
+cuesta lo mismo que escribir 80.
+
+El reemplazo es `StrengthGoal`, que es `SavingsGoal` con kilos y hereda su
+docstring entera: se declara ANTES, el progreso sale de las series y no se
+guarda, `achieved_at` se sella una vez, y **bajar la cifra por debajo de lo que
+ya se levanta no la marca sola** —hace falta una serie posterior—. Sin esa última
+regla, editar el objetivo sería la forma más barata de cobrar 50 XP de toda la
+app. El PR se sigue dibujando: rombo de tinta en la curva, y cero XP.
+
+### La fecha manda sobre el rito, pero no sobre el XP
+
+Registrar una sesión marca el rito del día, y ahí hay dos cosas que se cruzan y
+no significan lo mismo:
+
+- **Una sesión con fecha pasada no marca nada.** `complete_habit` sólo sabe
+  marcar hoy —escribe la marca con la hora actual—, así que con fecha vieja
+  apuntaría el rito al día equivocado: racha inflada y mapa de consistencia
+  mintiendo.
+- **Pero sí paga los 5 XP del día.** El XP premia asentar, no entrenar. No
+  pagarlo empujaría a no rellenar los huecos, y rellenarlos es lo que mantiene el
+  registro honesto. Es exactamente `ledger_day`, que tampoco mira `occurred_on`.
+
+Y el auto-marcado **nunca puede tumbar el guardado**. Marcar a mano responde 400
+si el rito ya está hecho o si un semanal alcanzó su meta —la tercera sesión de
+una semana de 2×—; asentar una sesión sigue adelante y lo cuenta en
+`habit_note`. Perder el detalle real de una sesión por intentar ser amable sería
+el peor intercambio posible. Por eso la validación vive en
+`services.mark_habit_done` y no en el router: la regla es una, y lo único que
+cambia entre los dos llamantes es qué hacer cuando no se cumple.
+
+Borrar una sesión **no** desmarca el rito ni devuelve XP: la marca vive en
+`habit_logs` y el pago en `xp_log`, y si borrar desmarcara, el ciclo
+asentar-borrar-asentar cobraría una y otra vez.
+
+### El cuerpo no es un marcador
+
+`body_metrics` no da XP, ni racha, ni logro, y su gráfica no lleva verdigrís ni
+oxblood. Un peso que baja no es «bien» y uno que sube no es «mal»: pintarlos de
+éxito o de peligro convierte el cuerpo en un marcador, que es el incentivo
+perverso más caro que este módulo podía crear. Es la misma decisión que hace que
+el dinero no sea oro, en el terreno donde más daño hace.
+
+La gráfica dibuja dos líneas porque la pregunta no es «¿cuánto peso hoy?» sino
+«¿esto baja o es ruido?»: el dato crudo en tinta tenue y la media móvil de cuatro
+medidas en tinta brillante.
+
+### Gramos, no floats
+
+`weight_g` es entero por lo mismo que `amount_minor`: el volumen semanal es una
+suma de peso×reps sobre miles de series, y ahí un float pierde exactitud. 2,5 kg
+se guarda como 2500. Las medidas del cuerpo van en milésimas de su unidad
+(`BODY_METRIC_UNITS`), con espejo en `utils.ts` atado por
+`test_body_metric_units_mirror_matches_the_frontend`.
+
+**La unidad de peso no cuelga del ejercicio.** Vive una sola vez en
+`users.weight_unit` y es preferencia de presentación. Por ejercicio, el volumen
+semanal sumaría kilos con libras dentro de la misma barra, y cambiarla
+reinterpretaría todo el historial de ese ejercicio.
+
+### Una tabla, tres modalidades
+
+`training_sessions` mete fuerza, HEMA y cardio en una sola tabla con `kind`,
+igual que `ledger_entries` mete gasto, ingreso y traspaso. Tres tablas habrían
+costado tres routers, tres formularios y un `UNION` cada vez que alguien pregunta
+cuántas sesiones lleva la semana; y una cuarta modalidad sería una migración en
+vez de una constante.
+
+El 1RM sale de Epley con un clamp: **a una repetición devuelve el peso tal cual.**
+Sin él, `peso × (1 + 1/30)` inflaría un 3,3 % justo el caso en que el dato es
+exacto, y en la curva la estimación acabaría por encima del récord real. Por
+encima de diez reps la estimación se marca en ámbar en vez de ocultarse.
+
+El ritmo se deduce de distancia y duración, y devuelve `None` sin distancia: una
+sesión de cinta se anota con duración y sin kilómetros, y sin ese guardia eso
+divide entre cero.
+
 ## Trampas que ya han mordido
 
 **Cascada.** `.card`, sus rangos, `.input` y `.btn` viven dentro de
