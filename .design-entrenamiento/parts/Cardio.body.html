@@ -1,0 +1,79 @@
+<div style="min-height:100%;background:rgba(10,8,16,.72);padding:16px;display:flex;justify-content:center;align-items:flex-start;">
+  <div style="width:100%;border-radius:var(--gr-radius-lg);padding:20px;background:var(--gr-surface-sunken);border:1px solid var(--gr-edge-strong);">
+
+    <div style="display:flex;align-items:center;margin-bottom:16px;">
+      <h2 style="margin:0;font-family:var(--gr-font-display);font-size:16px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--gr-arcane);">Asentar sesión de cardio</h2>
+      <span style="margin-left:auto;color:var(--gr-ink-dim);display:inline-flex;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:200px 1fr;gap:12px;margin-bottom:14px;">
+      <label style="display:block;">
+        <span class="campo-label">Fecha</span>
+        <input class="input tabular" value="23/08/2026" readonly>
+      </label>
+      <div>
+        <span class="campo-label">Tipo</span>
+        <div style="display:flex;gap:6px;">
+          <span class="btn" style="border-color:var(--gr-arcane);background:var(--gr-arcane-deep);color:var(--gr-arcane-bright);padding:8px 14px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="4.5" r="1.5"/><path d="M4 17l5 1l.75 -1.5"/><path d="M15 21v-4l-4 -3l1 -6"/><path d="M7 12V9l5 -1l3 3l3 1"/></svg>
+            Correr
+          </span>
+          <span class="btn" style="padding:8px 14px;">Bici</span>
+          <span class="btn" style="padding:8px 14px;">Otro</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Se pide lo que se midió; el ritmo NO se pide. Es la misma regla que el
+         saldo de un arca en el erario: nada que se pueda deducir se guarda. -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:6px;">
+      <label style="display:block;">
+        <span class="campo-label">Distancia <span class="opcional">— km</span></span>
+        <input class="input tabular input-focus" style="text-align:right;" value="6,40" readonly>
+      </label>
+      <label style="display:block;">
+        <span class="campo-label">Duración <span class="opcional">— min</span></span>
+        <input class="input tabular" style="text-align:right;" value="34" readonly>
+      </label>
+      <div>
+        <span class="campo-label" style="color:var(--gr-ink-faint);">Ritmo <span class="opcional">— calculado</span></span>
+        <div style="display:flex;align-items:baseline;justify-content:flex-end;gap:4px;border:1px dotted var(--gr-edge-strong);border-radius:var(--gr-radius-md);background:transparent;padding:8px 11px;height:38px;">
+          <span class="tabular" style="font-size:15px;color:var(--gr-ink);">5:19</span>
+          <span style="font-size:11px;color:var(--gr-ink-faint);">min/km</span>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--gr-ink-faint);margin-bottom:14px;">
+      El ritmo sale de la distancia y la duración. Sin distancia no hay ritmo, y el campo se queda en «—» en vez de dividir entre cero.
+    </div>
+
+    <!-- Cardio no tiene rito en el catálogo. Se dice, y se dice sin alarma. -->
+    <div style="display:flex;align-items:center;gap:9px;border-left:2px solid var(--gr-edge-strong);background:rgba(210,203,219,.04);border-radius:var(--gr-radius-sm);padding:9px 12px;margin-bottom:14px;">
+      <span style="color:var(--gr-ink-dim);display:inline-flex;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      </span>
+      <span style="font-size:13px;line-height:1.45;color:var(--gr-ink-dim);">
+        El cardio no tiene rito asociado, así que no marca ninguno. <a href="#">Crea uno en Hábitos</a> si quieres que cuente para una racha.
+      </span>
+    </div>
+
+    <label style="display:block;margin-bottom:16px;">
+      <span class="campo-label">Notas <span class="opcional">— opcional</span></span>
+      <textarea class="input" style="border-style:dashed;min-height:64px;resize:none;" placeholder="Ruta del río. Las dos últimas cuestas me costaron." readonly></textarea>
+    </label>
+
+    <div style="display:flex;align-items:center;gap:16px;border-top:1px solid var(--gr-edge);padding-top:14px;">
+      <div>
+        <span class="tabular" style="font-size:15px;color:var(--gr-ink);">6,40 km</span>
+        <span class="label" style="margin-left:7px;font-size:11px;color:var(--gr-ink-dim);">en 34 min</span>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn">Cancelar</button>
+        <button class="btn btn-primary">Asentar</button>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,46 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Vista Entrenamiento · con datos", "x": 0, "y": 0, "w": 1200, "h": 1080 },
+    { "file": "Vacio.dc.html", "title": "Vista Entrenamiento · vacía", "x": 1300, "y": 0, "w": 1200, "h": 900 },
+
+    { "file": "Fuerza.dc.html", "title": "Registro · fuerza", "x": 0, "y": 1200, "w": 720, "h": 800 },
+    { "file": "Hema.dc.html", "title": "Registro · HEMA", "x": 820, "y": 1200, "w": 720, "h": 620 },
+    { "file": "Cardio.dc.html", "title": "Registro · cardio", "x": 1640, "y": 1200, "w": 720, "h": 560 },
+
+    { "file": "Metas.dc.html", "title": "Metas de fuerza", "x": 0, "y": 2120, "w": 780, "h": 620 },
+    { "file": "Corporales.dc.html", "title": "Métricas corporales", "x": 880, "y": 2120, "w": 1200, "h": 560 },
+
+    { "file": "Estadisticas.dc.html", "title": "Cards de Estadísticas · llena y vacía", "x": 0, "y": 2860, "w": 1216, "h": 700 }
+  ],
+  "annotations": [
+    {
+      "id": "ley-acento",
+      "x": -620,
+      "y": 0,
+      "w": 560,
+      "text": "LA LEY DEL ACENTO EN ESTE MÓDULO\n\nTinta — todo lo que se midió: peso, reps, volumen, 1RM, ritmo, peso corporal. Un PR entra aquí: es un dato, no una medalla.\n\nArcano — selección y estado: el ejercicio elegido, la intensidad marcada, el arco de una meta en camino.\n\nOro — sólo tres cosas, y ninguna es un dato de entrenamiento:\n  · el rito marcado (viene de Hábitos, no de aquí)\n  · el XP\n  · una meta de fuerza declarada y cumplida\n\nEse último es el único oro que este módulo se inventa."
+    },
+    {
+      "id": "fecha-rito",
+      "x": -620,
+      "y": 1200,
+      "w": 560,
+      "text": "LA FECHA MANDA SOBRE EL RITO\n\nEl artboard de fuerza lleva un interruptor arriba («esHoy»): enciéndelo y apágalo para ver los dos avisos.\n\nCon fecha de HOY el rito se marca solo, y se avisa antes de guardar.\n\nCon fecha PASADA la sesión se anota igual pero no marca nada ni paga XP — y el aviso va en tinta, no en rojo: no es un error, es la regla de que el XP se sella el día del acto.\n\nEn HEMA se dibuja el otro caso incómodo: la meta de 2×/semana ya cumplida. La sesión se guarda igual; hoy eso devolvería un 400 y perdería el registro."
+    },
+    {
+      "id": "unico-oro",
+      "x": -620,
+      "y": 2120,
+      "w": 560,
+      "text": "EL RELOJ DE LA RELIQUIA, EN KILOS\n\nLa meta de fuerza es el mismo objeto que una reliquia del erario: se declara antes, el arco va en arcano mientras avanza y sólo se vuelve oro al cerrarse. XP plano, sellado una vez.\n\nEs el reemplazo del «logro por PR» de la propuesta: premiar un récord premia la cifra, y la cifra es autorreportada.\n\nA la derecha, lo contrario: las métricas corporales no llevan oro, ni racha, ni flecha verde o roja. Un peso que baja no es «bien». El único color que entra ahí es la tinta."
+    },
+    {
+      "id": "rampas",
+      "x": -620,
+      "y": 2860,
+      "w": 560,
+      "text": "NINGUNA RAMPA ACABA EN ORO\n\nEl volumen semanal usa la paleta fría de datos, cinco colores y ninguno dorado. Una rampa hacia el oro premiaría la semana de más carga, y más volumen no es inequívocamente mejor — es el mismo razonamiento por el que el gasto diario del erario acaba en ámbar.\n\nEl 1RM estimado va en tinta tenue y discontinua: es una estimación, no una medición. Nunca en arcano, que es estado del sistema.\n\nEl ámbar sí aparece, y sólo como advertencia sobre el dato: por encima de 10 reps Epley pierde precisión."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

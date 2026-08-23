@@ -1,0 +1,100 @@
+<div class="cielo" style="min-height:100%;padding:16px;display:flex;flex-direction:column;gap:16px;">
+
+  <div class="card" style="display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;padding:14px 18px 14px 48px;">
+    <span class="nudo nudo-oro nudo-cabecera"></span>
+    <h1 class="title-module">Entrenamiento</h1>
+    <span style="align-self:flex-end;padding-bottom:7px;font-size:13px;font-style:italic;color:var(--gr-ink-dim);">Sin sesiones todavía</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Registrar sesión
+      </button>
+      <button class="btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="2"/><path d="M6.8 9h10.4a1 1 0 0 1 .98 .82l1.64 9a1 1 0 0 1 -.98 1.18H4.16a1 1 0 0 1 -.98 -1.18l1.64 -9A1 1 0 0 1 6.8 9z"/></svg>
+        Métrica corporal
+      </button>
+    </div>
+  </div>
+
+  <!-- La rúbrica del día vacío no es un hueco: es la invitación. Es la única
+       card de la vista que dice qué hacer, y por eso conserva el rango. -->
+  <section class="card card-rubric">
+    <span class="nudo nudo-oro"></span>
+    <span class="nudo nudo-oro nudo-contra"></span>
+    <div class="section-title sangrado" style="margin-bottom:14px;">
+      <span class="rubrica">Jueves 21 de agosto</span>
+      <span class="tabular" style="margin-left:12px;text-transform:none;letter-spacing:normal;color:var(--gr-ink-dim);">Hoy toca gym</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:32px;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:11px;">
+        <span style="color:var(--gr-ink-faint);display:inline-flex;">
+          <svg width="22" height="22" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"><path d="M6 1L11 10.5H1Z"/></svg>
+        </span>
+        <div>
+          <div style="font-size:15px;line-height:1.4;color:var(--gr-ink);">El rito de hoy sigue sin marcar.</div>
+          <div style="font-size:13px;color:var(--gr-ink-dim);">Asienta la sesión y se marca solo.</div>
+        </div>
+      </div>
+
+      <!-- Rito pendiente: TINTA. Todavía no se ganó nada, así que no hay oro. -->
+      <span class="label" style="display:inline-flex;align-items:center;gap:7px;border:1px solid var(--gr-edge-strong);color:var(--gr-ink-dim);border-radius:var(--gr-radius-md);padding:5px 11px;font-size:11px;">
+        <span style="width:9px;height:9px;border-radius:50%;border:1px solid var(--gr-edge-strong);"></span>
+        Entrenamiento físico (gym)
+      </span>
+
+      <div style="margin-left:auto;display:flex;gap:8px;">
+        <button class="btn btn-primary" style="padding:9px 16px;">Asentar fuerza</button>
+        <button class="btn" style="padding:9px 16px;">HEMA</button>
+        <button class="btn" style="padding:9px 16px;">Cardio</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <span class="nudo nudo-tinta"></span>
+    <div class="section-title sangrado" style="margin-bottom:4px;">
+      <span class="rubrica">La bitácora</span>
+      <span class="cadena"></span>
+      <span class="rombo"></span>
+    </div>
+    <div style="border-top:1px solid var(--gr-edge);padding:32px 0;text-align:center;font-size:13px;color:var(--gr-ink-dim);">
+      Nada asentado todavía.
+    </div>
+  </section>
+
+  <section class="card card-pozo">
+    <div style="display:grid;grid-template-columns:28px 1fr;column-gap:8px;">
+      <div style="grid-row:span 2;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--gr-ink-faint);">
+        <svg width="22" height="22" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"><path d="M6 1L11 6L6 11L1 6Z"/><path d="M6 5.4a.6 .6 0 1 0 0 1.2a.6 .6 0 1 0 0 -1.2"/></svg>
+        <span style="height:5px;width:5px;transform:rotate(45deg);background:var(--gr-edge);"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:4px;font-family:var(--gr-font-ui);font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;">
+        <span style="color:var(--gr-ink-faint);">Progresión</span>
+        <span class="filete"></span>
+        <span class="rombo"></span>
+      </div>
+      <div style="margin-top:8px;padding:38px 0;text-align:center;font-size:13px;letter-spacing:normal;text-transform:none;font-weight:400;color:var(--gr-ink-dim);">
+        La curva de un ejercicio aparece con su segunda sesión.
+      </div>
+    </div>
+  </section>
+
+  <section class="card card-pozo">
+    <div style="display:grid;grid-template-columns:28px 1fr;column-gap:8px;">
+      <div style="grid-row:span 2;display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--gr-ink-faint);">
+        <svg width="22" height="22" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="0.8" stroke-linejoin="round"><path d="M6 1a5 5 0 1 0 0 10a5 5 0 1 0 0 -10"/></svg>
+        <span style="height:5px;width:5px;transform:rotate(45deg);background:var(--gr-edge);"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;padding-top:4px;font-family:var(--gr-font-ui);font-size:13px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;">
+        <span style="color:var(--gr-ink-faint);">Peso corporal</span>
+        <span class="filete"></span>
+        <span class="rombo"></span>
+      </div>
+      <div style="margin-top:8px;padding:38px 0;text-align:center;font-size:13px;letter-spacing:normal;text-transform:none;font-weight:400;color:var(--gr-ink-dim);">
+        Sin medidas anotadas. Una tendencia necesita tres puntos.
+      </div>
+    </div>
+  </section>
+
+</div>

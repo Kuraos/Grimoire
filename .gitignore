@@ -34,3 +34,8 @@ backend/backups/
 
 # Sidecar compilado: se regenera con `npm run sidecar` desde backend/*.py
 src-tauri/binaries/
+
+# Salida de las maquetas: `.dc.html` sale de `build.mjs` y el canvas sembrado
+# lleva dentro el editor entero (2 MB). La fuente es `parts/` + `_prelude.txt`.
+.design-entrenamiento/*.dc.html
+.design-entrenamiento/entrenamiento-grimoire.html
