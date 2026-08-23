@@ -3,7 +3,8 @@
     "allow": [
       "PowerShell(node --version)",
       "PowerShell(npm --version)",
-      "PowerShell(python --version)"
+      "PowerShell(python --version)",
+      "mcp__Claude_Code_Remote__subscribe_pr_activity"
     ]
   }
 }
