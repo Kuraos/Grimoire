@@ -119,6 +119,18 @@ updater compara contra ese campo, no contra la etiqueta. El workflow lo verifica
 y falla si no cuadran, porque si no el release sale con la versión vieja y la
 actualización no se ofrece nunca — un fallo mudo y caro de diagnosticar.
 
+**Sin empujar la etiqueta:** *Actions → Release → Run workflow* pide la etiqueta
+en un campo y hace lo mismo. Sirve para reintentar una compilación que falló sin
+borrar y reponer la etiqueta, y para publicar desde una máquina o una sesión que
+no puede escribir refs. Dispáralo desde `master`: una etiqueta que aún no existe
+se crea sobre la rama desde la que corres.
+
+La misma comprobación de versión corre en los dos caminos. Estuvo un tiempo
+saltándosela en el disparo manual —el paso llevaba un
+`if: startsWith(github.ref, 'refs/tags/')` y a `tauri-action` se le pasaba
+`github.ref_name`, que a mano vale `master`—, así que el botón existía y lo que
+producía era un release etiquetado «master» con la versión sin verificar.
+
 El release queda en borrador a propósito: sus archivos no son descargables hasta
 que lo publiques, así que nadie recibe una versión a medio revisar.
 
