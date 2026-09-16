@@ -104,13 +104,19 @@ export function VolumeByGroup({ weeks, groups, unit }: {
       </ResponsiveContainer>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 pl-[38px] text-2xs text-[var(--text-muted)]">
-        <span className="text-[var(--text-faint)]">Eje en {axisUnit}</span>
         {used.map((g) => (
           <span key={g.key} className="inline-flex items-center gap-1.5">
             <span className="h-[9px] w-[9px] rounded-xs" style={{ background: g.color }} />
             {g.name}
           </span>
         ))}
+        {/* La unidad del eje NO es una serie, y estaba puesta como si lo fuera:
+            primera de la fila y en redonda, así que al leer de izquierda a
+            derecha «Eje en t» aparecía antes que Pierna y con su misma forma,
+            sólo que sin muestra de color. Al final y en cursiva es como esta app
+            marca una nota en una leyenda —lo hace la constelación—, y ahí ya no
+            se puede confundir con un grupo muscular. */}
+        <span className="ml-auto italic text-[var(--text-faint)]">eje en {axisUnit}</span>
       </div>
     </>
   );
