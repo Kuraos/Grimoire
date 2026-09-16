@@ -134,6 +134,7 @@ export default function Erario() {
   const [goals, setGoals] = useState<SavingsGoal[]>([]);
   const [goalForm, setGoalForm] = useState<"new" | null>(null);
   const [contributing, setContributing] = useState<SavingsGoal | null>(null);
+  const [accountForm, setAccountForm] = useState<Account | "new" | null>(null);
   const [stats, setStats] = useState<LedgerStats | null>(null);
   const { handleXP } = useApp();
 
@@ -148,7 +149,10 @@ export default function Erario() {
       const [sum, ents, accs, cats, rev, gls, st] = await Promise.all([
         Api.ledgerSummary(month),
         Api.listEntries(`?${params}`),
-        Api.listAccounts(),
+        // Con las archivadas: `accountById` resuelve el nombre del arca de un
+        // asiento viejo, y sin ellas una fila de marzo se quedaba sin nombre en
+        // cuanto se archivaba su arca. Los desplegables usan `activeAccounts`.
+        Api.listAccounts(true),
         Api.listLedgerCategories(),
         Api.monthReview(month),
         Api.listGoals(),
@@ -183,6 +187,12 @@ export default function Erario() {
     () => Object.fromEntries(accounts.map((a) => [a.id, a])),
     [accounts],
   );
+  /* Lo que se puede elegir hoy. Un arca archivada tiene que seguir teniendo
+     nombre en los asientos que ya la mencionan, pero ofrecerla para anotar algo
+     nuevo la desarchivaría de hecho: el saldo volvería a moverse y el motivo
+     para retirarla se perdería sin que nadie lo decidiera. */
+  const activeAccounts = useMemo(() => accounts.filter((a) => !a.archived), [accounts]);
+  const archived = useMemo(() => accounts.filter((a) => a.archived), [accounts]);
   const categoryById = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories],
@@ -525,13 +535,27 @@ export default function Erario() {
       </div>
 
       <div className="space-y-3">
-        <Card named title="Arcas">
-          {accounts.length === 0 ? (
+        <Card
+          named
+          title="Arcas"
+          right={
+            <button className="btn" onClick={() => setAccountForm("new")}
+                    title="Abrir un arca nueva">
+              <IconPlus size={12} /> Abrir
+            </button>
+          }
+        >
+          {activeAccounts.length === 0 ? (
             <p className="text-xs text-[var(--text-muted)]">Ninguna arca todavía.</p>
           ) : (
             <div className="space-y-2">
-              {accounts.map((a) => (
-                <div key={a.id} className="flex items-baseline justify-between gap-3 border-b border-[var(--gr-edge)] py-1.5 text-sm last:border-none">
+              {activeAccounts.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() => setAccountForm(a)}
+                  title={`Editar «${a.name}»`}
+                  className="flex w-full items-baseline justify-between gap-3 border-b border-[var(--gr-edge)] py-1.5 text-left text-sm last:border-none hover:text-[var(--purple-main)]"
+                >
                   <span className="flex items-center gap-2 text-[var(--text-body)]">
                     {/* La billetera dice «arca» antes que el nombre; el color
                         de la cuenta va en el trazo del icono, no en un punto
@@ -548,6 +572,32 @@ export default function Erario() {
                   >
                     {formatMoney(a.balance_minor, a.currency)}
                   </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Las retiradas, al pie y en tinta tenue. Sin esto, archivar era una
+              puerta de un solo sentido: el arca desaparecía de la vista y
+              `archived` sólo se puede volver a poner en false desde aquí. */}
+          {archived.length > 0 && (
+            <div className="mt-3 border-t border-[var(--gr-edge)] pt-2">
+              <p className="mb-1.5 font-label text-2xs text-[var(--text-faint)]">Retiradas</p>
+              {archived.map((a) => (
+                <div key={a.id} className="flex items-baseline justify-between gap-3 py-1 text-xs text-[var(--text-faint)]">
+                  <span className="flex items-center gap-2">
+                    <IconWallet size={13} style={{ color: a.color }} />
+                    {a.name}
+                  </span>
+                  <button
+                    className="text-[var(--purple-main)] hover:underline"
+                    onClick={async () => {
+                      await Api.updateAccount(a.id, { archived: false });
+                      load();
+                    }}
+                  >
+                    Restaurar
+                  </button>
                 </div>
               ))}
             </div>
@@ -650,7 +700,7 @@ export default function Erario() {
 
       {goalForm && (
         <GoalModal
-          accounts={accounts}
+          accounts={activeAccounts}
           currency={currency}
           onClose={() => setGoalForm(null)}
           onSaved={() => { setGoalForm(null); load(); }}
@@ -660,11 +710,20 @@ export default function Erario() {
       {contributing && (
         <ContributeModal
           goal={contributing}
-          accounts={accounts}
+          accounts={activeAccounts}
           currency={currency}
           onClose={() => setContributing(null)}
           onXp={handleXP}
           onSaved={() => { setContributing(null); load(); }}
+        />
+      )}
+
+      {accountForm && (
+        <AccountModal
+          account={accountForm === "new" ? null : accountForm}
+          currency={accounts.length > 0 ? currency : null}
+          onClose={() => setAccountForm(null)}
+          onSaved={() => { setAccountForm(null); load(); }}
         />
       )}
 
@@ -686,7 +745,7 @@ export default function Erario() {
       {editing && (
         <EntryModal
           entry={editing === "new" ? null : editing}
-          accounts={accounts}
+          accounts={activeAccounts}
           categories={categories}
           currency={currency}
           onClose={() => setEditing(null)}
@@ -1335,6 +1394,149 @@ function EntryModal({ entry, accounts, categories, currency, onClose, onSaved, o
         <button className="btn" onClick={onClose}>Cancelar</button>
         <button className="btn btn-primary" disabled={!valid || saving} onClick={submit}>
           {saving ? "Guardando…" : entry ? "Guardar" : "Asentar"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * Abrir un arca, editarla o retirarla.
+ *
+ * El backend sabía hacer las tres desde el principio y el cliente las exponía;
+ * lo que faltaba era esta pantalla, así que un erario nuevo se quedaba para
+ * siempre con la única arca que siembra el arranque, sin poder renombrarla.
+ *
+ * **La moneda sólo se elige una vez.** El backend rechaza la segunda arca si no
+ * coincide con la primera —sumar dos monedas sin tasas da un total que parece
+ * bueno y no lo es—, y `AccountUpdate` ni siquiera acepta el campo, porque el
+ * exponente de unidades menores depende de ella y cambiarla reinterpretaría en
+ * silencio todo lo ya anotado. Con `currency` ya fijada el campo se enseña
+ * apagado en vez de ofrecerse: mejor no dejar teclear algo que sólo puede
+ * terminar en un 400.
+ */
+function AccountModal({ account, currency, onClose, onSaved }: {
+  account: Account | null;
+  /** La moneda del erario, o null si esta es la primera arca y toca elegirla. */
+  currency: string | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const moneda = account?.currency ?? currency ?? "COP";
+  /** Ya hay erario, o se está editando: la moneda no se toca. */
+  const fijada = currency !== null || account !== null;
+  const [name, setName] = useState(account?.name ?? "");
+  const [kind, setKind] = useState(account?.kind ?? "bank");
+  const [divisa, setDivisa] = useState(moneda);
+  const [opening, setOpening] = useState(
+    account ? formatMoney(account.opening_minor, moneda, { symbol: false }) : "",
+  );
+  const [color, setColor] = useState(account?.color ?? "#9b7fc4");
+  const [saving, setSaving] = useState(false);
+
+  // Un saldo de apertura vacío es cero, no un error: se abre un arca sin nada
+  // dentro tan a menudo como con algo.
+  const minor = opening.trim() === "" ? 0 : parseMoney(opening, moneda);
+  const valid = name.trim() !== "" && minor !== null && divisa.trim().length === 3;
+
+  const submit = async () => {
+    if (!valid || minor === null) return;
+    setSaving(true);
+    try {
+      if (account) {
+        await Api.updateAccount(account.id, {
+          name: name.trim(), kind, opening_minor: minor, color,
+        });
+      } else {
+        await Api.createAccount({
+          name: name.trim(), kind, currency: divisa.toUpperCase(),
+          opening_minor: minor, color,
+        });
+      }
+      onSaved();
+    } catch {
+      setSaving(false);
+    }
+  };
+
+  const retirar = async () => {
+    if (!account) return;
+    if (!(await confirm({
+      title: `Retirar «${account.name}»`,
+      message: "Si tiene asientos se archiva y su historial se queda intacto; si nunca se usó, se borra. "
+        + "Una arca retirada deja de ofrecerse para anotar, y se puede restaurar desde la lista.",
+      confirmLabel: "Retirar",
+      danger: true,
+    }))) return;
+    setSaving(true);
+    try {
+      await Api.deleteAccount(account.id);
+      onSaved();
+    } catch {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title={account ? "Editar arca" : "Abrir arca"} onClose={onClose}>
+      <Field label="Nombre">
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)}
+               placeholder="Cuenta de ahorros" autoFocus />
+      </Field>
+      <Field label="Tipo">
+        <select className="input" value={kind} onChange={(e) => setKind(e.target.value)}>
+          <option value="cash">Efectivo</option>
+          <option value="bank">Banco</option>
+          <option value="savings">Ahorro</option>
+          <option value="debt">Deuda</option>
+        </select>
+      </Field>
+      <div className="flex gap-3">
+        <div className="flex-1">
+          <Field label="Saldo de apertura">
+            <input className="input tabular" value={opening} inputMode="decimal"
+                   onChange={(e) => setOpening(e.target.value)} placeholder="0" />
+          </Field>
+        </div>
+        {/* La moneda sólo es un campo la primera vez. Después no es una decisión
+            que quede por tomar, así que tampoco se dibuja como si lo fuera: un
+            `disabled` aquí se vería igual que un campo vivo —hay `.btn:disabled`
+            en la hoja, pero no `.input:disabled`— e invitaría a teclear en él. */}
+        {fijada ? null : (
+          <div className="w-24">
+            <Field label="Moneda">
+              <input className="input tabular uppercase" value={divisa} maxLength={3}
+                     onChange={(e) => setDivisa(e.target.value)} />
+            </Field>
+          </div>
+        )}
+        <div className="w-16">
+          <Field label="Color">
+            <input type="color" className="input h-9 p-1" value={color}
+                   onChange={(e) => setColor(e.target.value)} />
+          </Field>
+        </div>
+      </div>
+      {fijada && (
+        <p className="-mt-1 mb-3 text-2xs text-[var(--text-faint)]">
+          En {moneda}, como el resto del erario: no se pueden mezclar monedas.
+        </p>
+      )}
+      {minor === null && (
+        <p className="-mt-1 mb-3 text-2xs text-[var(--danger)]">
+          No se entiende ese saldo de apertura.
+        </p>
+      )}
+      <div className="mt-4 flex justify-end gap-2">
+        {account && (
+          <button className="btn btn-ghost mr-auto text-[var(--danger)]"
+                  onClick={retirar} disabled={saving}>
+            <IconTrash size={13} /> Retirar
+          </button>
+        )}
+        <button className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+        <button className="btn btn-primary" onClick={submit} disabled={!valid || saving}>
+          {account ? "Guardar" : "Abrir"}
         </button>
       </div>
     </Modal>

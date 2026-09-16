@@ -586,6 +586,37 @@ def test_ledger_seeds_a_first_account_and_categories():
         assert all(l["amount_minor"] == 0 and l["source_month"] is None for l in b["lines"])
 
 
+def test_retiring_an_arca_archives_it_if_used_and_deletes_it_if_not():
+    """Las dos ramas del DELETE, que el diálogo del erario promete por escrito.
+
+    Borrar un arca con asientos dejaría filas huérfanas y un libro que no cuadra;
+    borrar una que nunca se usó y archivarla en su lugar llenaría la lista de
+    «Retiradas» de arcas abiertas por error. El backend elige según la historia,
+    y la pantalla le dice al usuario exactamente eso antes de confirmar.
+    """
+    with TestClient(main.app) as c:
+        virgen = _arca(c, "Abierta por error")
+        assert c.delete(f"/ledger/accounts/{virgen['id']}").status_code == 204
+        todas = c.get("/ledger/accounts?include_archived=true").json()
+        assert virgen["id"] not in {a["id"] for a in todas}, "sin asientos, se borra"
+
+        usada = _arca(c, "Con historia", opening_minor=100000)
+        food = next(x for x in c.get("/ledger/categories").json() if x["name"] == "Alimentación")
+        c.post("/ledger/entries", json={
+            "account_id": usada["id"], "category_id": food["id"], "kind": "expense",
+            "amount_minor": 18000, "occurred_on": "2026-08-11", "concept": "Almuerzo",
+        })
+        assert c.delete(f"/ledger/accounts/{usada['id']}").status_code == 204
+
+        viva = {a["id"] for a in c.get("/ledger/accounts").json()}
+        assert usada["id"] not in viva, "archivada: deja de ofrecerse para anotar"
+        con_archivadas = {a["id"]: a for a in c.get("/ledger/accounts?include_archived=true").json()}
+        assert con_archivadas[usada["id"]]["archived"] is True, "pero sigue existiendo"
+        # y se puede volver: sin esto, retirar sería una puerta de un solo sentido
+        assert c.patch(f"/ledger/accounts/{usada['id']}", json={"archived": False}).status_code == 200
+        assert usada["id"] in {a["id"] for a in c.get("/ledger/accounts").json()}
+
+
 def test_balance_is_derived_from_entries_not_stored():
     with TestClient(main.app) as c:
         a = _arca(c, "Saldo", opening_minor=100000)
