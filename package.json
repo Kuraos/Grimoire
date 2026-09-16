@@ -12,7 +12,6 @@
     "dev:browser": "concurrently -k -n backend,web -c blue,green \"npm:dev:backend\" \"npm:dev:web\"",
     "//release": "Sólo para producir instalador. El sidecar se reconstruye únicamente si cambió el backend.",
     "sidecar": "powershell -ExecutionPolicy Bypass -File backend/build_sidecar.ps1",
-    "desktop:dev": "concurrently -k -n backend,app -c blue,magenta \"npm:dev:backend\" \"tauri dev\"",
     "desktop:build": "npm run sidecar && tauri build",
     "desktop:rebuild": "powershell -ExecutionPolicy Bypass -File scripts/rebuild.ps1",
     "test": "npm --prefix frontend run test",
@@ -20,6 +19,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
-    "concurrently": "^9"
+    "concurrently": "^9",
+    "typescript": "^5.6.3"
   }
 }
