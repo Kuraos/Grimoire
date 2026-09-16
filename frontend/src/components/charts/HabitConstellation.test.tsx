@@ -70,12 +70,36 @@ describe("HabitConstellation", () => {
     expect(a).toEqual(b);
   });
 
-  it("la racha satura a 21 días para que una estrella no tape a sus vecinas", () => {
+  it("el tamaño no codifica nada: todas las estrellas miden igual", () => {
+    // Codificar la racha en el radio daba 2,9px de diámetro a una estrella
+    // pendiente y 3,1 a una cumplida: marcar un hábito movía 0,16px y parecía no
+    // hacer nada. Si alguien vuelve a atar el radio a un dato, esto lo caza.
     const html = renderToStaticMarkup(
-      <HabitConstellation habits={[habit(1, "Físico", 21), habit(2, "Físico", 900)]} />,
+      <HabitConstellation habits={[habit(1, "Físico", 0), habit(2, "Físico", 21),
+                                   habit(3, "Físico", 900)]} />,
     );
     const radii = [...html.matchAll(/ r="([\d.]+)"/g)].map((m) => m[1]);
+    expect(radii).toHaveLength(3);
     expect(new Set(radii).size).toBe(1);
+  });
+
+  it("las estrellas se ven: nunca por debajo de 6px de diámetro en pantalla", () => {
+    // El lienzo mide 520 y la columna donde vive, ~401px: todo se dibuja a
+    // 0,772x. Un radio elegido en unidades del viewBox miente sobre su tamaño
+    // real, que es exactamente por lo que las estrellas salían invisibles.
+    const ESCALA = 401 / 520;
+    const html = renderToStaticMarkup(<HabitConstellation habits={make(14)} />);
+    const r = Number([...html.matchAll(/ r="([\d.]+)"/g)][0][1]);
+    expect(2 * r * ESCALA).toBeGreaterThanOrEqual(6);
+  });
+
+  it("cada categoría lleva su nombre escrito", () => {
+    // Sin rótulos había seis zigzags de colores y ninguna forma de saber cuál
+    // era cuál, que es justo la pregunta que la pieza existe para contestar.
+    const html = renderToStaticMarkup(<HabitConstellation habits={make(12, 4)} />);
+    for (const c of CATS.slice(0, 4)) {
+      expect(html).toContain(c.toUpperCase());
+    }
   });
 
   it("una línea por categoría con más de una estrella", () => {

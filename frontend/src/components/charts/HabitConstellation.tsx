@@ -1,11 +1,11 @@
 import { Card } from "../ui/Card";
 import { SectionBand } from "../ui/SectionBand";
-import { chartPalette } from "../../theme-tokens";
+import { chartPalette, CHART_LABEL_SIZE } from "../../theme-tokens";
 import type { Habit } from "../../types";
 
 /**
- * La constelación: un hábito es una estrella, el tamaño es la racha y las
- * líneas unen los de una misma categoría.
+ * La constelación: un hábito es una estrella y cada categoría tiene su grupo,
+ * rotulado con su nombre y unido por una línea.
  *
  * El heatmap de al lado cuenta el tiempo —qué días se marcó— y no dice nada de
  * la forma del conjunto. Aquí se ve de un vistazo qué categoría está viva y
@@ -16,11 +16,32 @@ import type { Habit } from "../../types";
  * constelación no baila entre renders ni al marcar uno. Cada categoría tiene su
  * celda en una rejilla sobre el lienzo, y dentro de ella las estrellas se
  * dispersan sin llegar al borde.
+ *
+ * **El tamaño ya no es la racha, y el rótulo no es decorativo.** El lienzo mide
+ * 520 de ancho y la columna donde vive, 401 px: todo se dibuja a 0,772×. Con el
+ * radio de antes —1,9 + racha·0,115, saturando a 21— una estrella pendiente
+ * salía a 2,9 px de diámetro y una cumplida a 3,1, así que marcar un hábito
+ * movía 0,16 px y no se veía cambiar nada. El rango entero de la codificación,
+ * de racha 0 a racha 21, iba de 2,9 px a 6,6 px: por debajo del umbral en el que
+ * un círculo se compara con otro. La racha ya la cuenta la card del hábito con
+ * cifras, y la constancia, el heatmap; aquí estorbaba a cambio de nada.
+ *
+ * Sin ella el radio es uniforme y puede subir a 4,5 (≈7 px), que sí se ve. Cabe
+ * de sobra: la separación mínima entre estrellas es de 17,5 unidades incluso con
+ * cuarenta hábitos en una sola categoría.
+ *
+ * Y sin rótulos no había forma de saber qué zigzag era qué categoría —cero
+ * textos en el SVG—, con lo que la pregunta que la pieza existe para contestar
+ * no se podía contestar.
  */
 
 const W = 520;
 const H = 310;
 const PAD = 26;
+/** Radio de una estrella. Uniforme a propósito; ver la cabecera. */
+const R_STAR = 4.5;
+/** Alto reservado al rótulo de cada categoría, dentro de su celda. */
+const LABEL_H = 13;
 
 /** Ruido determinista en [0,1) a partir de dos enteros.
  *
@@ -57,9 +78,11 @@ export function HabitConstellation({ habits }: { habits: Habit[] }) {
 
   const groups = cats.map((cat, ci) => {
     const x0 = PAD + (ci % cols) * cellW + 0.12 * cellW;
-    const y0 = PAD + Math.floor(ci / cols) * cellH + 0.12 * cellH;
+    // El rótulo se come su banda por arriba en vez de escribirse encima de las
+    // estrellas de la fila de al lado.
+    const y0 = PAD + Math.floor(ci / cols) * cellH + 0.12 * cellH + LABEL_H;
     const innerW = 0.76 * cellW;
-    const innerH = 0.76 * cellH;
+    const innerH = 0.76 * cellH - LABEL_H;
 
     // Ranura por hábito más un temblor de ±¼ de ranura, en vez de dispersión
     // libre. Con dispersión libre dos estrellas caían encima por pura suerte
@@ -82,7 +105,7 @@ export function HabitConstellation({ habits }: { habits: Habit[] }) {
       .sort((a, b) => a.x - b.x)
       .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
       .join(" ");
-    return { ...cat, points, path };
+    return { ...cat, points, path, labelX: x0, labelY: y0 - LABEL_H * 0.5 };
   });
 
   return (
@@ -114,15 +137,24 @@ export function HabitConstellation({ habits }: { habits: Habit[] }) {
                       strokeOpacity="0.28" strokeWidth="0.9" />
               )
             ))}
+            {/* El nombre de la categoría, en su color: es lo que ata el color de
+                la línea a algo legible. El lienzo se dibuja a ~0,772×, así que
+                el peldaño de rótulo (11px) se pide en 14 unidades para llegar a
+                la pantalla midiendo 11. */}
+            {groups.map((g) => (
+              <text key={`t-${g.name}`} x={g.labelX.toFixed(1)} y={g.labelY.toFixed(1)}
+                    fontFamily="Inter, sans-serif" fontSize={CHART_LABEL_SIZE / 0.772}
+                    letterSpacing="1.1" fill={g.color} fillOpacity="0.85">
+                {g.name.toUpperCase()}
+              </text>
+            ))}
             {groups.flatMap((g) =>
               g.points.map((p) => (
                 <circle
                   key={p.habit.id}
                   cx={p.x.toFixed(1)}
                   cy={p.y.toFixed(1)}
-                  /* La racha satura a 21 días: sin techo, un hábito de dos años
-                     se comía la mitad del lienzo y tapaba a sus vecinos. */
-                  r={(1.9 + Math.min(p.habit.streak, 21) * 0.115).toFixed(1)}
+                  r={R_STAR}
                   fill={p.habit.done_today ? c.gilded : c.ink}
                   fillOpacity={p.habit.done_today ? 0.95 : 0.42}
                 >
@@ -140,7 +172,7 @@ export function HabitConstellation({ habits }: { habits: Habit[] }) {
               <span className="h-[5px] w-[5px] rounded-full bg-[var(--text-faint)]" />pendiente
             </span>
             <span className="ml-auto font-normal normal-case italic tracking-normal">
-              el tamaño es la racha; las líneas unen una categoría
+              cada grupo es una categoría
             </span>
           </div>
         </>
