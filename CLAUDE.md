@@ -24,8 +24,11 @@ tests de backend. No hay motivo para lanzarlas por separado.
 - El backend escucha en `127.0.0.1:8000` y Vite en `5173`, que hace de proxy a
   `/api`. En desarrollo el sidecar **no** se lanza desde Tauri: corre aparte,
   para no reconstruirlo con PyInstaller cada vez que se toca Python.
-- **Vite tarda ~18 s en levantar.** Si algo se conecta antes, falla con un
-  error que parece de permisos y no lo es.
+- **Vite levanta en ~0,6 s** (medido: 582 y 657 ms en dos arranques con
+  7.3.6), y el stack entero de `dev:browser` sirve en 1-3 s. Eran ~18 s con
+  vite 5, y esa cifra vivió aquí hasta bastante después de subir a 7: si algo
+  se conecta antes de tiempo falla con un error que parece de permisos y no lo
+  es, pero la ventana para acertarle es ahora demasiado corta para que moleste.
 - **Cambiar `tailwind.config.js` no recarga en caliente.** Hay que reiniciar el
   servidor de desarrollo o se sigue sirviendo el CSS viejo, y las mediciones
   salen contra la versión anterior sin avisar.
