@@ -331,6 +331,24 @@ body {
   border-color: var(--border-focus);
 }
 
+/* Un campo bloqueado tiene que parecerlo. Había `.btn:disabled` desde siempre y
+   esto no, así que un `<input disabled>` se veía idéntico a uno vivo e invitaba
+   a teclear en él; el hueco llegó a cambiar dos decisiones de diseño en el
+   erario —la moneda de un arca y el tipo de una partida— que acabaron
+   enseñándose como texto en vez de como control para esquivarlo.
+
+   Mismos valores que el botón, que es el precedente de la casa. El 0.4 baja el
+   texto de AA a propósito: WCAG exime a los controles inactivos del requisito
+   de contraste, y aquí la atenuación ES la señal de que no se puede escribir.
+
+   Sube la especificidad a 0-2-0 y gana a una utilidad de Tailwind, igual que
+   `.btn:disabled`. Es aceptable en un estado —no en una propiedad—: nadie
+   quiere sobrescribir con `opacity-100` el aspecto de un campo bloqueado. */
+.input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Deslizadores (energía, ánimo, XP de hábitos y tareas).
    El carril nativo se pinta blanco puro: dos barras de 410px a 18:1 contra el
    sustrato eran, con diferencia, los objetos más brillantes del Dashboard.
