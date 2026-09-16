@@ -295,17 +295,39 @@ export function formatVolume(grams: number, unit: WeightUnit = "kg"): string {
   return formatWeight(grams, unit);
 }
 
+/** Tope de un peso: mil kilos. Es el `MAX_MINOR` de la palestra. */
+const MAX_WEIGHT_G = 1_000_000;
+
 /** Texto tecleado -> gramos. null si no hay número que leer.
+ *
+ *  Lee con la regla de `parseMoney`, y no por simetría: las tres cosas que esa
+ *  función hace y ésta no hacía eran tres bugs.
+ *
+ *  - El signo se mira **antes** de filtrar. Con el filtro delante, `/[^\d.,]/`
+ *    se come el «−» y el guardia de negativo no puede dispararse nunca: «-5»
+ *    entraba como 5 kg.
+ *  - Un filtrado que no deja nada es `null`, no cero. `Number("")` es 0, así que
+ *    una serie tecleada con basura se registraba pesando 0 g en vez de omitirse.
+ *  - Un grupo final de tres cifras es separador de miles, nunca decimales. Aquí
+ *    no es teoría: `formatWeight` imprime en es-CO, donde mil kilos se escriben
+ *    «1.000 kg», y leer eso como 1,0 es un error de mil veces —esta función no
+ *    sabía releer lo que la de al lado acababa de escribir—.
  *
  *  Corta arriba igual que `parseMoney`: 82.500 kg en vez de 82,5 no es un peso,
  *  es un dedo resbalado, y una vez dentro deforma cada gráfica del módulo. */
 export function parseWeight(input: string, unit: WeightUnit = "kg"): number | null {
-  const raw = String(input).trim().replace(",", ".");
-  if (!raw) return null;
-  const value = Number(raw.replace(/[^\d.]/g, ""));
-  if (!Number.isFinite(value) || value < 0) return null;
+  const raw = String(input).trim();
+  if (!raw || /^[-−]/.test(raw)) return null;
+  const cleaned = raw.replace(/[^\d.,]/g, "");
+  if (!cleaned) return null;
+
+  const frac = cleaned.match(/[.,](\d{1,2})$/);
+  const whole = (frac ? cleaned.slice(0, -frac[0].length) : cleaned).replace(/[.,]/g, "");
+  if (!whole && !frac) return null;
+
+  const value = Number(whole || "0") + (frac ? Number(frac[1]) / 10 ** frac[1].length : 0);
   const grams = Math.round(value * gramsPer(unit));
-  return grams > 1_000_000 ? null : grams; // MAX_WEIGHT_G
+  return grams > MAX_WEIGHT_G ? null : grams;
 }
 
 /** Milésimas -> texto de una medida corporal, con su unidad. */

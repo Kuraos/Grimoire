@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   streakMultiplier, TIER_META,
   moneyDecimals, formatMoney, parseMoney, entrySign, budgetState,
+  formatWeight, parseWeight,
 } from "./utils";
 
 describe("streakMultiplier", () => {
@@ -116,5 +117,48 @@ describe("entrySign", () => {
     expect(entrySign("income")).toBe("+");
     expect(entrySign("expense")).toBe("−");
     expect(entrySign("transfer")).toBe("");
+  });
+});
+
+describe("parseWeight", () => {
+  it("reads what people actually type", () => {
+    expect(parseWeight("62,5")).toBe(62500);
+    expect(parseWeight("62.5")).toBe(62500);
+    expect(parseWeight("100 kg")).toBe(100000);
+    expect(parseWeight("2,25")).toBe(2250); // el disco de 1,25 y su pareja
+    expect(parseWeight("0")).toBe(0);
+  });
+
+  it("returns null when there is no number to read", () => {
+    // devolvía 0, y una serie tecleada con basura se guardaba pesando 0 g
+    expect(parseWeight("abc")).toBeNull();
+    expect(parseWeight("kg")).toBeNull();
+    expect(parseWeight("")).toBeNull();
+    expect(parseWeight("   ")).toBeNull();
+  });
+
+  it("refuses a negative instead of silently dropping its sign", () => {
+    // el filtro se comía el signo antes de que el guardia pudiera verlo
+    expect(parseWeight("-5")).toBeNull();
+    expect(parseWeight("−5")).toBeNull();
+  });
+
+  it("treats a three-digit group as thousands, never as decimals", () => {
+    expect(parseWeight("1.000")).toBe(1_000_000); // mil kilos, el tope
+    expect(parseWeight("82.500")).toBeNull();     // no es 82,5: es un dedo resbalado
+  });
+
+  it("reads back what formatWeight prints", () => {
+    // formatWeight imprime en es-CO: mil kilos son «1.000 kg». Leerlo como 1,0
+    // era un error de mil veces que ninguna prueba veía.
+    const casos = [[62500, "kg"], [100000, "kg"], [1_000_000, "kg"], [453592, "lb"]] as const;
+    for (const [grams, unit] of casos) {
+      expect(parseWeight(formatWeight(grams, unit), unit)).toBe(grams);
+    }
+  });
+
+  it("caps at a thousand kilos", () => {
+    expect(parseWeight("1000")).toBe(1_000_000);
+    expect(parseWeight("1001")).toBeNull();
   });
 });
