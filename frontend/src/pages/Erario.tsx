@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IconChevronLeft, IconChevronRight, IconPlus, IconSearch, IconPencil,
   IconTrash, IconArrowsExchange, IconAlertTriangle, IconAdjustments,
-  IconLock, IconCheck, IconWallet,
+  IconLock, IconCheck, IconWallet, IconTag,
 } from "@tabler/icons-react";
 import { BudgetRail } from "../components/ui/BudgetRail";
 import { RelicRail } from "../components/ui/RelicRail";
@@ -135,6 +135,7 @@ export default function Erario() {
   const [goalForm, setGoalForm] = useState<"new" | null>(null);
   const [contributing, setContributing] = useState<SavingsGoal | null>(null);
   const [accountForm, setAccountForm] = useState<Account | "new" | null>(null);
+  const [catalog, setCatalog] = useState(false);
   const [stats, setStats] = useState<LedgerStats | null>(null);
   const { handleXP } = useApp();
 
@@ -153,7 +154,9 @@ export default function Erario() {
         // asiento viejo, y sin ellas una fila de marzo se quedaba sin nombre en
         // cuanto se archivaba su arca. Los desplegables usan `activeAccounts`.
         Api.listAccounts(true),
-        Api.listLedgerCategories(),
+        // Mismo motivo que las arcas: `categoryById` nombra la partida de un
+        // asiento viejo. Los selectores usan `activeCategories`.
+        Api.listLedgerCategories(true),
         Api.monthReview(month),
         Api.listGoals(),
         Api.ledgerStats(6),
@@ -193,6 +196,7 @@ export default function Erario() {
      para retirarla se perdería sin que nadie lo decidiera. */
   const activeAccounts = useMemo(() => accounts.filter((a) => !a.archived), [accounts]);
   const archived = useMemo(() => accounts.filter((a) => a.archived), [accounts]);
+  const activeCategories = useMemo(() => categories.filter((c) => !c.archived), [categories]);
   const categoryById = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c])),
     [categories],
@@ -611,13 +615,31 @@ export default function Erario() {
           named
           title="Partidas del mes"
           right={
-            <button
-              className="btn"
-              onClick={() => setBudgets(true)}
-              title="Fijar el cerco mensual de cada partida"
-            >
-              <IconAdjustments size={12} /> Asignar
-            </button>
+            <div className="flex gap-1.5">
+              {/* El catálogo, no el mes: esta card lista lo que tuvo
+                  movimiento, y las de ingreso o las recién creadas no salen
+                  aquí hasta que alguien las use.
+
+                  Sin rótulo y a propósito: con «Partidas» al lado de «Asignar»
+                  esta cabecera se queda sin ancho en la columna derecha y el
+                  título de la card se parte en dos líneas. Dos botones caben
+                  si uno es sólo sigilo, y el que se usa a diario es el otro. */}
+              <button
+                className="btn !px-2"
+                onClick={() => setCatalog(true)}
+                title="Crear, renombrar y retirar partidas"
+                aria-label="Gestionar las partidas"
+              >
+                <IconTag size={13} />
+              </button>
+              <button
+                className="btn"
+                onClick={() => setBudgets(true)}
+                title="Fijar el cerco mensual de cada partida"
+              >
+                <IconAdjustments size={12} /> Asignar
+              </button>
+            </div>
           }
         >
           {!summary || summary.by_category.length === 0 ? (
@@ -718,6 +740,14 @@ export default function Erario() {
         />
       )}
 
+      {catalog && (
+        <CategoriesModal
+          categories={categories}
+          onClose={() => setCatalog(false)}
+          onChanged={load}
+        />
+      )}
+
       {accountForm && (
         <AccountModal
           account={accountForm === "new" ? null : accountForm}
@@ -746,7 +776,7 @@ export default function Erario() {
         <EntryModal
           entry={editing === "new" ? null : editing}
           accounts={activeAccounts}
-          categories={categories}
+          categories={activeCategories}
           currency={currency}
           onClose={() => setEditing(null)}
           onXp={handleXP}
@@ -1538,6 +1568,181 @@ function AccountModal({ account, currency, onClose, onSaved }: {
         <button className="btn btn-primary" onClick={submit} disabled={!valid || saving}>
           {account ? "Guardar" : "Abrir"}
         </button>
+      </div>
+    </Modal>
+  );
+}
+
+/**
+ * El catálogo de partidas: crear, renombrar, recolorear y retirar.
+ *
+ * Es el mismo hueco que tenían las arcas una capa más abajo — el backend sabía
+ * hacerlo todo y `endpoints.ts` lo exponía, pero las tres funciones no tenían un
+ * solo llamante, así que el catálogo era el que sembró el arranque y nada más.
+ *
+ * **Sin icono.** `LedgerCategory` guarda uno y las de fábrica lo traen, pero el
+ * erario no lo dibuja en ningún sitio y los nombres sembrados —`tools-kitchen-2`,
+ * `bus`, `school`— ni siquiera están en el registro de `TablerIcon`, así que
+ * saldrían todos como una estrella. Un selector para un campo invisible es
+ * trabajo inventado; si algún día se pintan, entonces se elige.
+ *
+ * **El tipo no se edita.** `LedgerCategoryUpdate` lo excluye a propósito: una
+ * partida de gasto que pasara a ingreso reinterpretaría el signo de todo lo ya
+ * clasificado con ella. Se elige al crear, y por eso la lista va agrupada.
+ *
+ * Los campos guardan al perder el foco y sólo si cambiaron: en una lista de ocho
+ * filas, un modo de edición por fila era más marcado y más clics que el problema
+ * que resolvía.
+ */
+function CategoriesModal({ categories, onClose, onChanged }: {
+  categories: LedgerCategory[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [kind, setKind] = useState<"expense" | "income">("expense");
+  const [color, setColor] = useState("#9b7fc4");
+  const [busy, setBusy] = useState(false);
+
+  const vivas = categories.filter((c) => !c.archived);
+  const retiradas = categories.filter((c) => c.archived);
+
+  const add = async () => {
+    if (!name.trim() || busy) return;
+    setBusy(true);
+    try {
+      await Api.createLedgerCategory({ name: name.trim(), kind, color });
+      setName("");
+      onChanged();
+    } catch {
+      /* el duplicado lo rechaza el backend con un 400 y `client.ts` lo anuncia */
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** Guarda sólo si el valor cambió: el blur salta también al mirar otra fila. */
+  const save = async (c: LedgerCategory, patch: Partial<LedgerCategory>) => {
+    const [campo, valor] = Object.entries(patch)[0] as [keyof LedgerCategory, string];
+    if (c[campo] === valor || (campo === "name" && !valor.trim())) return;
+    try {
+      await Api.updateLedgerCategory(c.id, campo === "name" ? { name: valor.trim() } : patch);
+      onChanged();
+    } catch {
+      /* idem: el mensaje del backend llega por toast */
+    }
+  };
+
+  const retirar = async (c: LedgerCategory) => {
+    const usada = c.entry_count > 0;
+    if (!(await confirm({
+      title: `Retirar «${c.name}»`,
+      /* Las dos frases enteras, no una con sufijos pegados: encadenando plurales
+         salía «Sus 1 asiento conserva», que es justo el detalle que un test de
+         comportamiento aprueba y sólo se ve leyendo el diálogo. */
+      message: !usada
+        ? "No la usa ningún asiento, así que se borra."
+        : c.entry_count === 1
+          ? "Se archiva. Su único asiento conserva esta partida y sigue contando en "
+            + "los totales del mes; lo que cambia es que deja de ofrecerse para "
+            + "clasificar lo nuevo. Se puede restaurar desde esta lista."
+          : `Se archiva. Sus ${c.entry_count} asientos conservan esta partida y siguen `
+            + "contando en los totales del mes; lo que cambia es que deja de ofrecerse "
+            + "para clasificar lo nuevo. Se puede restaurar desde esta lista.",
+      confirmLabel: "Retirar",
+      danger: true,
+    }))) return;
+    try {
+      await Api.deleteLedgerCategory(c.id);
+      onChanged();
+    } catch {
+      /* idem */
+    }
+  };
+
+  const grupo = (titulo: string, tipo: "expense" | "income") => {
+    const filas = vivas.filter((c) => c.kind === tipo);
+    if (filas.length === 0) return null;
+    return (
+      <div className="mb-3">
+        <p className="mb-1 font-label text-2xs text-[var(--text-faint)]">{titulo}</p>
+        {filas.map((c) => (
+          <div key={c.id} className="flex items-center gap-2 border-b border-[var(--gr-edge)] py-1.5 last:border-none">
+            <input
+              type="color" value={c.color} title="Color"
+              className="h-5 w-5 shrink-0 cursor-pointer rounded-xs border-none bg-transparent p-0"
+              onChange={(e) => save(c, { color: e.target.value })}
+            />
+            <input
+              className="input flex-1 !py-1 !text-sm"
+              defaultValue={c.name}
+              onBlur={(e) => save(c, { name: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); }}
+            />
+            <span className="w-16 shrink-0 text-right tabular text-2xs text-[var(--text-faint)]">
+              {c.entry_count} {c.entry_count === 1 ? "asiento" : "asientos"}
+            </span>
+            <button
+              onClick={() => retirar(c)}
+              title={c.entry_count > 0 ? "Se archiva: sus asientos quedan sin partida" : "Se borra: no la usa nadie"}
+              className="shrink-0 text-[var(--text-faint)] hover:text-[var(--gr-oxblood)]"
+            >
+              <IconTrash size={14} />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <Modal title="Partidas del erario" onClose={onClose}>
+      {vivas.length === 0 && (
+        <p className="mb-3 text-xs text-[var(--text-muted)]">Ninguna partida.</p>
+      )}
+      {grupo("Gastos", "expense")}
+      {grupo("Ingresos", "income")}
+
+      {retiradas.length > 0 && (
+        <div className="mb-3 border-t border-[var(--gr-edge)] pt-2">
+          <p className="mb-1 font-label text-2xs text-[var(--text-faint)]">Retiradas</p>
+          {retiradas.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 py-1 text-xs text-[var(--text-faint)]">
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} />
+              <span className="flex-1">{c.name}</span>
+              <button
+                className="text-[var(--purple-main)] hover:underline"
+                onClick={async () => { await Api.updateLedgerCategory(c.id, { archived: false }); onChanged(); }}
+              >
+                Restaurar
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="border-t border-[var(--gr-edge)] pt-3">
+        <Field label="Nueva partida">
+          <div className="flex gap-2">
+            <input
+              className="input flex-1" value={name} placeholder="Suscripciones"
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") add(); }}
+            />
+            <select className="input w-28" value={kind}
+                    onChange={(e) => setKind(e.target.value as "expense" | "income")}>
+              <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+            </select>
+            <input type="color" className="input h-9 w-12 shrink-0 p-1" value={color}
+                   onChange={(e) => setColor(e.target.value)} />
+          </div>
+        </Field>
+        <div className="flex justify-end">
+          <button className="btn btn-primary" onClick={add} disabled={!name.trim() || busy}>
+            <IconPlus size={13} /> Añadir
+          </button>
+        </div>
       </div>
     </Modal>
   );

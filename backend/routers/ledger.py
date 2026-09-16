@@ -346,8 +346,15 @@ async def update_category(category_id: int, payload: LedgerCategoryUpdate, db: A
 
 @router.delete("/categories/{category_id}", status_code=204)
 async def delete_category(category_id: int, db: AsyncSession = Depends(get_db)):
-    """Archiva si tiene asientos, borra si no. Los asientos que la usaban quedan
-    sin clasificar, que es un estado válido — no se pierde el movimiento."""
+    """Archiva si tiene asientos, borra si no.
+
+    Archivar la retira del catálogo y nada más: los asientos que ya la usan
+    conservan su `category_id`, siguen saliendo con su nombre y siguen contando
+    en `by_category` y en el gasto del mes. No quedan sin clasificar —el filtro
+    de «sin partida» no los recoge—, que es lo que este docstring dijo durante un
+    tiempo y nunca fue cierto. Lo que cambia es que deja de ofrecerse para
+    clasificar lo nuevo, y que su cerco sale del asignado del resumen.
+    """
     c = await db.get(LedgerCategory, category_id)
     if not c:
         raise HTTPException(404, "Partida no encontrada")

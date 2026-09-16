@@ -617,6 +617,55 @@ def test_retiring_an_arca_archives_it_if_used_and_deletes_it_if_not():
         assert usada["id"] in {a["id"] for a in c.get("/ledger/accounts").json()}
 
 
+def test_retiring_a_partida_archives_it_without_touching_its_entries():
+    """El gemelo del de las arcas, y escrito porque el docstring mentía.
+
+    `delete_category` decía que los asientos de una partida archivada «quedan sin
+    clasificar». No es cierto y nunca lo fue: conservan su `category_id`, siguen
+    saliendo con su nombre, siguen contando en `by_category` y no los recoge el
+    filtro de «sin partida». Archivar la retira del catálogo y ya.
+
+    Importa porque el diálogo del erario le cuenta al usuario, con el número que
+    da `entry_count`, qué le va a pasar a su historial antes de confirmar. Este
+    test es lo que impide que esa frase vuelva a describir algo que no ocurre.
+    """
+    with TestClient(main.app) as c:
+        a = _arca(c, "Caja", opening_minor=100000)
+        virgen = c.post("/ledger/categories",
+                        json={"name": "Creada por error", "kind": "expense"}).json()
+        assert c.delete(f"/ledger/categories/{virgen['id']}").status_code == 204
+        todas = c.get("/ledger/categories?include_archived=true").json()
+        assert virgen["id"] not in {x["id"] for x in todas}, "sin asientos, se borra"
+
+        usada = c.post("/ledger/categories", json={"name": "Suscripciones", "kind": "expense"}).json()
+        # el alta devuelve el asiento y el XP juntos; aquí sólo interesa la fila
+        e = c.post("/ledger/entries", json={
+            "account_id": a["id"], "category_id": usada["id"], "kind": "expense",
+            "amount_minor": 30000, "occurred_on": "2026-08-11", "concept": "Streaming",
+        }).json()["entry"]
+        con_cuenta = next(x for x in c.get("/ledger/categories").json() if x["id"] == usada["id"])
+        assert con_cuenta["entry_count"] == 1, "es lo que el diálogo le enseña al usuario"
+
+        assert c.delete(f"/ledger/categories/{usada['id']}").status_code == 204
+        assert usada["id"] not in {x["id"] for x in c.get("/ledger/categories").json()}
+
+        # el asiento no se entera: conserva partida, importe y sitio en el resumen
+        sigue = next(x for x in c.get("/ledger/entries?month=2026-08").json() if x["id"] == e["id"])
+        assert sigue["amount_minor"] == 30000
+        assert sigue["category_id"] == usada["id"], "archivar NO desclasifica"
+        sin_partida = c.get("/ledger/entries?month=2026-08&unclassified=true").json()
+        assert e["id"] not in {x["id"] for x in sin_partida}
+        # su fila del resumen sigue ahí con su importe. Se comprueba la fila y no
+        # `expense_minor`: el total del mes es de todo el fichero de tests, y
+        # atarlo aquí rompería este test en cuanto otro anote un gasto de agosto.
+        fila = next(x for x in c.get("/ledger/summary?month=2026-08").json()["by_category"]
+                    if x["name"] == usada["name"])
+        assert fila["total_minor"] == 30000
+
+        assert c.patch(f"/ledger/categories/{usada['id']}", json={"archived": False}).status_code == 200
+        assert usada["id"] in {x["id"] for x in c.get("/ledger/categories").json()}
+
+
 def test_balance_is_derived_from_entries_not_stored():
     with TestClient(main.app) as c:
         a = _arca(c, "Saldo", opening_minor=100000)
