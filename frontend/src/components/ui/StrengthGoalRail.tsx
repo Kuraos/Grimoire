@@ -34,6 +34,20 @@ export function StrengthGoalRail({ goal, exerciseName, unit, onDelete }: {
     ? `${goal.target_reps} reps`
     : `${formatWeight(goal.target_weight_g, unit)}${goal.target_reps > 1 ? ` × ${goal.target_reps}` : ""}`;
 
+  /* El peso puede estar alcanzado sin que la meta esté sellada, y es la regla,
+     no un fallo: sellar exige una serie POSTERIOR, o bajar la cifra por debajo
+     de lo que ya se levanta la cumpliría sola. Lo que fallaba era decirlo —
+     «Faltan 0 kg» afirma que no falta nada junto a un anillo que no es de oro—.
+     El caso a peso corporal ya lo nombraba bien; éste ahora usa sus palabras. */
+  const plazo = goal.deadline ? ` · antes del ${goal.deadline}` : "";
+  const estado = done
+    ? `Sellada el ${goal.achieved_at!.slice(0, 10)}`
+    : bodyweight
+      ? `Aún sin una serie de ${goal.target_reps}`
+      : left > 0
+        ? `Faltan ${formatWeight(left, unit)}${plazo}`
+        : `Aún sin una serie posterior${plazo}`;
+
   return (
     <div
       className="flex items-start gap-3.5"
@@ -68,14 +82,7 @@ export function StrengthGoalRail({ goal, exerciseName, unit, onDelete }: {
           )}
         </div>
         <div className="mt-1 flex items-baseline gap-2 text-2xs">
-          <span className="tabular text-[var(--text-faint)]">
-            {done
-              ? `Sellada el ${goal.achieved_at!.slice(0, 10)}`
-              : bodyweight
-                ? `Aún sin una serie de ${goal.target_reps}`
-                : `Faltan ${formatWeight(Math.max(0, left), unit)}${
-                    goal.deadline ? ` · antes del ${goal.deadline}` : ""}`}
-          </span>
+          <span className="tabular text-[var(--text-faint)]">{estado}</span>
           {onDelete && !done && (
             <button className="text-[var(--purple-main)] hover:underline" onClick={() => onDelete(goal)}>
               Retirar

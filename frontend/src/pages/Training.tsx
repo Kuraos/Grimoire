@@ -51,6 +51,20 @@ const EMPTY_SET: SetDraft = { exercise: "", reps: "", weight: "", rpe: "" };
  *  contestar está más abajo. */
 const LOG_ROWS = 8;
 
+/** Cuántas sesiones se traen, y es el máximo que admite `GET /training/sessions`
+ *  (`le=500`): por encima responde 422 y la vista entera se queda en blanco, así
+ *  que este número no se sube sin tocar el backend. Lo ata
+ *  `test_log_limit_matches_the_backend_cap`.
+ *
+ *  Antes eran 40 y el botón se rotulaba «Ver las 40 sesiones» con el largo de lo
+ *  recibido, que es el tamaño de página y no el total: a partir de la sesión 41
+ *  afirmaba en artículo definido que ésas eran todas mientras escondía el resto.
+ *  Con cuatro sesiones por semana eso pasa en tres meses.
+ *
+ *  ponytail: una sola página basta para años de registro personal; si algún día
+ *  no basta, hay que paginar de verdad, no subir el tope. */
+const LOG_LIMIT = 500;
+
 export default function Training() {
   const { pushToast, handleXP } = useApp();
 
@@ -81,7 +95,7 @@ export default function Training() {
 
   const load = useCallback(async () => {
     const [s, ses, ex, gr, go, hb, st] = await Promise.all([
-      Api.trainingSummary(), Api.listTrainingSessions("?limit=40"),
+      Api.trainingSummary(), Api.listTrainingSessions(`?limit=${LOG_LIMIT}`),
       Api.listExercises(true), Api.listMuscleGroups(),
       Api.listStrengthGoals(), Api.listHabits(), Api.trainingStats(10),
     ]);
@@ -114,6 +128,11 @@ export default function Training() {
   }, [sessions, exercises]);
 
   const shownExercise = focusExercise ?? chartExercises[0]?.id ?? null;
+
+  // Una página llena puede tener más detrás: el backend corta en LOG_LIMIT y no
+  // dice cuántas hay. Mientras no lo diga, la bitácora habla de «las últimas» y
+  // no promete un total que no conoce.
+  const logIncompleto = sessions.length >= LOG_LIMIT;
 
   useEffect(() => {
     if (shownExercise == null) { setProgress(null); return; }
@@ -156,7 +175,9 @@ export default function Training() {
         <div className="mb-2 flex items-center gap-2 font-label text-xs tracking-[0.1em] text-[var(--text-muted)]">
           <span className="gr-cadena" />
           <span className="normal-case tracking-normal text-2xs">
-            {allLog ? `${sessions.length} sesiones` : `Últimas ${Math.min(LOG_ROWS, sessions.length)}`}
+            {allLog
+              ? `${logIncompleto ? "Últimas " : ""}${sessions.length} sesiones`
+              : `Últimas ${Math.min(LOG_ROWS, sessions.length)}`}
           </span>
           <span className="gr-rombo" />
         </div>
@@ -185,7 +206,9 @@ export default function Training() {
             className="mt-2 w-full border-t border-[var(--border)] pt-2.5 text-2xs text-[var(--purple-main)] hover:underline"
             onClick={() => setAllLog(!allLog)}
           >
-            {allLog ? "Ver sólo las últimas" : `Ver las ${sessions.length} sesiones`}
+            {allLog
+              ? "Ver sólo las últimas"
+              : `Ver ${logIncompleto ? "las últimas" : "las"} ${sessions.length} sesiones`}
           </button>
         )}
       </Card>
@@ -230,7 +253,12 @@ export default function Training() {
         </SectionBand>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* `items-start`: sin él la rejilla estira las dos cards a la altura de la
+          más alta, y como la de métricas la fija un gráfico, la de metas queda
+          con hasta 150 px de vacío dentro de su propio borde. Que cada una acabe
+          donde acaba su contenido deja el hueco FUERA de la caja, contra el
+          fondo, que es donde no se lee como un error. */}
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         <Card named title="Metas de fuerza" right={
           <button className="btn btn-ghost !px-2.5 !py-1 !text-2xs" onClick={() => setGoalForm(true)}>
             <IconPlus size={12} /> Declarar

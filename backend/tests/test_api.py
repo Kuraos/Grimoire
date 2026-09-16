@@ -683,6 +683,25 @@ def test_ledger_rejects_what_would_silently_corrupt_the_book():
         assert _cerco(c, "2026-08", food["id"], MAX_MINOR + 1).status_code == 422
 
 
+def test_log_limit_matches_the_backend_cap():
+    """La bitácora pide LOG_LIMIT sesiones y el backend corta en `le=500`.
+
+    Pedir una más devuelve 422, y como la vista trae sus siete llamadas en un
+    `Promise.all`, ese 422 no deja la bitácora corta: deja la página entera en
+    blanco. El número vive en TSX y el tope en Python, y nada los ataba.
+    """
+    training_tsx = (pathlib.Path(__file__).resolve().parents[2]
+                    / "frontend" / "src" / "pages" / "Training.tsx").read_text(encoding="utf-8")
+    m = re.search(r"const LOG_LIMIT\s*=\s*(\d+)", training_tsx)
+    assert m, "no se encontró LOG_LIMIT en Training.tsx"
+    log_limit = int(m.group(1))
+
+    with TestClient(main.app) as c:
+        assert c.get(f"/training/sessions?limit={log_limit}").status_code == 200
+        # y que el tope sea de verdad el del backend, no uno más bajo por inercia
+        assert c.get(f"/training/sessions?limit={log_limit + 1}").status_code == 422
+
+
 def test_money_decimals_mirror_matches_the_frontend():
     """MONEY_DECIMALS vive en dos lenguajes y sólo el de JS tenía test.
 
