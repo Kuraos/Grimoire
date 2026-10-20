@@ -3,6 +3,7 @@ import { IconChevronLeft, IconChevronRight, IconPlus, IconTrash, IconEdit, IconC
 import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { Card } from "../components/ui/Card";
+import { Segmented } from "../components/ui/Segmented";
 import { SectionBand } from "../components/ui/SectionBand";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Modal, Field } from "../components/ui/Modal";
@@ -137,10 +138,7 @@ export default function Calendar() {
         <button className="btn" onClick={() => move(-1)}><IconChevronLeft size={14} /></button>
         <button className="btn" onClick={() => { setCursor(new Date()); setSelected(isoDate(new Date())); }}>Hoy</button>
         <button className="btn" onClick={() => move(1)}><IconChevronRight size={14} /></button>
-        <div className="flex rounded-md border border-[var(--border-accent)] overflow-hidden">
-          <button className={`px-3 py-1 text-xs font-display ${view === "month" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("month")}>Mes</button>
-          <button className={`px-3 py-1 text-xs font-display ${view === "week" ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`} onClick={() => setView("week")}>Semana</button>
-        </div>
+        <Segmented label="Vista" value={view} onChange={setView} options={[{ value: "month", label: "Mes" }, { value: "week", label: "Semana" }]} />
         <input ref={fileRef} type="file" accept=".ics,text/calendar" className="hidden" onChange={onPickFile} />
         <button className="btn" onClick={() => fileRef.current?.click()} disabled={importing}
                 title="Importar un archivo .ics (horario de clases, etc.)">

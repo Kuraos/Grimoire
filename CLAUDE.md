@@ -108,6 +108,42 @@ Pedirlo a mano sería una segunda fuente de verdad de la misma jerarquía.
 medido, no una preferencia: si alguien quiere más separación entre card y
 fondo, hay que subir también la tinta tenue y revalidar los pares.
 
+## Motion, Bklit y Kokonut UI
+
+Motion anima la app; Bklit dibuja los gráficos; de Kokonut UI se tomaron
+interacciones, no código. Tres reglas:
+
+- **Bklit se trae con `frontend/scripts/vendor-registry.mjs`, no con
+  `npx shadcn add`.** El CLI escribe sus gráficos en `components/charts/`
+  mezclados con los nuestros, sobrescribe `src/lib/utils.ts` e instala
+  `tailwind-merge` sin versión: la v3 sólo entiende Tailwind 4. Va fijado a la
+  v2, y `cn` lleva nuestra escala (`text-2xs` no es un color).
+- **Lo traído se toca lo menos posible y cada cambio va marcado `GRIMOIRE:`.**
+  Volver a traer un componente lo sobrescribe; `grep -rn GRIMOIRE:
+  src/components/bklit` dice qué reponer. Dos de esos parches son de
+  corrección, no de gusto: `yBaseline="data"` (con el eje en cero, un peso de
+  70–75 kg era una raya y `BodyTrend` no contestaba su pregunta) y el techo de
+  las barras apiladas, que tomaba la serie más alta en vez de la suma y dejaba
+  la pila salirse del gráfico.
+- **Kokonut UI no se instala.** Es shadcn sobre Tailwind 4, `zinc-*` y
+  `lucide-react`: cada pieza se reescribió con los tokens, la escala y la ley
+  del acento (isla del Pomodoro, anillos de misiones, mantener para confirmar,
+  deshacer, paleta, pila de avisos, cartas de logro).
+
+Los gráficos comparten `components/charts/kit.tsx`. Bklit es de series
+temporales y quiere `Date`: `isoDay` los construye en hora local, porque
+`new Date("2026-10-20")` es UTC y en Bogotá cae en el día anterior.
+
+**Confirmar no es una sola cosa.** Lo grave y raro (`confirm({ danger })`) se
+mantiene pulsado, y Enter ya no lo confirma. Lo frecuente y leve —borrar un
+asiento— no pregunta: se tacha y queda cinco segundos para deshacer. Un diálogo
+cada vez protege del error una vez de cada cien a costa de interrumpir las
+otras noventa y nueve.
+
+**Las motas de oro salen de `handleXP` y sólo con `xp_earned > 0`.** Es el
+único sitio por el que pasa todo el XP; ninguna vista sabe que existen. Un acto
+que no pagó no puede soltar oro.
+
 ## El erario
 
 El módulo de finanzas. La tesis larga está en la cabecera de
@@ -312,18 +348,25 @@ Por lo mismo, **no añadir selectores compuestos** tipo `select.input`: suben la
 especificidad a 0-1-1 y vuelven a ganar a cualquier utilidad. Una clase de
 autor ya gana a los estilos del navegador sin ayuda.
 
-**SVG no sustituye `var()`.** Los atributos de presentación que emite recharts
-necesitan un color resuelto. `frontend/src/theme-tokens.ts` lee los tokens del
-documento y expone también `CHART_LABEL_SIZE` y `CHART_BAR_RADIUS`, porque
-recharts pide números. No volver a escribir hexadecimales en los gráficos.
+**SVG no sustituye `var()`.** Un atributo de presentación (`stroke="…"`,
+`fill="…"`) necesita un color resuelto. Las piezas de ornamento dibujadas a mano
+—sigilo, constelación, mapa de calor— lo leen de `frontend/src/theme-tokens.ts`.
+Los gráficos de Bklit no pasan por ahí: pintan con `var(--chart-*)`, que
+`theme.css` apunta a `--gr-*`. No volver a escribir hexadecimales en los gráficos.
 
 **Cinzel no tiene cifras tabulares.** `tabular-nums` no le hace nada, y a 56 px
 `11:11` mide 6 px menos que `25:00`. Cualquier número que cambie va en Inter
 tabular; Cinzel es para títulos y nombres.
 
-**Movimiento reducido.** Cada hoja apaga el suyo: `theme.css` sus clases
-`gr-*`, `index.css` las suyas. Quedan fuera a propósito `transition-colors` y
-`transition-opacity`, que no son movimiento.
+**Movimiento reducido: no preguntar al sistema.** En Windows,
+`prefers-reduced-motion` es «Efectos de animación», un interruptor global que
+mucha gente apaga por rendimiento; en la máquina de desarrollo estaba apagado y
+Grimoire llevaba meses sin moverse sin que nada lo dijera. `motion-pref.ts`
+resuelve la preferencia de la app (sistema / siempre / reducido, en Ajustes) y
+la deja en `<html data-motion>`. El CSS apaga su movimiento con
+`[data-motion="reduced"] …`, nunca con `@media`, y `MotionConfig` lee el mismo
+módulo. Quedan fuera a propósito `transition-colors` y `transition-opacity`, que
+no son movimiento.
 
 **Un temporizador no puede contar ticks.** El Pomodoro restaba un segundo por
 cada `setInterval` de 1 s, y el navegador estrangula los intervalos de una

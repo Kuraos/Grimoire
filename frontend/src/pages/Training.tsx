@@ -5,6 +5,7 @@ import {
 } from "@tabler/icons-react";
 import { Api } from "../api/endpoints";
 import { Card } from "../components/ui/Card";
+import { Segmented } from "../components/ui/Segmented";
 import { Figure } from "../components/ui/Figure";
 import { SectionBand } from "../components/ui/SectionBand";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -626,18 +627,11 @@ function SessionModal({ kind, unit, habits, exercises, suggestedHabit, onClose, 
 
   return (
     <Modal title={`Asentar sesión de ${KIND_META[tab].label.toLowerCase()}`} onClose={onClose}>
-      <div className="mb-3 flex gap-1.5">
-        {(Object.keys(KIND_META) as TrainingKind[]).map((k) => {
+      <div className="mb-3 flex">
+        <Segmented label="Modalidad" value={tab} onChange={setTab} options={(Object.keys(KIND_META) as TrainingKind[]).map((k) => {
           const { label, Icon } = KIND_META[k];
-          return (
-            <button
-              key={k} onClick={() => setTab(k)}
-              className={`btn !py-1.5 ${k === tab ? "btn-primary" : ""}`}
-            >
-              <Icon size={14} /> {label}
-            </button>
-          );
-        })}
+          return { value: k, label: <><Icon size={14} /> {label}</> };
+        })} />
       </div>
 
       <div className="grid grid-cols-[150px_1fr] gap-3">

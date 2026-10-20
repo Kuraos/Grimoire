@@ -4,6 +4,7 @@ import {
 import { Api } from "./api/endpoints";
 import { onConnectionChange, onApiError } from "./api/client";
 import { playLevelUp } from "./sounds";
+import { burstFromLastPress } from "./burst";
 import type { User, Achievement, XPEventResponse } from "./types";
 
 export interface Toast {
@@ -65,8 +66,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const pushToast = useCallback((t: Omit<Toast, "id">) => {
     const id = toastSeq++;
+    // Sin temporizador aquí: cada aviso lleva su propio reloj en la pila
+    // (ToastAchievement), que se para mientras se lee.
     setToasts((ts) => [...ts, { ...t, id }]);
-    setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== id)), 4000);
   }, []);
 
   // surface API/network errors as toasts (deduped to avoid spam)
@@ -83,6 +85,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const handleXP = useCallback(
     (res: XPEventResponse) => {
       refreshUser();
+      // Oro sólo si pagó: deshacer devuelve XP negativo y no puede soltar motas.
+      if (res.xp_earned > 0) burstFromLastPress();
       if (res.leveled_up) {
         setLevelUp({ level: res.new_level, title: res.title });
         playLevelUp();

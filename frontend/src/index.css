@@ -441,20 +441,6 @@ input[type="range"]::-moz-range-thumb {
   background: var(--border-accent);
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-.toast-enter {
-  animation: toast-in var(--gr-dur-enter) var(--gr-ease-out);
-}
-
 /* ---------------- Movimiento reducido ----------------
    theme.css apagaba el suyo (`gr-enter`, `gr-reward`, `gr-seal`) pero esta hoja
    no tenía bloque ninguno, así que su movimiento ignoraba la preferencia del
@@ -477,6 +463,6 @@ input[type="range"]::-moz-range-thumb {
 [data-motion="reduced"] input[type="range"]::-webkit-slider-thumb {
   transition: none;
 }
-[data-motion="reduced"] :is(.skeleton, .toast-enter) {
+[data-motion="reduced"] .skeleton {
   animation: none;
 }

@@ -85,7 +85,7 @@ export default function Achievements() {
             fill="linea"
             spine
           >
-            <div className="grid grid-cols-1 gap-2.5 xl:grid-cols-2">
+            <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 xl:grid-cols-4">
               {byTier[t].map((a) => (
                 <AchievementCard key={a.id} a={a} />
               ))}

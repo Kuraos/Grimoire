@@ -5,6 +5,7 @@ import { useApp } from "../../context";
 import { TablerIcon } from "../TablerIcon";
 import { Card } from "./Card";
 import { SectionBand } from "./SectionBand";
+import { QuestRings } from "./QuestRings";
 import type { SigilName } from "./Sigil";
 import type { Quest } from "../../types";
 
@@ -29,7 +30,7 @@ export function QuestsCard() {
       {/* Diarias y semanales cuelgan cada una de su sigilo y su espina, igual
           que las categorías de hábitos: son dos plazos distintos, no una lista
           con un subtítulo en medio. El reloj es el día; el libro, la semana. */}
-      <Group sigil="reloj" label="Diarias" quests={daily} onClaim={claim} />
+      <Group sigil="reloj" label="Diarias" quests={daily} onClaim={claim} rings />
       <div className="mt-3">
         <Group sigil="libro" label="Semanales" quests={weekly} onClaim={claim} />
       </div>
@@ -43,12 +44,15 @@ export function QuestsCard() {
   );
 }
 
-function Group({ sigil, label, quests, onClaim }: {
+function Group({ sigil, label, quests, onClaim, rings }: {
   sigil: SigilName; label: string; quests: Quest[]; onClaim: (q: Quest) => void;
+  /** Las diarias van en anillos: son las metas del día, y caben de un vistazo. */
+  rings?: boolean;
 }) {
   return (
     <SectionBand sigil={sigil} label={label} count={quests.filter((q) => q.claimed).length || undefined}
                  fill="linea" spine>
+      {rings ? <QuestRings quests={quests} onClaim={onClaim} /> : (
       <div className="space-y-2">
         {quests.map((q) => {
           const pct = Math.min(100, Math.round((q.progress / q.target) * 100));
@@ -75,6 +79,7 @@ function Group({ sigil, label, quests, onClaim }: {
           );
         })}
       </div>
+      )}
     </SectionBand>
   );
 }

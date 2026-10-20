@@ -5,6 +5,7 @@ import { Api } from "../api/endpoints";
 import { useApp } from "../context";
 import { usePomodoroCtx } from "../pomodoro-context";
 import { Card } from "../components/ui/Card";
+import { Segmented } from "../components/ui/Segmented";
 import { SectionBand } from "../components/ui/SectionBand";
 import { ProgressSigil } from "../components/ui/ProgressSigil";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -143,16 +144,10 @@ export default function Tasks() {
   return (
     <div className="space-y-3">
       <PageHeader title="Tareas y Proyectos" context={headerContext}>
-        <div className="flex overflow-hidden rounded-md border border-[var(--border-accent)]">
-          <button onClick={() => setView("list")} title="Lista"
-            className={`px-2 py-1 ${view === "list" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
-            <IconList size={15} />
-          </button>
-          <button onClick={() => setView("board")} title="Tablero"
-            className={`px-2 py-1 ${view === "board" ? "bg-[var(--bg-elevated)] text-[var(--purple-main)]" : "text-[var(--text-muted)]"}`}>
-            <IconLayoutKanban size={15} />
-          </button>
-        </div>
+        <Segmented label="Vista" size="sm" value={view} onChange={setView} options={[
+          { value: "list", label: <IconList size={15} />, title: "Lista" },
+          { value: "board", label: <IconLayoutKanban size={15} />, title: "Tablero" },
+        ]} />
         <button className="btn" onClick={openNewProject}><IconFolder size={14} /> Proyecto</button>
         <button className="btn btn-primary" onClick={openNewTask}><IconPlus size={14} /> Tarea</button>
       </PageHeader>

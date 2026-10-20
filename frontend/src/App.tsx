@@ -6,6 +6,7 @@ import { TopBar } from "./components/layout/TopBar";
 import { ToastAchievement } from "./components/layout/ToastAchievement";
 import { LevelUpOverlay } from "./components/layout/LevelUpOverlay";
 import { CommandPalette } from "./components/layout/CommandPalette";
+import { PomodoroIsland } from "./components/layout/PomodoroIsland";
 import { ErrorBoundary } from "./components/layout/ErrorBoundary";
 import { ConfirmHost } from "./confirm";
 import { PageSkeleton } from "./components/ui/Skeleton";
@@ -153,6 +154,7 @@ export default function App() {
         </main>
       </div>
       <ToastAchievement />
+      <PomodoroIsland />
       <LevelUpOverlay />
       <CommandPalette />
       <ConfirmHost />

@@ -3,8 +3,11 @@ import {
   IconChevronLeft, IconChevronRight, IconPlus, IconSearch, IconPencil,
   IconTrash, IconArrowsExchange, IconAlertTriangle, IconAdjustments,
   IconLock, IconCheck, IconWallet, IconTag,
+  IconRosette,
 } from "@tabler/icons-react";
 import { BudgetRail } from "../components/ui/BudgetRail";
+import { HoldButton } from "../components/ui/HoldButton";
+import { UndoCountdown } from "../components/ui/UndoCountdown";
 import { RelicRail } from "../components/ui/RelicRail";
 import { SpendDaily } from "../components/charts/SpendDaily";
 import { CategoryTrend } from "../components/charts/CategoryTrend";
@@ -202,16 +205,15 @@ export default function Erario() {
     [categories],
   );
 
-  const removeEntry = async (e: LedgerEntry) => {
-    const ok = await confirm({
-      title: "Borrar asiento",
-      message: `«${e.concept}» — ${formatMoney(e.amount_minor, currency)}. Esto no se puede deshacer.`,
-      confirmLabel: "Borrar",
-      danger: true,
-    });
-    if (!ok) return;
-    await Api.deleteEntry(e.id);
-    load();
+  /* Borrar un asiento no pide confirmación: se tacha, queda cinco segundos para
+     deshacer (UndoCountdown) y sólo entonces se borra de verdad. Es el borrado
+     más frecuente del erario, y un diálogo cada vez protegía del error una vez
+     de cada cien a costa de interrumpir las otras noventa y nueve. */
+  const [pendingDelete, setPendingDelete] = useState<Set<number>>(new Set());
+  const unpend = (id: number) => setPendingDelete((s) => { const n = new Set(s); n.delete(id); return n; });
+  const removeEntry = (e: LedgerEntry) => setPendingDelete((s) => new Set(s).add(e.id));
+  const commitDelete = async (id: number) => {
+    try { await Api.deleteEntry(id); } finally { unpend(id); load(); }
   };
 
   return (
@@ -469,7 +471,9 @@ export default function Erario() {
                     return (
                       <tr
                         key={e.id}
-                        className="group border-b border-[var(--gr-edge)] last:border-none"
+                        className={`group border-b border-[var(--gr-edge)] last:border-none transition-opacity ${
+                          pendingDelete.has(e.id) ? "opacity-45 [&_td:not(:last-child)]:line-through" : ""
+                        }`}
                       >
                         {/* El día es rótulo, no dato que cambie de ancho: puede ir
                             en display. Todo lo demás va en Inter tabular. */}
@@ -511,6 +515,9 @@ export default function Erario() {
                           {formatMoney(e.amount_minor, currency)}
                         </td>
                         <td className="py-2 text-right">
+                          {pendingDelete.has(e.id) ? (
+                            <UndoCountdown onUndo={() => unpend(e.id)} onCommit={() => commitDelete(e.id)} />
+                          ) : (
                           <span className="flex justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                             <button
                               className="text-[var(--text-muted)] hover:text-[var(--purple-main)]"
@@ -527,6 +534,7 @@ export default function Erario() {
                               <IconTrash size={13} />
                             </button>
                           </span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -1137,9 +1145,18 @@ function CloseMonthModal({ month, summary, review, currency, onClose, onSaved }:
           {review ? "Ya cerrado — editar no vuelve a otorgar XP" : "Cerrar el mes otorga 30 XP, una vez"}
         </span>
         <button className="btn" onClick={onClose}>Cancelar</button>
-        <button className="btn btn-primary" disabled={saving} onClick={submit}>
-          {saving ? "Guardando…" : review ? "Guardar" : "Cerrar el mes"}
-        </button>
+        {/* Sellar el mes es uno de los dos oros legítimos del erario, y se
+            cobra una sola vez: se mantiene pulsado, no se despacha con un clic.
+            Editar una revisión ya sellada no paga nada y es un botón normal. */}
+        {review ? (
+          <button className="btn btn-primary" disabled={saving} onClick={submit}>
+            {saving ? "Guardando…" : "Guardar"}
+          </button>
+        ) : (
+          <HoldButton tone="gilded" icon={<IconRosette size={13} />} completeLabel="Sellado" onComplete={submit}>
+            Sellar el mes
+          </HoldButton>
+        )}
       </div>
     </Modal>
   );

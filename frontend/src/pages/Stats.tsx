@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { IconFlame } from "@tabler/icons-react";
 import { Api } from "../api/endpoints";
 import { Card } from "../components/ui/Card";
+import { Segmented } from "../components/ui/Segmented";
 import { Figure } from "../components/ui/Figure";
 import { SectionBand } from "../components/ui/SectionBand";
 import { PageHeader } from "../components/layout/PageHeader";
@@ -49,14 +50,7 @@ export default function Stats() {
         title="Estadísticas"
         context={`${PERIODS.find((p) => p.key === period)!.label.toLowerCase()} · ${data.xp_total.toLocaleString()} XP · ${data.habits_rate}% de hábitos cumplidos`}
       >
-        <div className="flex rounded-md border border-[var(--border-accent)] overflow-hidden">
-          {PERIODS.map((p) => (
-            <button key={p.key} onClick={() => setPeriod(p.key)}
-              className={`px-3 py-1 text-xs font-display ${period === p.key ? "bg-[var(--purple-deep)] text-[var(--gr-arcane-bright)]" : "text-[var(--text-muted)]"}`}>
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <Segmented label="Periodo" value={period} onChange={setPeriod} options={PERIODS.map((p) => ({ value: p.key, label: p.label }))} />
       </PageHeader>
 
       {/* Las cuatro cifras y el XP del periodo comparten la rúbrica: son la
