@@ -90,6 +90,50 @@ export const TOOLTIP_STYLE = {
   color: "var(--gr-ink-bright)",
 } as const;
 
+/**
+ * Tiempos y curvas de Motion, leídos de theme.css.
+ *
+ * Motion quiere segundos y la curva como cuatro números; `var(--gr-dur-enter)`
+ * no le sirve. Copiar 0.24 aquí sería una segunda fuente de verdad del ritmo de
+ * la app, así que se lee igual que la paleta de los gráficos.
+ */
+export type MotionTokens = {
+  state: number;
+  enter: number;
+  reward: number;
+  easeOut: [number, number, number, number];
+  easeReward: [number, number, number, number];
+};
+
+let motionCache: MotionTokens | null = null;
+
+/** `"240ms"` → 0.24; `"0.3s"` → 0.3. */
+export function toSeconds(css: string): number {
+  const n = parseFloat(css);
+  return css.trim().endsWith("ms") ? n / 1000 : n;
+}
+
+/** `"cubic-bezier(0.22, 1, 0.36, 1)"` → `[0.22, 1, 0.36, 1]`. */
+export function toBezier(css: string): [number, number, number, number] {
+  const m = css.match(/cubic-bezier\(([^)]+)\)/);
+  const n = m ? m[1].split(",").map(Number) : [];
+  return n.length === 4 && n.every(Number.isFinite)
+    ? (n as [number, number, number, number])
+    : [0.22, 1, 0.36, 1];
+}
+
+export function motionTokens(): MotionTokens {
+  if (motionCache) return motionCache;
+  motionCache = {
+    state: toSeconds(read("--gr-dur-state") || "170ms"),
+    enter: toSeconds(read("--gr-dur-enter") || "240ms"),
+    reward: toSeconds(read("--gr-dur-reward") || "420ms"),
+    easeOut: toBezier(read("--gr-ease-out")),
+    easeReward: toBezier(read("--gr-ease-reward")),
+  };
+  return motionCache;
+}
+
 /** `#rrggbb` → `[r, g, b]`. Para interpolar entre dos tokens. */
 export function toRgb(hex: string): [number, number, number] {
   const n = parseInt(hex.replace("#", ""), 16);

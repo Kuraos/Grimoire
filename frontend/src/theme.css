@@ -255,3 +255,35 @@
 @media (prefers-reduced-motion: reduce) {
   .gr-enter, .gr-reward, .gr-seal path { animation: none; }
 }
+
+/* ---------------- Puente para Bklit ----------------
+   Los gráficos de Bklit (components/bklit/) pintan con `--chart-*`. Aquí esos
+   nombres apuntan a la paleta y no tienen valor propio: si tuvieran uno, serían
+   una segunda paleta, justo la deriva que esta hoja existe para evitar.
+
+   Las series por defecto no incluyen el dorado. Una serie que de verdad sea
+   recompensa (XP) lo pide de forma explícita; una que no lo es no puede
+   heredarlo por ser la quinta. */
+:root {
+  --chart-1: var(--gr-arcane);
+  --chart-2: var(--gr-verdigris);
+  --chart-3: var(--gr-cat-idioma);
+  --chart-4: var(--gr-cat-proyecto);
+  --chart-5: var(--gr-ink-dim);
+  --chart-line-primary: var(--chart-1);
+  --chart-line-secondary: var(--chart-2);
+  --chart-background: var(--gr-surface-sunken);
+  --chart-foreground: var(--gr-ink);
+  --chart-foreground-muted: var(--gr-ink-dim);
+  --chart-label: var(--gr-ink-dim);
+  --chart-grid: var(--gr-edge);
+  --chart-crosshair: var(--gr-edge-strong);
+  --chart-brush-border: var(--gr-edge);
+  --chart-tooltip-background: var(--gr-surface-sunken);
+  --chart-tooltip-foreground: var(--gr-ink-bright);
+  --chart-tooltip-muted: var(--gr-ink-dim);
+  --chart-marker-background: var(--gr-surface-raised);
+  --chart-marker-border: var(--gr-edge-strong);
+  --chart-marker-foreground: var(--gr-ink-bright);
+  --chart-indicator-color: var(--gr-arcane);
+}
