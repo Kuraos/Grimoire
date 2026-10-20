@@ -1,7 +1,11 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { chartPalette, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
+import { useMemo } from "react";
+import { ChartTooltip, Grid, Line, LineChart, XAxis, YAxis } from "../bklit";
 import { BODY_METRIC_MILLI } from "../../utils";
 import type { BodyMetricSeries } from "../../types";
+import { ChartEmpty, ChartLegend, CURVE, fixedHeight, isoDay, MARGIN, PointMarks } from "./kit";
+
+/** Tinta tenue al 55 %: el dato crudo se ve, pero no compite con la tendencia. */
+const CRUDO = "color-mix(in srgb, var(--gr-ink-faint) 55%, transparent)";
 
 /**
  * La tendencia de una medida del cuerpo.
@@ -16,72 +20,47 @@ import type { BodyMetricSeries } from "../../types";
  * sino «¿esto baja o es ruido?». El peso corporal oscila un kilo entre la mañana
  * y la noche por razones que no tienen nada que ver con entrenar; la media móvil
  * de cuatro medidas es lo único que contesta la pregunta de verdad.
+ *
+ * El eje se ajusta a los datos (`yBaseline="data"`): desde cero, 70–75 kg sería
+ * una raya plana y la pregunta no tendría respuesta.
  */
 export function BodyTrend({ series }: { series: BodyMetricSeries }) {
-  const c = chartPalette();
+  const rows = useMemo(
+    () => series.points.map((p) => ({
+      date: isoDay(p.measured_on),
+      valor: p.value_milli / BODY_METRIC_MILLI,
+      tendencia: p.trend_milli / BODY_METRIC_MILLI,
+    })),
+    [series],
+  );
 
-  if (series.points.length < 3) {
-    return (
-      <div className="py-8 text-center text-xs text-[var(--text-muted)]">
-        {series.points.length === 0
-          ? "Sin medidas anotadas."
-          : "Una tendencia necesita tres puntos."}
-      </div>
-    );
+  if (rows.length < 3) {
+    return <ChartEmpty>{rows.length === 0 ? "Sin medidas anotadas." : "Una tendencia necesita tres puntos."}</ChartEmpty>;
   }
 
-  const rows = series.points.map((p) => ({
-    date: p.measured_on.slice(5),
-    valor: p.value_milli / BODY_METRIC_MILLI,
-    tendencia: p.trend_milli / BODY_METRIC_MILLI,
-  }));
-
+  const fmt = (v: unknown) => `${(v as number).toFixed(1)} ${series.unit}`;
   return (
     <>
-      <ResponsiveContainer width="100%" height={200}>
-        <LineChart data={rows} margin={{ top: 10, right: 12, bottom: 0, left: 0 }}>
-          <XAxis
-            dataKey="date"
-            stroke={c.axis}
-            tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }}
-            minTickGap={30}
-          />
-          <YAxis
-            stroke={c.axis}
-            tick={{ fill: c.tickFaint, fontSize: CHART_LABEL_SIZE }}
-            width={40}
-            domain={["dataMin - 1", "dataMax + 1"]}
-            tickFormatter={(v: number) => v.toFixed(1)}
-          />
-          <Tooltip
-            contentStyle={TOOLTIP_STYLE}
-            formatter={(v: number, name) => [
-              `${v.toFixed(1)} ${series.unit}`,
-              name === "valor" ? "Medida" : "Tendencia",
-            ]}
-          />
-          <Line
-            type="monotone" dataKey="valor" stroke={c.tickFaint} strokeWidth={1}
-            strokeOpacity={0.55} dot={{ r: 1.8, fill: c.tickFaint, strokeWidth: 0 }}
-            isAnimationActive={false}
-          />
-          <Line
-            type="monotone" dataKey="tendencia" stroke={c.ink} strokeWidth={2}
-            dot={false} isAnimationActive={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 pl-10 text-2xs text-[var(--text-muted)]">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-[2px] w-4" style={{ background: "var(--gr-ink-bright)" }} />
-          Tendencia (media de 4)
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-px w-4 opacity-55" style={{ background: "var(--text-faint)" }} />
-          Medida anotada
-        </span>
-      </div>
+      <LineChart data={rows} yBaseline="data" margin={MARGIN} {...fixedHeight(200)}>
+        <Grid horizontal numTicksRows={4} />
+        <Line dataKey="valor" curve={CURVE} stroke={CRUDO} strokeWidth={1} />
+        <Line dataKey="tendencia" curve={CURVE} stroke="var(--gr-ink-bright)" strokeWidth={2} />
+        <PointMarks dataKey="valor" shape="dot" color="var(--gr-ink-faint)" />
+        <XAxis numTicks={5} tickMode="domain" />
+        <YAxis numTicks={4} formatValue={(v) => v.toFixed(1)} />
+        <ChartTooltip
+          rows={(p: Record<string, unknown>) => [
+            { color: "var(--gr-ink-faint)", label: "Medida", value: fmt(p.valor) },
+            { color: "var(--gr-ink-bright)", label: "Tendencia", value: fmt(p.tendencia) },
+          ]}
+        />
+      </LineChart>
+      <ChartLegend
+        items={[
+          { label: "Tendencia (media de 4)", color: "var(--gr-ink-bright)", shape: "line" },
+          { label: "Medida anotada", color: "var(--text-faint)", shape: "line" },
+        ]}
+      />
     </>
   );
 }

@@ -1,3 +1,4 @@
+// GRIMOIRE: la píldora de fecha usa la superficie elevada en vez de zinc.
 "use client";
 
 import { type MotionValue, motion, useSpring } from "motion/react";
@@ -76,7 +77,7 @@ const DateTickerCompact = memo(function DateTickerCompact({
   useActiveItemWidth(stackRef, labelItems, 0, width);
 
   return (
-    <div className="overflow-hidden rounded-full bg-zinc-900 px-4 py-1 text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+    <div className="overflow-hidden rounded-full border border-[var(--gr-edge-strong)] bg-[var(--gr-surface-raised)] px-4 py-1 text-[var(--gr-ink-bright)] shadow-lg">
       <motion.div className="relative h-6" style={{ width }}>
         <motion.div
           className="absolute top-0 left-1/2 flex h-6 items-center"
@@ -173,7 +174,7 @@ const DateTickerInner = memo(function DateTickerInner({
   }
 
   return (
-    <div className="overflow-hidden rounded-full bg-zinc-900 px-4 py-1 text-white shadow-lg dark:bg-zinc-100 dark:text-zinc-900">
+    <div className="overflow-hidden rounded-full border border-[var(--gr-edge-strong)] bg-[var(--gr-surface-raised)] px-4 py-1 text-[var(--gr-ink-bright)] shadow-lg">
       <div className="relative h-6 overflow-hidden">
         <div className="flex items-center justify-center gap-1">
           {/* Month stack */}

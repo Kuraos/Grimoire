@@ -84,6 +84,14 @@ export default {
           from: "var(--gr-xp-from)",
           to: "var(--gr-xp-to)",
         },
+        // Clases que traen los gráficos de Bklit. Apuntan al puente `--chart-*`
+        // de theme.css, que a su vez apunta a la paleta.
+        chart: {
+          label: "var(--chart-label)",
+          "tooltip-background": "var(--chart-tooltip-background)",
+          "tooltip-foreground": "var(--chart-tooltip-foreground)",
+          "tooltip-muted": "var(--chart-tooltip-muted)",
+        },
         state: {
           success: "var(--gr-verdigris)",
           "success-bg": "var(--gr-verdigris-deep)",

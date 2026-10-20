@@ -1,23 +1,17 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { chartPalette, CHART_BAR_RADIUS, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
+import { useMemo } from "react";
+import { Bar, BarChart, BarXAxis, ChartTooltip, Grid, YAxis } from "../bklit";
+import { fixedHeight, isoDay, MARGIN } from "./kit";
 
+/** XP ganado por día. Las barras crecen escalonadas al entrar (Bklit). */
 export function XPBarChart({ data }: { data: { date: string; xp: number }[] }) {
-  const c = chartPalette();
+  const rows = useMemo(() => data.map((d) => ({ date: isoDay(d.date), xp: d.xp })), [data]);
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <YAxis tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <Tooltip
-          cursor={{ fill: c.arcaneDeep, fillOpacity: 0.55 }}
-          contentStyle={TOOLTIP_STYLE}
-        />
-        <Bar dataKey="xp" radius={[CHART_BAR_RADIUS, CHART_BAR_RADIUS, 0, 0]}>
-          {data.map((_, i) => (
-            <Cell key={i} fill={c.arcane} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <BarChart data={rows} xDataKey="date" margin={MARGIN} barGap={0.25} {...fixedHeight(220)}>
+      <Grid horizontal numTicksRows={4} />
+      <Bar dataKey="xp" fill="var(--gr-arcane)" lineCap={2} />
+      <YAxis numTicks={4} />
+      <BarXAxis maxLabels={7} />
+      <ChartTooltip rows={(p: Record<string, unknown>) => [{ color: "var(--gr-arcane)", label: "XP", value: p.xp as number }]} />
+    </BarChart>
   );
 }

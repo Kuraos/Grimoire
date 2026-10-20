@@ -14,7 +14,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
-          charts: ["recharts"],
+          // Bklit: visx y d3. Sólo lo cargan las vistas con gráficos.
+          charts: ["@visx/scale", "@visx/shape", "@visx/curve", "@visx/responsive", "d3-array", "d3-shape"],
           icons: ["@tabler/icons-react"],
         },
       },

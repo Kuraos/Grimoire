@@ -53,12 +53,13 @@ export interface TooltipBoxProps {
  * edge highlight (`before:`) — matches shadcn / coss popovers using only theme
  * tokens (`border`, `--radius`) and Tailwind utilities.
  */
+// GRIMOIRE: el panel lleva el borde, el radio y el filo interior de la casa en
+// vez de la sintaxis de Tailwind 4 (`shadow-lg/5`, `not-dark:`) que aquí no existe.
 const TOOLTIP_PANEL_CLASS_NAME =
-  "relative min-w-[160px] rounded-xl border not-dark:bg-clip-padding text-chart-tooltip-foreground shadow-lg/5 before:pointer-events-none before:absolute before:inset-0 before:rounded-[calc(var(--radius-xl)-1px)] before:shadow-[0_1px_rgb(0_0_0/0.04)] dark:before:shadow-[0_-1px_rgb(255_255_255/0.06)]";
+  "relative min-w-[160px] rounded-lg border border-[var(--gr-edge-strong)] text-chart-tooltip-foreground shadow-[inset_0_1px_0_var(--gr-edge-inner),0_8px_24px_rgba(0,0,0,0.45)]";
 
 /** Clips content to the panel's inner radius without clipping the edge highlight. */
-const TOOLTIP_PANEL_INNER_CLASS_NAME =
-  "overflow-hidden rounded-[calc(var(--radius-xl)-1px)]";
+const TOOLTIP_PANEL_INNER_CLASS_NAME = "overflow-hidden rounded-lg";
 
 // Inner-only-on-visible so `useSpring` initializes at the cursor's actual x/y
 // instead of (0, 0) on first hover.

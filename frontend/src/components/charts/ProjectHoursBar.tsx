@@ -1,27 +1,33 @@
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { chartPalette, CHART_BAR_RADIUS, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
+import { useMemo } from "react";
+import { Bar, BarChart, BarYAxis, ChartTooltip, Grid } from "../bklit";
+import { ChartEmpty, fixedHeight } from "./kit";
 
+/**
+ * Horas de foco por proyecto, en barras horizontales con el color del proyecto.
+ *
+ * Bklit pinta cada serie de un color, así que cada proyecto es su propia serie
+ * apilada: en cada fila sólo la suya tiene valor y las demás valen cero.
+ */
 export function ProjectHoursBar({ data }: { data: { project: string; color: string; hours: number }[] }) {
-  const c = chartPalette();
-  if (!data.length) {
-    return <div className="py-8 text-center text-xs text-[var(--text-muted)]">Sin horas de foco registradas.</div>;
-  }
+  const rows = useMemo(
+    () => data.map((d, i) => ({ project: d.project, hours: d.hours, ...Object.fromEntries(data.map((_, j) => [`p${j}`, i === j ? d.hours : 0])) })),
+    [data],
+  );
+  if (!data.length) return <ChartEmpty>Sin horas de foco registradas.</ChartEmpty>;
   return (
-    <ResponsiveContainer width="100%" height={Math.max(120, data.length * 38)}>
-      <BarChart data={data} layout="vertical" margin={{ top: 4, right: 12, left: 8, bottom: 0 }}>
-        <XAxis type="number" tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <YAxis type="category" dataKey="project" width={110} tick={{ fill: c.body, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <Tooltip
-          cursor={{ fill: c.arcaneDeep, fillOpacity: 0.55 }}
-          contentStyle={TOOLTIP_STYLE}
-          formatter={(v: number) => [`${v} h`, "Foco"]}
-        />
-        <Bar dataKey="hours" radius={[0, CHART_BAR_RADIUS, CHART_BAR_RADIUS, 0]}>
-          {data.map((d, i) => (
-            <Cell key={i} fill={d.color || c.arcane} />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+    <BarChart
+      data={rows} xDataKey="project" orientation="horizontal" stacked barWidth={16}
+      margin={{ top: 4, right: 12, bottom: 4, left: 110 }} {...fixedHeight(Math.max(120, data.length * 38))}
+    >
+      <Grid vertical horizontal={false} numTicksColumns={4} />
+      {data.map((d, j) => <Bar key={j} dataKey={`p${j}`} fill={d.color || "var(--gr-arcane)"} lineCap={2} />)}
+      <BarYAxis />
+      <ChartTooltip
+        rows={(p: Record<string, unknown>) => {
+          const d = data.find((x) => x.project === p.project);
+          return [{ color: d?.color || "var(--gr-arcane)", label: "Foco", value: `${p.hours} h` }];
+        }}
+      />
+    </BarChart>
   );
 }

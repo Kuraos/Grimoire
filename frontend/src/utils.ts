@@ -93,7 +93,7 @@ export function streakUnit(habit: Pick<Cadence, "frequency">, n: number): string
 
 /* Paletas de DATOS: hex literal a propósito, no var().
    Estos valores se concatenan con alfa (`${color}66`) y se pasan como atributos
-   SVG a recharts, donde `var(--x)66` sería inválido.
+   SVG, donde `var(--x)66` sería inválido.
    Espejo de --gr-cat-* en theme.css. */
 export const CATEGORY_COLORS: Record<string, string> = {
   "Físico": "#5aa885",

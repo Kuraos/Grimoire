@@ -1,29 +1,21 @@
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { chartPalette, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
+import { useMemo } from "react";
+import { Area, AreaChart, ChartTooltip, Grid, XAxis, YAxis } from "../bklit";
+import { ChartEmpty, CURVE, fixedHeight, isoDay, MARGIN } from "./kit";
 
 /**
  * Cumulative XP over time for a single habit. `series` comes from the backend's
  * xp_log (exact amounts, including streak multipliers and undo reversals).
  */
 export function HabitXPChart({ series }: { series: { date: string; xp: number }[] }) {
-  const c = chartPalette();
-  if (series.length === 0) {
-    return <div className="py-6 text-center text-xs text-[var(--text-muted)]">Sin datos todavía.</div>;
-  }
+  const rows = useMemo(() => series.map((d) => ({ date: isoDay(d.date), xp: d.xp })), [series]);
+  if (rows.length === 0) return <ChartEmpty>Sin datos todavía.</ChartEmpty>;
   return (
-    <ResponsiveContainer width="100%" height={140}>
-      <AreaChart data={series} margin={{ top: 4, right: 6, left: -22, bottom: 0 }}>
-        <defs>
-          <linearGradient id="habitxp" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={c.arcane} stopOpacity={0.5} />
-            <stop offset="100%" stopColor={c.xpFrom} stopOpacity={0.05} />
-          </linearGradient>
-        </defs>
-        <XAxis dataKey="date" tickFormatter={(d) => d.slice(5)} tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <YAxis tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }} stroke={c.axis} />
-        <Tooltip contentStyle={TOOLTIP_STYLE} />
-        <Area dataKey="xp" stroke={c.arcane} strokeWidth={2} fill="url(#habitxp)" />
-      </AreaChart>
-    </ResponsiveContainer>
+    <AreaChart data={rows} margin={{ ...MARGIN, top: 8 }} {...fixedHeight(140)}>
+      <Grid horizontal numTicksRows={3} />
+      <Area dataKey="xp" curve={CURVE} stroke="var(--gr-arcane)" fill="var(--gr-arcane)" strokeWidth={2} gradientToOpacity={0.02} />
+      <XAxis numTicks={4} tickMode="domain" />
+      <YAxis numTicks={3} />
+      <ChartTooltip rows={(p: Record<string, unknown>) => [{ color: "var(--gr-arcane)", label: "XP acumulado", value: p.xp as number }]} />
+    </AreaChart>
   );
 }

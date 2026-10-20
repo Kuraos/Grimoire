@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { IconFlame } from "@tabler/icons-react";
 import { Api } from "../api/endpoints";
 import { Card } from "../components/ui/Card";
@@ -10,8 +9,8 @@ import { XPBarChart } from "../components/charts/XPBarChart";
 import { MoodEnergyLine } from "../components/charts/MoodEnergyLine";
 import { ProjectHoursBar } from "../components/charts/ProjectHoursBar";
 import { HabitHeatmap } from "../components/charts/HabitHeatmap";
+import { CategoryRadar } from "../components/charts/CategoryRadar";
 import { CATEGORY_COLORS, streakUnit } from "../utils";
-import { CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../theme-tokens";
 import type { Stats as StatsType } from "../types";
 
 const PERIODS = [
@@ -95,36 +94,7 @@ export default function Stats() {
           </p>
         </Card>
         <Card title="XP por categoría">
-          {data.xp_by_category.length === 0 ? (
-            <p className="py-8 text-center text-xs text-[var(--text-muted)]">Sin datos.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                {/* Anillo exterior de acento: un filo de tinta a 2px por fuera
-                    del donut. Sin él, los sectores flotaban sobre el fondo sin
-                    nada que los contuviera y el gráfico no leía como objeto. */}
-                <Pie data={[{ v: 1 }]} dataKey="v" cx="50%" cy="50%"
-                     outerRadius={88} innerRadius={86} fill="var(--gr-edge)" stroke="none"
-                     isAnimationActive={false}
-                     /* `legendType="none"`: es adorno, no una serie. Sin esto
-                        recharts lo listaba en la leyenda como un «0» suelto. */
-                     legendType="none" tooltipType="none" />
-                <Pie data={data.xp_by_category} dataKey="xp" nameKey="category" cx="50%" cy="50%" outerRadius={80} innerRadius={44}>
-                  {data.xp_by_category.map((d, i) => (
-                    <Cell key={i} fill={colorFor(d.category)} stroke="var(--gr-void)" />
-                  ))}
-                </Pie>
-                {/* Era el último gráfico con su tooltip a mano: radio 8 y 12px,
-                    los dos fuera de escala. Ahora lee los mismos tokens que los
-                    otros cinco, y la leyenda baja al peldaño de rótulo. */}
-                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                <Legend
-                  wrapperStyle={{ fontSize: CHART_LABEL_SIZE }}
-                  formatter={(value) => <span style={{ color: "var(--gr-ink)" }}>{value}</span>}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          )}
+          <CategoryRadar data={data.xp_by_category} colorFor={colorFor} />
         </Card>
         <Card title="Horas de foco" right={
           <span className="normal-case tracking-normal text-2xs text-[var(--text-faint)]">por proyecto</span>

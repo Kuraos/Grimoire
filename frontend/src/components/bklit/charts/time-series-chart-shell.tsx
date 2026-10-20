@@ -112,7 +112,8 @@ function collectNumericExtents(
 function resolveTimeSeriesYDomain(
   data: Record<string, unknown>[],
   dataKeys: string[],
-  yScaleDomainMax: number | undefined
+  yScaleDomainMax: number | undefined,
+  yBaseline: "zero" | "data" = "zero"
 ): [number, number] {
   if (yScaleDomainMax != null && yScaleDomainMax > 0) {
     return [0, yScaleDomainMax * 1.1];
@@ -120,7 +121,10 @@ function resolveTimeSeriesYDomain(
 
   const { minValue, maxValue } = collectNumericExtents(data, dataKeys);
 
-  if (minValue >= 0) {
+  // GRIMOIRE: con datos positivos el eje arrancaba siempre en cero. Para un peso
+  // corporal de 70–75 kg eso aplana la curva y borra la pregunta del gráfico
+  // («¿baja o es ruido?»). `yBaseline="data"` ajusta el eje a los datos.
+  if (minValue >= 0 && yBaseline === "zero") {
     const top = maxValue <= 0 ? 100 : maxValue * 1.1;
     return [0, top];
   }
@@ -166,6 +170,8 @@ export interface TimeSeriesChartInnerProps {
   composedStackGap?: number;
   /** When set, drives the y-axis max instead of scanning `lines` (e.g. stacked bar totals). */
   yScaleDomainMax?: number;
+  /** GRIMOIRE: `"data"` ajusta el eje Y a los datos en vez de arrancar en cero. */
+  yBaseline?: "zero" | "data";
   /** Loading vs ready — drives chart phase until transition orchestration lands. */
   chartStatus?: ChartStatus;
   loadingLabel?: string;
@@ -211,6 +217,7 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
   composedStackOffsets,
   composedStackGap,
   yScaleDomainMax,
+  yBaseline = "zero",
   chartStatus = DEFAULT_CHART_STATUS,
   loadingLabel,
   yDomainTween = true,
@@ -235,9 +242,9 @@ const TimeSeriesChartCore = memo(function TimeSeriesChartCore({
         usesDefaultOnly && yScaleDomainMax != null
           ? yScaleDomainMax
           : undefined;
-      return resolveTimeSeriesYDomain(sourceData, dataKeys, domainMax);
+      return resolveTimeSeriesYDomain(sourceData, dataKeys, domainMax, yBaseline);
     },
-    [lines, yScaleDomainMax]
+    [lines, yScaleDomainMax, yBaseline]
   );
 
   const skeletonData = useMemo(() => {

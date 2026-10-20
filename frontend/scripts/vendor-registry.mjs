@@ -11,6 +11,10 @@
 //
 // Aquí cada registro va a su carpeta (`src/components/<registro>/`), conservando
 // la estructura del `target` para que las importaciones relativas sigan valiendo.
+// Lo traído se toca lo menos posible, y cada cambio local va marcado con
+// `GRIMOIRE:`. Volver a traer un componente sobrescribe sus archivos: antes de
+// hacerlo, `grep -rn GRIMOIRE: src/components/bklit` dice qué hay que reponer.
+//
 // Las dependencias npm y las variables CSS sólo se listan: instalarlas y
 // conectarlas a la paleta es una decisión, no un paso mecánico.
 

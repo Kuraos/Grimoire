@@ -110,6 +110,7 @@ function LineSeriesStroke({
   animatedPathD: string;
   curve: CurveFactory;
   getY: (datum: Record<string, unknown>) => number;
+  // GRIMOIRE: sin `| null`; los tipos de React 18 no lo aceptan en `ref`.
   pathRef: RefObject<SVGPathElement>;
   renderData: Record<string, unknown>[];
   strokeWidth: number;

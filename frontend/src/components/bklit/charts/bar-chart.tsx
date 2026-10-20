@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { localPoint } from "@visx/event";
 import { scaleBand, scaleLinear } from "@visx/scale";
 import type { Transition } from "motion/react";
@@ -95,6 +96,8 @@ export interface BarChartProps {
   /** Fetch / display status. When `"loading"`, a shimmer skeleton replaces the
    * bars (no chart data required). Default: `"ready"`. */
   status?: ChartStatus;
+  /** GRIMOIRE: estilos del contenedor (altura fija), como en LineChart. */
+  style?: CSSProperties;
 }
 
 const DEFAULT_MARGIN: Margin = { top: 40, right: 40, bottom: 40, left: 40 };
@@ -299,19 +302,23 @@ const ChartCore = memo(function ChartCore({
       data,
       innerHeight,
       resolveDomain: (dataKeys) => {
+        // GRIMOIRE: apilado, el techo es la suma de la fila, no la serie más
+        // alta. Sin esto la pila se salía del gráfico por arriba.
         let max = 0;
         for (const d of data) {
+          let row = 0;
           for (const key of dataKeys) {
             const value = d[key];
-            if (typeof value === "number" && value > max) {
-              max = value;
-            }
+            if (typeof value !== "number") continue;
+            if (stacked) row += Math.max(0, value);
+            else if (value > max) max = value;
           }
+          if (stacked && row > max) max = row;
         }
         return [0, (max || 100) * 1.1];
       },
     });
-  }, [data, innerHeight, isHorizontal, lines, valueScale]);
+  }, [data, innerHeight, isHorizontal, lines, valueScale, stacked]);
 
   const primaryYScale = getPrimaryYScale(yScales, valueScale);
 
@@ -679,6 +686,7 @@ export function BarChart({
   revealSignature,
   aspectRatio = "2 / 1",
   className = "",
+  style,
   barGap = 0.2,
   barWidth,
   orientation = "vertical",
@@ -696,7 +704,7 @@ export function BarChart({
     <div
       className={cn("relative w-full overflow-visible", className)}
       ref={containerRef}
-      style={{ aspectRatio }}
+      style={{ aspectRatio, ...style }}
     >
       <ParentSize debounceTime={10}>
         {({ width, height }) => (

@@ -1,16 +1,8 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
-import { chartPalette, CHART_LABEL_SIZE, TOOLTIP_STYLE } from "../../theme-tokens";
+import { useMemo } from "react";
+import { ChartTooltip, Grid, Line, LineChart, XAxis, YAxis } from "../bklit";
 import { formatWeight, type WeightUnit } from "../../utils";
 import type { ExercisePoint } from "../../types";
-
-/** Lo que recharts pasa a un `dot` propio. Su tipo público es un unión enorme
- *  que no se puede estrechar sin pelearse con él; esto es lo que se usa. */
-type DotProps = {
-  cx: number;
-  cy: number;
-  index: number;
-  payload: { record: number | null; lowConfidence: boolean };
-};
+import { ChartEmpty, ChartLegend, CURVE, fixedHeight, isoDay, MARGIN, PointMarks } from "./kit";
 
 /**
  * La progresión de un ejercicio: peso máximo medido y 1RM estimado.
@@ -27,117 +19,72 @@ type DotProps = {
  * Los récords se marcan con un rombo de tinta. Se DIBUJAN, no se premian: un
  * récord sin meta declarada de antemano es circunstancia, y el oro del módulo
  * está reservado a las metas que el usuario fijó antes de cumplirlas.
+ *
+ * El eje se ajusta a los datos y Bklit lo redondea (`nice()`), así que las marcas
+ * caen en números de escala en vez de 68·83·110.
  */
 export function ExerciseProgress({ points, unit }: {
   points: ExercisePoint[];
   unit: WeightUnit;
 }) {
-  const c = chartPalette();
+  const div = unit === "lb" ? 453.59237 : 1000;
+  const rows = useMemo(
+    () => points.map((p) => ({
+      date: isoDay(p.occurred_on),
+      top: p.top_weight_g / div,
+      est: p.est_1rm_g / div,
+      record: p.is_record,
+      lowConfidence: p.low_confidence,
+    })),
+    [points, div],
+  );
 
-  if (points.length < 2) {
+  if (rows.length < 2) {
     return (
-      <div className="py-8 text-center text-xs text-[var(--text-muted)]">
-        {points.length === 0
+      <ChartEmpty>
+        {rows.length === 0
           ? "Sin series de este ejercicio todavía."
           : "Una sola sesión no dibuja una curva. Vuelve cuando tenga dos."}
-      </div>
+      </ChartEmpty>
     );
   }
 
-  const div = unit === "lb" ? 453.59237 : 1000;
-  const rows = points.map((p) => ({
-    date: p.occurred_on.slice(5),
-    top: p.top_weight_g / div,
-    est: p.est_1rm_g / div,
-    record: p.is_record ? p.top_weight_g / div : null,
-    lowConfidence: p.low_confidence,
-    estG: p.est_1rm_g,
-  }));
-
+  const w = (v: unknown) => formatWeight(Math.round((v as number) * div), unit);
   return (
     <>
-      <ResponsiveContainer width="100%" height={210}>
-        <LineChart data={rows} margin={{ top: 14, right: 12, bottom: 0, left: 0 }}>
-          <XAxis
-            dataKey="date"
-            stroke={c.axis}
-            tick={{ fill: c.tick, fontSize: CHART_LABEL_SIZE }}
-            minTickGap={28}
-          />
-          <YAxis
-            stroke={c.axis}
-            tick={{ fill: c.tickFaint, fontSize: CHART_LABEL_SIZE }}
-            width={38}
-            /* El dominio se redondea a decenas para que las marcas caigan en
-               números de escala. Con `dataMin - 5` recharts elegía 68·83·110:
-               cifras correctas que no forman una escala, y un eje así se lee dos
-               veces antes de entenderse. */
-            domain={[
-              (min: number) => Math.max(0, Math.floor((min - 5) / 10) * 10),
-              (max: number) => Math.ceil((max + 5) / 10) * 10,
-            ]}
-            tickCount={6}
-            tickFormatter={(v: number) => String(Math.round(v))}
-          />
-          <Tooltip
-            contentStyle={TOOLTIP_STYLE}
-            formatter={(v: number, name) => [
-              formatWeight(Math.round(v * div), unit),
-              name === "top" ? "Peso máximo" : "1RM estimado",
-            ]}
-          />
-          {/* El estimado se dibuja primero para que el medido quede encima: si se
-              cruzan, lo que importa leer es el dato real. */}
-          <Line
-            type="monotone" dataKey="est" stroke={c.tickFaint} strokeWidth={1.5}
-            strokeDasharray="5 4" isAnimationActive={false}
-            dot={(p: DotProps) => (
-              /* Ámbar sobre la estimación floja: por encima de diez repeticiones
-                 Epley pierde precisión, y el ámbar es advertencia sobre el dato
-                 —no una recompensa ni un error—. */
-              p.payload.lowConfidence ? (
-                <circle key={p.index} cx={p.cx} cy={p.cy} r={3.5}
-                        fill="var(--gr-surface-sunken)" stroke={c.amber} strokeWidth={1.5} />
-              ) : <g key={p.index} />
-            )}
-          />
-          <Line
-            type="monotone" dataKey="top" stroke={c.ink} strokeWidth={2}
-            isAnimationActive={false}
-            dot={(p: DotProps) => (
-              /* El récord es un ROMBO, no un punto más gordo: a 4px de radio un
-                 círculo grande y uno pequeño no se distinguen, y la marca dejaba
-                 de leerse como marca. Va en tinta — un récord sin meta declarada
-                 es dato, no medalla. */
-              p.payload.record != null ? (
-                <rect key={p.index} x={p.cx - 3.6} y={p.cy - 3.6} width={7.2} height={7.2}
-                      fill={c.ink} transform={`rotate(45 ${p.cx} ${p.cy})`} />
-              ) : (
-                <circle key={p.index} cx={p.cx} cy={p.cy} r={2.5} fill={c.ink} />
-              )
-            )}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-
-      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5 pl-[38px] text-2xs text-[var(--text-muted)]">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-[2px] w-4" style={{ background: "var(--gr-ink-bright)" }} />
-          Peso máximo
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="w-4 border-t-[1.5px] border-dashed border-[var(--text-faint)]" />
-          1RM estimado (Epley)
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-[7px] w-[7px] rotate-45 bg-[var(--gr-ink-bright)]" />
-          Récord personal
-        </span>
-        <span className="inline-flex items-center gap-1.5 text-[var(--warning)]">
-          <span className="h-2 w-2 rounded-full border-[1.5px] border-[var(--warning)]" />
-          Más de 10 reps: estimación floja
-        </span>
-      </div>
+      <LineChart data={rows} yBaseline="data" margin={{ ...MARGIN, top: 16 }} {...fixedHeight(210)}>
+        <Grid horizontal numTicksRows={5} />
+        {/* El estimado se dibuja primero para que el medido quede encima: si se
+            cruzan, lo que importa leer es el dato real. */}
+        <Line dataKey="est" curve={CURVE} stroke="var(--gr-ink-faint)" strokeWidth={1.5} dashFromIndex={0} dashArray="5,4" />
+        <Line dataKey="top" curve={CURVE} stroke="var(--gr-ink-bright)" strokeWidth={2} />
+        {/* Ámbar sobre la estimación floja: por encima de diez repeticiones
+            Epley pierde precisión, y el ámbar es advertencia sobre el dato —no
+            una recompensa ni un error—. */}
+        <PointMarks dataKey="est" shape="ring" color="var(--gr-amber)" when={(d) => d.lowConfidence === true} />
+        <PointMarks dataKey="top" shape="dot" color="var(--gr-ink-bright)" when={(d) => d.record !== true} />
+        {/* El récord es un ROMBO, no un punto más gordo: a 4px de radio un
+            círculo grande y uno pequeño no se distinguen. En tinta: un récord
+            sin meta declarada es dato, no medalla. */}
+        <PointMarks dataKey="top" shape="rhombus" color="var(--gr-ink-bright)" when={(d) => d.record === true} />
+        <XAxis numTicks={5} tickMode="domain" />
+        <YAxis numTicks={6} formatValue={(v) => String(Math.round(v))} />
+        <ChartTooltip
+          rows={(p: Record<string, unknown>) => [
+            { color: "var(--gr-ink-bright)", label: p.record ? "Peso máximo · récord" : "Peso máximo", value: w(p.top) },
+            { color: p.lowConfidence ? "var(--gr-amber)" : "var(--gr-ink-faint)", label: "1RM estimado", value: w(p.est) },
+          ]}
+        />
+      </LineChart>
+      <ChartLegend
+        inset={38}
+        items={[
+          { label: "Peso máximo", color: "var(--gr-ink-bright)", shape: "line" },
+          { label: "1RM estimado (Epley)", color: "var(--text-faint)", shape: "dash" },
+          { label: "Récord personal", color: "var(--gr-ink-bright)", shape: "rhombus" },
+          { label: "Más de 10 reps: estimación floja", color: "var(--warning)", shape: "ring" },
+        ]}
+      />
     </>
   );
 }
