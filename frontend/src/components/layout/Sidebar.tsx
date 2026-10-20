@@ -4,6 +4,7 @@ import {
   IconBook2, IconChartHistogram, IconTrophy, IconNotebook, IconHexagon, IconCoins,
   IconBarbell,
 } from "@tabler/icons-react";
+import { motion } from "motion/react";
 
 const NAV = [
   { to: "/", icon: IconLayoutDashboard, label: "Dashboard" },
@@ -38,16 +39,29 @@ export function Sidebar() {
           end={to === "/"}
           className={({ isActive }) =>
             `group relative flex h-[34px] w-[34px] items-center justify-center rounded-lg transition-colors ${
-              isActive
-                ? "bg-[var(--gr-surface-raised)] text-[var(--purple-main)] border border-[var(--border-accent)]"
-                : "text-[var(--gr-ink-faint)] hover:text-[var(--purple-main)]"
+              isActive ? "text-[var(--purple-main)]" : "text-[var(--gr-ink-faint)] hover:text-[var(--purple-main)]"
             }`
           }
         >
-          <Icon size={17} />
-          <span className="pointer-events-none absolute left-[44px] z-50 whitespace-nowrap rounded border border-[var(--border-accent)] bg-[var(--bg-deep)] px-2 py-1 text-xs font-display text-[var(--text-body)] opacity-0 transition-opacity group-hover:opacity-100">
-            {label}
-          </span>
+          {({ isActive }) => (
+            <>
+              {/* Una sola placa que viaja de un icono al otro (layoutId), en
+                  vez de once que se encienden y se apagan: la navegación se
+                  lee como un movimiento, no como un parpadeo. Arcano: es estado
+                  del sistema. */}
+              {isActive && (
+                <motion.span
+                  layoutId="nav-activo"
+                  className="absolute inset-0 rounded-lg border border-[var(--border-accent)] bg-[var(--gr-surface-raised)]"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                />
+              )}
+              <Icon size={17} className="relative" />
+              <span className="pointer-events-none absolute left-[44px] z-50 whitespace-nowrap rounded border border-[var(--border-accent)] bg-[var(--bg-deep)] px-2 py-1 text-xs font-display text-[var(--text-body)] opacity-0 transition-opacity group-hover:opacity-100">
+                {label}
+              </span>
+            </>
+          )}
         </NavLink>
       ))}
     </nav>

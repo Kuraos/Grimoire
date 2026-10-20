@@ -117,28 +117,6 @@ body {
   animation: skeletonPulse 1.4s ease-in-out infinite;
 }
 
-@keyframes levelupFade { from { opacity: 0; } to { opacity: 1; } }
-@keyframes levelupPop {
-  0% { transform: scale(0.7); opacity: 0; }
-  55% { transform: scale(1.06); opacity: 1; }
-  100% { transform: scale(1); opacity: 1; }
-}
-@keyframes levelupGlowPulse {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.15); }
-}
-@keyframes levelupSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.levelup-fade { animation: levelupFade var(--gr-dur-enter) var(--gr-ease-out); }
-.levelup-pop { animation: levelupPop var(--gr-dur-reward) var(--gr-ease-reward); }
-.levelup-star { animation: levelupSpin 4s linear infinite; }
-.levelup-glow {
-  background: radial-gradient(circle, rgba(220, 174, 92, 0.45), transparent 65%);
-  animation: levelupGlowPulse 1.8s ease-in-out infinite;
-}
-
 /* Etiqueta de sección: Inter, no Cinzel. Cuando todo es ceremonial,
    nada destaca — Cinzel queda para títulos de página.
    A 11px es un rótulo, no un título: lo que debe pesar es el contenido. */
@@ -481,8 +459,10 @@ input[type="range"]::-moz-range-thumb {
    theme.css apagaba el suyo (`gr-enter`, `gr-reward`, `gr-seal`) pero esta hoja
    no tenía bloque ninguno, así que su movimiento ignoraba la preferencia del
    sistema — incluidos un giro y un pulso INFINITOS en el overlay de subida de
-   nivel, que ocupa la pantalla entera. Es justo lo que esta media query existe
-   para detener.
+   nivel, que ocupa la pantalla entera. (Ese overlay ya es de Motion.)
+
+   No es una media query: cuelga de `data-motion`, que resuelve motion-pref.ts
+   (ver la cabecera de ese archivo para el porqué).
 
    El esqueleto conserva su degradado: sin el pulso sigue leyéndose como hueco
    a la espera, que es su trabajo.
@@ -493,25 +473,10 @@ input[type="range"]::-moz-range-thumb {
    escalado —lo que dispara respuestas vestibulares—, no los fundidos que
    ayudan a seguir un cambio de estado. Medido: 0 elementos transicionan
    `transform` en toda la app. */
-@media (prefers-reduced-motion: reduce) {
-  .card,
-  .card-rubric,
-  .card-marginalia {
-    transition: none;
-  }
-
-  .skeleton,
-  .levelup-fade,
-  .levelup-pop,
-  .levelup-star,
-  .levelup-glow,
-  .toast-enter {
-    animation: none;
-  }
-
-  .btn,
-  .input,
-  input[type="range"]::-webkit-slider-thumb {
-    transition: none;
-  }
+[data-motion="reduced"] :is(.card, .card-rubric, .card-marginalia, .btn, .input),
+[data-motion="reduced"] input[type="range"]::-webkit-slider-thumb {
+  transition: none;
+}
+[data-motion="reduced"] :is(.skeleton, .toast-enter) {
+  animation: none;
 }

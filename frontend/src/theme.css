@@ -250,11 +250,10 @@
   animation: gr-seal var(--gr-dur-state) var(--gr-ease-out) both;
 }
 
-/* Respeta la preferencia del sistema: sin movimiento si así se pidió */
-/* Cada hoja apaga su propio movimiento; index.css hace lo mismo con el suyo. */
-@media (prefers-reduced-motion: reduce) {
-  .gr-enter, .gr-reward, .gr-seal path { animation: none; }
-}
+/* Movimiento reducido. No pregunta al sistema: lee `data-motion`, que resuelve
+   motion-pref.ts a partir de la preferencia de la app («sistema» por defecto).
+   Cada hoja apaga su propio movimiento; index.css hace lo mismo con el suyo. */
+[data-motion="reduced"] :is(.gr-enter, .gr-reward, .gr-seal path) { animation: none; }
 
 /* ---------------- Puente para Bklit ----------------
    Los gráficos de Bklit (components/bklit/) pintan con `--chart-*`. Aquí esos

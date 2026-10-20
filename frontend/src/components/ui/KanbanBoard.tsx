@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { IconChecklist, IconEdit } from "@tabler/icons-react";
+import { LayoutGroup, motion } from "motion/react";
 import type { Task } from "../../types";
 import { Sigil, SigilName } from "./Sigil";
 import { parseTags } from "./TagInput";
@@ -49,6 +50,7 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
   };
 
   return (
+    <LayoutGroup>
     <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
       {COLUMNS.map((col) => {
         const items = tasks.filter((t) => statusOf(t) === col.key).sort(byPosition);
@@ -74,8 +76,12 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
             </div>
             <div className="space-y-2">
               {items.map((t) => (
+                /* La tarjeta que cambia de sitio viaja hasta él —también de una
+                   columna a otra, por eso `layoutId` y no `layout`—. Va en un
+                   envoltorio porque `motion.div` reinterpreta `onDragStart` como
+                   su propio gesto, y aquí el arrastre es el nativo de HTML. */
+                <motion.div key={t.id} layoutId={`tarea-${t.id}`} layout="position" transition={{ type: "spring", stiffness: 500, damping: 40 }}>
                 <div
-                  key={t.id}
                   draggable
                   onDragStart={() => setDragId(t.id)}
                   onDragEnd={() => { setDragId(null); setOverCol(null); setOverCard(null); }}
@@ -102,11 +108,13 @@ export function KanbanBoard({ tasks, projectColor, onReorder, onEdit }: {
                     {t.due_date && <span className="ml-auto">{t.due_date.slice(5)}</span>}
                   </div>
                 </div>
+                </motion.div>
               ))}
             </div>
           </div>
         );
       })}
     </div>
+    </LayoutGroup>
   );
 }

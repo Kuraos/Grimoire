@@ -176,16 +176,3 @@
   margin: 4px 12px 0 0;
 }
 
-/* ── Entrada de vista ──────────────────────────────────────────────────────
-   `gr-enter` ya vive en theme.css; esto sólo lo reparte a las cards de la
-   vista al montarse. Al navegar, React remonta `<main>` y la entrada se
-   repite, que es el efecto buscado. */
-.gr-motion main section,
-.gr-motion main > div:first-child {
-  animation: gr-enter var(--gr-dur-enter) var(--gr-ease-out) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .gr-motion main section,
-  .gr-motion main > div:first-child { animation: none; }
-}

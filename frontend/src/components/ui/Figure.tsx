@@ -12,9 +12,15 @@
  * `gold` sólo para lo que se gana. Lo demás es dato, y va en tinta — que es la
  * razón de que el erario tenga `tone`: un saldo pasado de cerco es estado
  * semántico, no recompensa, y el oro no entra ahí.
+ *
+ * Un `value` numérico rueda sus dígitos al cambiar (NumberFlow); uno de texto
+ * —«12 · 80 %», «45m», un monto ya formateado— se pinta tal cual. Rodar no es
+ * celebrar: es la misma tinta, sólo que el cambio se ve llegar.
  */
+import NumberFlow from "@number-flow/react";
+
 export function Figure({ value, label, suffix, gold, muted, tone }: {
-  value: string;
+  value: string | number;
   label: string;
   suffix?: string;
   /** lo que el usuario se ganó */
@@ -33,7 +39,7 @@ export function Figure({ value, label, suffix, gold, muted, tone }: {
   return (
     <div>
       <div className="gr-figure" style={{ color }}>
-        {value}
+        {typeof value === "number" ? <NumberFlow value={value} locales="es" /> : value}
         {suffix && <span className="text-xl text-[var(--text-faint)]">{suffix}</span>}
       </div>
       <div className="mt-1.5 text-2xs font-label text-[var(--text-muted)]">{label}</div>

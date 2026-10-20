@@ -1,5 +1,8 @@
 import { IconSkull, IconFlame } from "@tabler/icons-react";
+import NumberFlow from "@number-flow/react";
+import { motion } from "motion/react";
 import { useUser } from "../../context";
+import { motionTokens } from "../../theme-tokens";
 
 /**
  * Ley del acento: aquí todo es recompensa —nivel, bonus de racha, XP del día—
@@ -26,18 +29,24 @@ export function XPBar({ xpToday, streakBonus }: { xpToday?: number; streakBonus?
           </span>
         )}
         {xpToday !== undefined && (
-          <span className="ml-auto text-xs text-[var(--gr-gilded)]">+{xpToday} XP hoy</span>
+          <span className="ml-auto text-xs text-[var(--gr-gilded)]">+<NumberFlow value={xpToday} locales="es" /> XP hoy</span>
         )}
       </div>
       <div className="my-1.5 h-2 overflow-hidden rounded bg-[var(--bg-elevated)]">
-        <div
+        {/* Se llena desde cero al montar y desde donde estaba al ganar XP: el
+            avance se ve ocurrir, que es el punto de pintarlo. Curva de
+            recompensa (con su leve rebase) porque esto sí es recompensa. */}
+        <motion.div
           className="h-full rounded"
-          style={{ width: `${pct}%`, background: "linear-gradient(90deg, var(--xp-from), var(--xp-to))" }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: motionTokens().reward * 2, ease: motionTokens().easeReward }}
+          style={{ background: "linear-gradient(90deg, var(--xp-from), var(--xp-to))" }}
         />
       </div>
       <div className="flex justify-between text-xs tabular text-[var(--text-body)]">
         <span>
-          {user.xp.toLocaleString()} XP · {user.xp_into_level}/{user.xp_span} al siguiente nivel
+          <NumberFlow value={user.xp} locales="es" /> XP · <NumberFlow value={user.xp_into_level} locales="es" />/{user.xp_span} al siguiente nivel
         </span>
         <span>Nivel {user.level + 1}</span>
       </div>

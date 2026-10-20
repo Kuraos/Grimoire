@@ -320,7 +320,7 @@ export default function Training() {
               label={`${METRIC_LABEL[metricKind]} · última`}
               muted
             />
-            <Figure value={String(metrics.length)} label="Medidas anotadas" muted />
+            <Figure value={metrics.length} label="Medidas anotadas" muted />
           </div>
           <div className="mt-3 border-t border-[var(--border)] pt-3">
             {series ? <BodyTrend series={series} /> : null}
@@ -440,7 +440,7 @@ function TodayRubric({ summary, unit, habits, onStart }: {
             <SplitFigure text={formatVolume(hoy.volume_g, unit)} label="Volumen" />
           )}
           <SplitFigure text={formatDuration(hoy.duration_s)} label="Duración" />
-          <Figure value={String(summary?.days_this_week ?? 0)} label="Días esta semana" muted />
+          <Figure value={summary?.days_this_week ?? 0} label="Días esta semana" muted />
         </div>
 
         {/* El oro aquí NO marca un dato de entrenamiento: marca el rito

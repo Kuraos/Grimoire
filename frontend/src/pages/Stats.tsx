@@ -67,10 +67,10 @@ export default function Stats() {
       <Card rank="rubric">
         <div className="flex flex-wrap items-start gap-x-10 gap-y-5">
           <div className="flex flex-wrap gap-x-10 gap-y-4">
-            <Figure value={data.xp_total.toLocaleString()} label="XP total" gold />
+            <Figure value={data.xp_total} label="XP total" gold />
             <Figure value={`${data.habits_completed} · ${data.habits_rate}%`} label="Hábitos" />
             <Figure value={`${data.pomodoro_minutes_total}m`} label="Foco" />
-            <Figure value={`${data.tasks_closed}`} label="Tareas cerradas" />
+            <Figure value={data.tasks_closed} label="Tareas cerradas" />
           </div>
           <div className="min-w-[280px] flex-1">
             <div className="mb-2 flex items-center gap-2">
@@ -170,7 +170,7 @@ export default function Stats() {
           <div className="flex flex-wrap items-start gap-8">
             <div className="min-w-0 flex-1"><HabitHeatmap data={data.heatmap} /></div>
             <div className="space-y-4">
-              <Figure value={marks.toLocaleString("es")} label="Marcas en 12 meses" />
+              <Figure value={marks} label="Marcas en 12 meses" />
               <Figure value={`${data.habits_rate}%`} label="Constancia media" />
             </div>
           </div>

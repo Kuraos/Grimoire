@@ -5,14 +5,20 @@ import { MotionConfig } from "motion/react";
 import App from "./App";
 import { AppProvider } from "./context";
 import { PomodoroProvider } from "./pomodoro-context";
+import { initMotionPref, useReducedMotion } from "./motion-pref";
 import "./index.css";
+
+initMotionPref();
+
+/* Motion obedece a la misma preferencia que el CSS (motion-pref.ts). "always"
+ * deja opacidad y color y retira desplazamientos, giros y escalas. */
+function MotionRoot({ children }: { children: React.ReactNode }) {
+  return <MotionConfig reducedMotion={useReducedMotion() ? "always" : "never"}>{children}</MotionConfig>;
+}
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {/* `reducedMotion="user"`: con movimiento reducido pedido en el sistema,
-        Motion apaga desplazamientos y escalas y deja sólo opacidad y color —la
-        misma línea que trazan theme.css e index.css con sus propias clases. */}
-    <MotionConfig reducedMotion="user">
+    <MotionRoot>
     <BrowserRouter>
       <AppProvider>
         <PomodoroProvider>
@@ -20,6 +26,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </PomodoroProvider>
       </AppProvider>
     </BrowserRouter>
-    </MotionConfig>
+    </MotionRoot>
   </React.StrictMode>
 );

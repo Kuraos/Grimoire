@@ -1,6 +1,8 @@
 import { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { IconX } from "@tabler/icons-react";
+import { motion } from "motion/react";
+import { motionTokens } from "../../theme-tokens";
 
 /**
  * Todo diálogo se monta en `document.body`, no donde se escribe.
@@ -21,7 +23,10 @@ export function Overlay({ onClose, children, align = "center" }: {
   align?: "center" | "start";
 }) {
   return createPortal(
-    <div
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: motionTokens().state }}
       /* Marca de «hay un diálogo abierto». La lee el atajo de Espacio en App:
          sin ella, la barra arrancaba el Pomodoro por debajo del modal. */
       data-overlay=""
@@ -32,7 +37,7 @@ export function Overlay({ onClose, children, align = "center" }: {
       onClick={onClose}
     >
       {children}
-    </div>,
+    </motion.div>,
     document.body,
   );
 }
@@ -40,7 +45,12 @@ export function Overlay({ onClose, children, align = "center" }: {
 export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
     <Overlay onClose={onClose}>
-      <div
+      {/* Sólo entrada. La salida pediría un AnimatePresence en cada una de las
+          diecinueve llamadas, que hoy desmontan el modal con un `&&`. */}
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 380, damping: 30 }}
         className="w-full max-w-md rounded-lg p-5"
         style={{ background: "var(--bg-deep)", border: "1px solid var(--border-accent)" }}
         onClick={(e) => e.stopPropagation()}
@@ -52,7 +62,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
           </button>
         </div>
         {children}
-      </div>
+      </motion.div>
     </Overlay>
   );
 }

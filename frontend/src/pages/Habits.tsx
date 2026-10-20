@@ -163,9 +163,9 @@ export default function Habits() {
             </div>
           </div>
           <div className="flex gap-7">
-            <Figure value={`${bestStreak}`} label="Racha más larga" gold />
-            <Figure value={`${avgRate}`} suffix="%" label="Constancia media" />
-            <Figure value={marks.toLocaleString("es")} label="Marcas en 12 meses" />
+            <Figure value={bestStreak} label="Racha más larga" gold />
+            <Figure value={avgRate} suffix="%" label="Constancia media" />
+            <Figure value={marks} label="Marcas en 12 meses" />
           </div>
         </div>
       </Card>

@@ -1,4 +1,6 @@
 import { ReactNode } from "react";
+import { motion, type Variants } from "motion/react";
+import { motionTokens } from "../../theme-tokens";
 
 /**
  * `rank` decide cuánto pesa la card, no sólo cómo se ve:
@@ -43,6 +45,20 @@ const NUDO: Record<CardRank, ReactNode> = {
   pozo: null,
 };
 
+/* La entrada no se pide: se hereda. La vista (App) anima de `hidden` a `show`
+ * escalonando a sus hijos, y cada card responde con esto. Una card fuera de esa
+ * orquestación —en un modal, en un test— no recibe nombre de variante y se
+ * pinta quieta, que es lo correcto. Sustituye a la regla de ornamento.css que
+ * animaba todas las `section` de golpe: con escalonado, el ojo recorre la vista
+ * en el orden en que está escrita. */
+export function cardEnter(): Variants {
+  const t = motionTokens();
+  return {
+    hidden: { opacity: 0, y: 8 },
+    show: { opacity: 1, y: 0, transition: { duration: t.enter, ease: t.easeOut } },
+  };
+}
+
 export function Card({ title, icon, children, className = "", right, rank = "leaf", named }: {
   title?: string;
   icon?: ReactNode;
@@ -62,7 +78,7 @@ export function Card({ title, icon, children, className = "", right, rank = "lea
   named?: boolean;
 }) {
   return (
-    <section className={`card ${RANK_CLASS[rank]} ${className}`.replace(/\s+/g, " ").trim()}>
+    <motion.section variants={cardEnter()} className={`card ${RANK_CLASS[rank]} ${className}`.replace(/\s+/g, " ").trim()}>
       {NUDO[rank]}
       {title && (
         <div className={`section-title ${rank === "rubric" ? "mb-3" : "mb-2.5"} ${NUDO[rank] ? "gr-sangrado" : ""}`}>
@@ -81,6 +97,6 @@ export function Card({ title, icon, children, className = "", right, rank = "lea
         </div>
       )}
       {children}
-    </section>
+    </motion.section>
   );
 }

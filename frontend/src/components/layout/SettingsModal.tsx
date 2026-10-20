@@ -9,9 +9,17 @@ import { confirm } from "../../confirm";
 import { checkForUpdate, applyUpdate, isDesktop, type UpdateState } from "../../updater";
 import type { Update } from "@tauri-apps/plugin-updater";
 import type { BackupEntry } from "../../types";
+import { setPref, useMotionPref, type MotionPref } from "../../motion-pref";
+
+const MOTION_OPTIONS: { value: MotionPref; label: string }[] = [
+  { value: "system", label: "Seguir al sistema" },
+  { value: "full", label: "Siempre" },
+  { value: "reduced", label: "Reducido" },
+];
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const { user, refreshUser, pushToast } = useApp();
+  const motionPref = useMotionPref();
   const [vaultPath, setVaultPath] = useState(user?.obsidian_vault_path ?? "");
   const [saving, setSaving] = useState(false);
   /* El campo se fijaba una sola vez, en el primer render. Abierto antes de que
@@ -144,6 +152,22 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
         <button className="btn btn-primary" onClick={save} disabled={saving}>
           <IconDeviceFloppy size={13} /> Guardar ruta
         </button>
+      </div>
+
+      {/* ---------------- Movimiento ---------------- */}
+      <div className="mt-5 border-t border-[var(--gr-edge)] pt-4">
+        <h3 className="gr-title-card mb-1">Movimiento</h3>
+        <p className="mb-3 text-xs text-[var(--text-muted)]">
+          «Seguir al sistema» obedece a Efectos de animación de Windows, que suele
+          venir apagado por rendimiento. «Siempre» anima Grimoire aunque lo esté.
+        </p>
+        <select
+          className="input w-auto"
+          value={motionPref}
+          onChange={(e) => setPref(e.target.value as MotionPref)}
+        >
+          {MOTION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
       </div>
 
       {/* ---------------- Respaldo ---------------- */}

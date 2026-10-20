@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+import { motion } from "motion/react";
 import { Sidebar } from "./components/layout/Sidebar";
 import { TopBar } from "./components/layout/TopBar";
 import { ToastAchievement } from "./components/layout/ToastAchievement";
@@ -14,6 +15,7 @@ import { useReminders } from "./hooks/useReminders";
 import { ensureNotifyPermission } from "./notify";
 import { checkForUpdate, isDesktop } from "./updater";
 import { Api } from "./api/endpoints";
+import { motionTokens } from "./theme-tokens";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Habits = lazy(() => import("./pages/Habits"));
@@ -26,6 +28,18 @@ const Erario = lazy(() => import("./pages/Erario"));
 const Stats = lazy(() => import("./pages/Stats"));
 const Achievements = lazy(() => import("./pages/Achievements"));
 const WeeklyReview = lazy(() => import("./pages/WeeklyReview"));
+
+/* Orquesta la entrada de cada vista: un fundido propio y, dentro, las cards una
+ * tras otra (cada `Card` trae su variante). Sólo opacidad a este nivel, sin
+ * desplazamiento: un `transform` aquí volvería a ser el antepasado que rompe el
+ * `position: fixed` de lo que no va en portal (ver Modal.tsx). */
+function viewEnter() {
+  const t = motionTokens();
+  return {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { duration: t.state, staggerChildren: 0.04 } },
+  };
+}
 
 export default function App() {
   const { online, refreshUser, pushToast } = useApp();
@@ -105,7 +119,7 @@ export default function App() {
   }, [pomo]);
 
   return (
-    <div className="gr-cielo gr-motion flex h-screen overflow-hidden">
+    <div className="gr-cielo flex h-screen overflow-hidden">
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <TopBar />
@@ -118,6 +132,7 @@ export default function App() {
           {/* key por ruta: al navegar a otra sección el boundary se remonta
               y el error queda atrás sin necesidad de recargar la app */}
           <ErrorBoundary key={location.pathname} scope={location.pathname}>
+          <motion.div key={location.pathname} initial="hidden" animate="show" variants={viewEnter()}>
           <Suspense fallback={<PageSkeleton />}>
             <Routes>
               <Route path="/" element={<Dashboard />} />
@@ -133,6 +148,7 @@ export default function App() {
               <Route path="/revision" element={<WeeklyReview />} />
             </Routes>
           </Suspense>
+          </motion.div>
           </ErrorBoundary>
         </main>
       </div>
