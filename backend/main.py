@@ -46,6 +46,9 @@ def _ensure_columns(sync_conn):
         # `ledger_entries` nació en la fase del libro, antes que las reliquias:
         # create_all no toca una tabla que ya existe, así que la columna entra por aquí.
         "ledger_entries": [("goal_id", "INTEGER")],
+        # cadena de progresión de la calistenia; los ejercicios ya existían.
+        "exercises": [("progresses_from_id", "INTEGER"), ("notes", "TEXT"),
+                      ("mastery_reps", "INTEGER")],
     }
     for table, cols in wanted.items():
         if table not in tables:

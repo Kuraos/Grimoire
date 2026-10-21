@@ -6,7 +6,7 @@ import type {
   BackupEntry,
   Account, LedgerCategory, LedgerEntry, LedgerSummary,
   LedgerMonthReview, LedgerEntryCreated, SavingsGoal, LedgerStats, BudgetMonth,
-  MuscleGroup, Exercise, TrainingSession, TrainingSessionCreated, TrainingSummary,
+  MuscleGroup, Exercise, RoutineTemplate, ProgressionHint, TrainingSession, TrainingSessionCreated, TrainingSummary,
   StrengthGoal, BodyMetric, BodyMetricSeries, ExerciseProgress, TrainingStats,
   BodyMetricKind,
 } from "../types";
@@ -190,6 +190,12 @@ export const Api = {
   updateExercise: (id: number, data: Partial<Exercise>) =>
     api.patch<Exercise>(`/training/exercises/${id}`, data),
   deleteExercise: (id: number) => api.del<void>(`/training/exercises/${id}`),
+  installCalisthenics: () =>
+    api.post<{ exercises_created: number; exercises_existing: number; templates_created: number }>(
+      "/training/catalog/calistenia", {}),
+  listRoutineTemplates: () => api.get<RoutineTemplate[]>("/training/templates"),
+  deleteRoutineTemplate: (id: number) => api.del<void>(`/training/templates/${id}`),
+  progressionHints: () => api.get<ProgressionHint[]>("/training/progression-hints"),
 
   // palestra — sesiones. Con prefijo: `createSession` ya es del Pomodoro, y sin
   // él la segunda definición pisaba a la primera en silencio.

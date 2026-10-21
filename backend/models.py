@@ -392,6 +392,46 @@ class Exercise(Base):
     muscle_group_id: Mapped[int | None] = mapped_column(ForeignKey("muscle_groups.id"), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+    # Cadena de progresión: el ejercicio MÁS FÁCIL del que éste viene. Es un
+    # puntero y no una lista porque cada ejercicio tiene un solo antecesor
+    # directo; los sucesores se deducen invirtiendo la relación.
+    progresses_from_id: Mapped[int | None] = mapped_column(ForeignKey("exercises.id"), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Repeticiones (o segundos, en los estáticos) a partir de las cuales el
+    # ejercicio se considera dominado y toca mirar el siguiente de la cadena.
+    mastery_reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class RoutineTemplate(Base):
+    """Una plantilla de rutina: una lista de ejercicios con series y repeticiones
+    objetivo, para precargar el formulario de sesión. No es una sesión ni crea
+    series: asentar sigue siendo lo único que cuenta."""
+    __tablename__ = "routine_templates"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+    items: Mapped[list["RoutineTemplateItem"]] = relationship(
+        back_populates="template", cascade="all, delete-orphan",
+        order_by="RoutineTemplateItem.position",
+    )
+
+
+class RoutineTemplateItem(Base):
+    __tablename__ = "routine_template_items"
+    __table_args__ = (
+        CheckConstraint("sets > 0"),
+        CheckConstraint("reps > 0"),
+    )
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_id: Mapped[int] = mapped_column(ForeignKey("routine_templates.id"))
+    exercise_id: Mapped[int] = mapped_column(ForeignKey("exercises.id"))
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    sets: Mapped[int] = mapped_column(Integer, default=4)
+    reps: Mapped[int] = mapped_column(Integer, default=10)
+
+    template: Mapped["RoutineTemplate"] = relationship(back_populates="items")
 
 
 class TrainingSession(Base):

@@ -729,6 +729,9 @@ class ExerciseUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     muscle_group_id: int | None = None
     archived: bool | None = None
+    progresses_from_id: int | None = None
+    notes: str | None = None
+    mastery_reps: int | None = Field(default=None, gt=0, le=MAX_REPS)
     # No hay `unit`: la unidad de peso es preferencia de presentación y vive en
     # `users.weight_unit`. Ver el docstring de `Exercise`.
 
@@ -739,6 +742,36 @@ class ExerciseOut(ORMModel):
     muscle_group_id: int | None
     archived: bool
     created_at: datetime
+    progresses_from_id: int | None = None
+    notes: str | None = None
+    mastery_reps: int | None = None
+
+
+class RoutineItemOut(ORMModel):
+    exercise_id: int
+    position: int
+    sets: int
+    reps: int
+
+
+class RoutineTemplateOut(ORMModel):
+    id: int
+    name: str
+    notes: str | None
+    items: list[RoutineItemOut] = []
+
+
+class ProgressionHintOut(BaseModel):
+    exercise_id: int
+    next_exercise_ids: list[int]
+    mastery_reps: int
+    sessions_ok: int
+
+
+class CatalogInstallOut(BaseModel):
+    exercises_created: int
+    exercises_existing: int
+    templates_created: int
 
 
 class TrainingSetIn(BaseModel):

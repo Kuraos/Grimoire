@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from models import (
     BodyMetric, Exercise, Habit, MuscleGroup, StrengthGoal, TrainingSession,
-    TrainingSet, XPLog,
+    TrainingSet, XPLog, RoutineTemplate, RoutineTemplateItem,
 )
 from schemas import (
     MuscleGroupCreate, MuscleGroupUpdate, MuscleGroupOut,
@@ -40,6 +40,7 @@ from schemas import (
     BodyMetricPointOut, TrainingSummaryOut, TrainingStatsOut,
     ExerciseProgressOut, ExercisePointOut, VolumeWeekOut, VolumeGroupOut,
     XPEventResponse, AchievementOut,
+    RoutineTemplateOut, ProgressionHintOut, CatalogInstallOut,
 )
 from services import (
     get_user, award_xp, mark_habit_done, like_escape,
@@ -50,6 +51,7 @@ from constants import (
     estimated_1rm_g,
 )
 from achievements import check_achievements
+from calistenia_catalog import CATALOG, TEMPLATES
 from tz import now as _now, today as _today
 
 router = APIRouter(prefix="/training", tags=["training"])
@@ -399,6 +401,17 @@ async def update_exercise(exercise_id: int, payload: ExerciseUpdate, db: AsyncSe
     data = payload.model_dump(exclude_unset=True)
     if data.get("muscle_group_id") is not None and not await db.get(MuscleGroup, data["muscle_group_id"]):
         raise HTTPException(404, "Grupo muscular no encontrado")
+    parent_id = data.get("progresses_from_id")
+    if parent_id is not None:
+        if not await db.get(Exercise, parent_id):
+            raise HTTPException(404, "Ejercicio antecesor no encontrado")
+        # una cadena con ciclo haría que la pista de progresión no terminara nunca
+        seen, cur = {exercise_id}, parent_id
+        while cur is not None:
+            if cur in seen:
+                raise HTTPException(400, "La cadena de progresión no puede dar la vuelta")
+            seen.add(cur)
+            cur = (await db.get(Exercise, cur)).progresses_from_id
     for k, v in data.items():
         setattr(ex, k, v)
     await db.commit()
@@ -884,3 +897,131 @@ async def seed_muscle_groups(db: AsyncSession):
     for name, color, icon in MUSCLE_GROUP_DEFAULTS:
         if name not in known:
             db.add(MuscleGroup(name=name, color=color, icon=icon))
+
+
+# --------------------------------------------------------------------------
+# Catálogo de calistenia, plantillas y pista de progresión
+#
+# Nada de esto da XP. La pista dice «ya puedes mirar el siguiente»; no es un
+# logro, porque las repeticiones las teclea el usuario sin validación posible y
+# premiarlas sería premiar la sinceridad (ver la cabecera del módulo).
+# --------------------------------------------------------------------------
+
+# Cuántas sesiones seguidas con el ejercicio dominado, y cuántas series por
+# sesión, antes de sugerir el siguiente. Una sola buena tarde no es dominio, y
+# la guía insiste en que tendones y ligamentos tardan más que el músculo.
+HINT_SESSIONS = 2
+HINT_SETS = 3
+
+
+@router.post("/catalog/calistenia", response_model=CatalogInstallOut, status_code=201)
+async def install_calisthenics_catalog(db: AsyncSession = Depends(get_db)):
+    """Instala el catálogo de calistenia y sus plantillas. Idempotente por nombre.
+
+    Acción explícita del usuario, no siembra de arranque. Un ejercicio que ya
+    existe conserva lo que el usuario le haya puesto: sólo se rellenan los
+    campos que estén vacíos.
+    """
+    groups = {g.name: g.id for g in (await db.execute(select(MuscleGroup))).scalars().all()}
+    existing = {e.name.lower(): e for e in (await db.execute(select(Exercise))).scalars().all()}
+    created = 0
+    by_name: dict[str, Exercise] = {}
+    for name, group, _parent, mastery, note in CATALOG:
+        ex = existing.get(name.lower())
+        if ex is None:
+            ex = Exercise(name=name, muscle_group_id=groups.get(group), notes=note,
+                          mastery_reps=mastery)
+            db.add(ex)
+            created += 1
+        else:
+            if ex.archived:
+                ex.archived = False
+            if ex.muscle_group_id is None:
+                ex.muscle_group_id = groups.get(group)
+            if ex.notes is None:
+                ex.notes = note
+            if ex.mastery_reps is None:
+                ex.mastery_reps = mastery
+        by_name[name] = ex
+    await db.flush()
+    for name, _g, parent, _m, _n in CATALOG:
+        ex = by_name[name]
+        if parent is not None and ex.progresses_from_id is None:
+            ex.progresses_from_id = by_name[parent].id
+
+    have = set((await db.execute(select(RoutineTemplate.name))).scalars().all())
+    templates = 0
+    for tname, tnotes, items in TEMPLATES:
+        if tname in have:
+            continue
+        tpl = RoutineTemplate(name=tname, notes=tnotes)
+        for pos, (en, sets, reps) in enumerate(items):
+            tpl.items.append(RoutineTemplateItem(
+                exercise_id=by_name[en].id, position=pos, sets=sets, reps=reps))
+        db.add(tpl)
+        templates += 1
+    await db.commit()
+    return CatalogInstallOut(
+        exercises_created=created, exercises_existing=len(CATALOG) - created,
+        templates_created=templates,
+    )
+
+
+@router.get("/templates", response_model=list[RoutineTemplateOut])
+async def list_templates(db: AsyncSession = Depends(get_db)):
+    sel = select(RoutineTemplate).options(selectinload(RoutineTemplate.items)).order_by(RoutineTemplate.id)
+    return (await db.execute(sel)).scalars().all()
+
+
+@router.delete("/templates/{template_id}", status_code=204)
+async def delete_template(template_id: int, db: AsyncSession = Depends(get_db)):
+    tpl = await db.get(RoutineTemplate, template_id)
+    if not tpl:
+        raise HTTPException(404, "Plantilla no encontrada")
+    await db.delete(tpl)
+    await db.commit()
+
+
+@router.get("/progression-hints", response_model=list[ProgressionHintOut])
+async def progression_hints(db: AsyncSession = Depends(get_db)):
+    """Ejercicios dominados en las últimas sesiones que ya tienen un siguiente.
+
+    «Dominado» = en cada una de las últimas `HINT_SESSIONS` sesiones que lo
+    incluyen, al menos `HINT_SETS` series alcanzaron `mastery_reps`. Si ya se
+    entrenó algún sucesor, no se sugiere: la pista ya se cumplió.
+    """
+    exercises = (await db.execute(
+        select(Exercise).where(Exercise.archived == False)  # noqa: E712
+    )).scalars().all()
+    children: dict[int, list[int]] = defaultdict(list)
+    for e in exercises:
+        if e.progresses_from_id is not None:
+            children[e.progresses_from_id].append(e.id)
+    candidates = [e for e in exercises if e.mastery_reps and e.id in children]
+    if not candidates:
+        return []
+    cand_ids = {e.id for e in candidates}
+    rows = (await db.execute(
+        select(TrainingSet.exercise_id, TrainingSet.session_id, TrainingSet.reps,
+               TrainingSession.occurred_on)
+        .join(TrainingSession, TrainingSession.id == TrainingSet.session_id)
+        .where(TrainingSet.exercise_id.in_(cand_ids | {c for cs in children.values() for c in cs}))
+    )).all()
+    # ejercicio -> sesión -> (fecha, [reps])
+    per: dict[int, dict[int, tuple[date, list[int]]]] = defaultdict(dict)
+    for ex_id, sess_id, reps, on in rows:
+        per[ex_id].setdefault(sess_id, (on, []))[1].append(reps)
+    out: list[ProgressionHintOut] = []
+    for e in candidates:
+        if any(per.get(c) for c in children[e.id]):
+            continue
+        sessions = sorted(per.get(e.id, {}).values(), key=lambda t: t[0], reverse=True)
+        recent = sessions[:HINT_SESSIONS]
+        if len(recent) < HINT_SESSIONS:
+            continue
+        if all(sum(1 for r in reps if r >= e.mastery_reps) >= HINT_SETS for _on, reps in recent):
+            out.append(ProgressionHintOut(
+                exercise_id=e.id, next_exercise_ids=children[e.id],
+                mastery_reps=e.mastery_reps, sessions_ok=len(recent),
+            ))
+    return out

@@ -411,6 +411,25 @@ export interface Exercise {
   muscle_group_id: number | null;
   archived: boolean;
   created_at: string;
+  /** el ejercicio más fácil del que éste viene en la cadena de progresión */
+  progresses_from_id: number | null;
+  notes: string | null;
+  /** reps (o segundos, en los estáticos) a partir de las cuales se considera dominado */
+  mastery_reps: number | null;
+}
+
+export interface RoutineTemplate {
+  id: number;
+  name: string;
+  notes: string | null;
+  items: { exercise_id: number; position: number; sets: number; reps: number }[];
+}
+
+export interface ProgressionHint {
+  exercise_id: number;
+  next_exercise_ids: number[];
+  mastery_reps: number;
+  sessions_ok: number;
 }
 
 export interface TrainingSet {

@@ -2037,3 +2037,68 @@ def test_a_session_refuses_fields_from_another_modality():
             "kind": "cardio", "occurred_on": hoy, "cardio_kind": "run",
             "sets": [_serie(ex, 5, 50)],
         }).status_code == 400
+
+
+# --------------------------------------------------------------------------
+# Catálogo de calistenia, plantillas y pista de progresión
+# --------------------------------------------------------------------------
+
+def test_calisthenics_catalog_installs_idempotently():
+    from calistenia_catalog import CATALOG, TEMPLATES
+    names = [n for n, *_ in CATALOG]
+    assert len(names) == len(set(n.lower() for n in names)), "nombres repetidos en el catálogo"
+    known = set(names)
+    assert all(p in known for _n, _g, p, _m, _t in CATALOG if p), "antecesor inexistente"
+    assert all(en in known for _t, _n, items in TEMPLATES for en, _s, _r in items)
+    with TestClient(main.app) as c:
+        xp_before = c.get("/user").json()["xp"]
+        r = c.post("/training/catalog/calistenia")
+        assert r.status_code == 201
+        assert r.json()["exercises_created"] + r.json()["exercises_existing"] == len(CATALOG)
+        assert r.json()["templates_created"] == len(TEMPLATES)
+        again = c.post("/training/catalog/calistenia").json()
+        assert again["exercises_created"] == 0 and again["templates_created"] == 0
+        tpls = c.get("/training/templates").json()
+        assert len(tpls) == len(TEMPLATES) and all(t["items"] for t in tpls)
+        # el catálogo no da XP
+        assert c.get("/user").json()["xp"] == xp_before
+
+
+def test_progression_hint_needs_two_good_sessions_and_hides_once_advanced():
+    with TestClient(main.app) as c:
+        c.post("/training/catalog/calistenia")
+        exs = {e["name"]: e for e in c.get("/training/exercises").json()}
+        base, nxt = exs["Flexión con rodillas apoyadas"], exs["Flexión"]
+        assert nxt["progresses_from_id"] == base["id"]
+        top = base["mastery_reps"]
+
+        def session(day, exercise_id, reps, n=3):
+            return c.post("/training/sessions", json={
+                "kind": "strength", "occurred_on": day,
+                "sets": [{"exercise_id": exercise_id, "reps": reps, "weight_g": 0} for _ in range(n)],
+            })
+
+        def hints():
+            return {h["exercise_id"]: h for h in c.get("/training/progression-hints").json()}
+
+        assert session("2026-03-02", base["id"], top).status_code == 201
+        assert base["id"] not in hints()          # una sesión no basta
+        assert session("2026-03-04", base["id"], top - 1).status_code == 201
+        assert base["id"] not in hints()          # la última se quedó corta
+        assert session("2026-03-06", base["id"], top).status_code == 201
+        assert base["id"] not in hints()          # sólo una de las dos últimas llega
+        assert session("2026-03-08", base["id"], top).status_code == 201
+        h = hints()[base["id"]]
+        assert h["next_exercise_ids"] == [nxt["id"]]
+        # al entrenar el siguiente, la pista se cumplió y desaparece
+        assert session("2026-03-10", nxt["id"], 5, n=1).status_code == 201
+        assert base["id"] not in hints()
+
+
+def test_exercise_progression_chain_rejects_cycles():
+    with TestClient(main.app) as c:
+        a = c.post("/training/exercises", json={"name": "Ciclo A"}).json()["id"]
+        b = c.post("/training/exercises", json={"name": "Ciclo B"}).json()["id"]
+        assert c.patch(f"/training/exercises/{b}", json={"progresses_from_id": a}).status_code == 200
+        assert c.patch(f"/training/exercises/{a}", json={"progresses_from_id": b}).status_code == 400
+        assert c.patch(f"/training/exercises/{a}", json={"progresses_from_id": a}).status_code == 400

@@ -22,7 +22,7 @@ import {
 } from "../utils";
 import type {
   BodyMetric, BodyMetricKind, BodyMetricSeries, Exercise, ExerciseProgress as Progress,
-  Habit, MuscleGroup, StrengthGoal, TrainingKind, TrainingSession, TrainingStats,
+  Habit, MuscleGroup, ProgressionHint, RoutineTemplate, StrengthGoal, TrainingKind, TrainingSession, TrainingStats,
   TrainingSummary, XPEventResponse,
 } from "../types";
 
@@ -76,6 +76,8 @@ export default function Training() {
   const [goals, setGoals] = useState<StrengthGoal[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [stats, setStats] = useState<TrainingStats | null>(null);
+  const [templates, setTemplates] = useState<RoutineTemplate[]>([]);
+  const [hints, setHints] = useState<ProgressionHint[]>([]);
   const [metrics, setMetrics] = useState<BodyMetric[]>([]);
   const [series, setSeries] = useState<BodyMetricSeries | null>(null);
   const [metricKind, setMetricKind] = useState<BodyMetricKind>("weight");
@@ -95,13 +97,14 @@ export default function Training() {
   );
 
   const load = useCallback(async () => {
-    const [s, ses, ex, gr, go, hb, st] = await Promise.all([
+    const [s, ses, ex, gr, go, hb, st, tp, hi] = await Promise.all([
       Api.trainingSummary(), Api.listTrainingSessions(`?limit=${LOG_LIMIT}`),
       Api.listExercises(true), Api.listMuscleGroups(),
       Api.listStrengthGoals(), Api.listHabits(), Api.trainingStats(10),
+      Api.listRoutineTemplates(), Api.progressionHints(),
     ]);
     setSummary(s); setSessions(ses); setExercises(ex); setGroups(gr);
-    setGoals(go); setHabits(hb); setStats(st);
+    setGoals(go); setHabits(hb); setStats(st); setTemplates(tp); setHints(hi);
   }, []);
 
   const loadMetrics = useCallback(async (kind: BodyMetricKind) => {
@@ -248,6 +251,55 @@ export default function Training() {
         </SectionBand>
       </Card>
 
+      <Card named title="Calistenia" right={
+        <span className="normal-case tracking-normal text-2xs italic text-[var(--text-faint)]">
+          Pista de progresión: sin XP
+        </span>
+      }>
+        {templates.length === 0 ? (
+          <div className="border-t border-[var(--border)] py-5 text-center">
+            <p className="mb-3 text-xs text-[var(--text-muted)]">
+              Catálogo de ejercicios de calistenia con su cadena de progresión y cuatro
+              plantillas (nivel 0, cuerpo completo A y B, softcombat). Se añade a tu lista; no
+              toca lo que ya tienes.
+            </p>
+            <button className="btn btn-primary" onClick={async () => {
+              const r = await Api.installCalisthenics();
+              pushToast({
+                title: "Catálogo instalado",
+                body: `${r.exercises_created} ejercicios y ${r.templates_created} plantillas nuevas.`,
+              });
+              await afterWrite();
+            }}>
+              Instalar catálogo de calistenia
+            </button>
+          </div>
+        ) : (
+          <div className="border-t border-[var(--border)] pt-3">
+            {hints.length === 0 ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                Sin pistas todavía. Cuando completes un ejercicio en su tope durante dos sesiones
+                seguidas (3 series o más), aquí te propondré el siguiente de la cadena.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {hints.map((h) => (
+                  <li key={h.exercise_id} className="text-xs text-[var(--text-body)]">
+                    <strong className="text-[var(--text-primary)]">{exerciseName(h.exercise_id)}</strong>
+                    {" "}llegó a {h.mastery_reps} en {h.sessions_ok} sesiones seguidas. Puedes probar:{" "}
+                    {h.next_exercise_ids.map(exerciseName).join(" o ")}.
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 border-t border-[var(--border)] pt-2.5 text-2xs leading-relaxed text-[var(--text-faint)]">
+              Es una sugerencia, no una orden: tendones y articulaciones se adaptan más despacio que
+              el músculo. En los estáticos (los que llevan «(s)») las repeticiones son segundos.
+            </p>
+          </div>
+        )}
+      </Card>
+
       <Card rank="pozo">
         <SectionBand sigil="triangulo" label="Volumen semanal de fuerza">
           <VolumeByGroup weeks={stats?.volume_weeks ?? []} groups={groups} unit={unit} />
@@ -335,6 +387,7 @@ export default function Training() {
           unit={unit}
           habits={habits}
           exercises={exercises}
+          templates={templates}
           suggestedHabit={summary?.suggested_habit?.[sessionForm] ?? null}
           onClose={() => setSessionForm(null)}
           onSaved={async (note, marked) => {
@@ -545,11 +598,12 @@ function SessionRow({ session, unit, onDelete }: {
 
 /* ------------------------------------------------------------------ sesión */
 
-function SessionModal({ kind, unit, habits, exercises, suggestedHabit, onClose, onSaved, onXP }: {
+function SessionModal({ kind, unit, habits, exercises, templates, suggestedHabit, onClose, onSaved, onXP }: {
   kind: TrainingKind;
   unit: WeightUnit;
   habits: Habit[];
   exercises: Exercise[];
+  templates: RoutineTemplate[];
   suggestedHabit: number | null;
   onClose: () => void;
   onSaved: (note: string | null, marked: boolean) => void | Promise<void>;
@@ -673,6 +727,26 @@ function SessionModal({ kind, unit, habits, exercises, suggestedHabit, onClose, 
             )}
           </span>
         </div>
+      )}
+
+      {tab === "strength" && templates.length > 0 && (
+        <Field label="Empezar desde plantilla — opcional">
+          <select className="input" value="" onChange={(e) => {
+            const tpl = templates.find((t) => String(t.id) === e.target.value);
+            if (!tpl) return;
+            const byId = new Map(exercises.map((x) => [x.id, x.name]));
+            // Sólo precarga el formulario: no asienta nada. El peso va en 0
+            // porque el peso corporal no se levanta; se corrige si hay lastre.
+            setSets(tpl.items.flatMap((it) =>
+              Array.from({ length: it.sets }, () => ({
+                exercise: byId.get(it.exercise_id) ?? "", reps: String(it.reps), weight: "0", rpe: "",
+              }))));
+            if (!name.trim()) setName(tpl.name);
+          }}>
+            <option value="">Ninguna — serie en blanco</option>
+            {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </Field>
       )}
 
       {tab === "strength" && (
